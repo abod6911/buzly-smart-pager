@@ -98,7 +98,7 @@ export default function LandingRoleSwitcherPage() {
               }`}
             >
               <Volume2 className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">{isPlayingTestSound ? 'جارِ الرنين 🔔' : 'تجربة صوت الجرس'}</span>
+              <span className="hidden sm:inline">{isPlayingTestSound ? 'جارِ الرنين' : 'تجربة صوت الجرس'}</span>
             </button>
 
             <Link
@@ -106,7 +106,7 @@ export default function LandingRoleSwitcherPage() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              <span>سجل مطعمك مجاناً 🚀</span>
+              <span>سجل مطعمك مجاناً</span>
             </Link>
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function LandingRoleSwitcherPage() {
                 <Layers className="w-6 h-6" />
               </div>
               <span className="text-[10px] font-bold text-buzly-amber uppercase tracking-wider block mb-1">
-                تلفاز الصالة والمطبخ (TV)
+                شاشة الصالة والمطبخ
               </span>
               <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-buzly-amber transition-colors">
                 شاشة التلفاز التفاعلية

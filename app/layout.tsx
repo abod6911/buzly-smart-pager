@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from 'next';
-import { Cairo } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { QueueProvider } from '@/context/QueueContext';
 
-const cairo = Cairo({
+const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   subsets: ['arabic', 'latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-cairo',
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -15,6 +22,10 @@ export const metadata: Metadata = {
   description: 'نظام بيجر ونداء واستدعاء الزبائن الذكي في المطاعم والكافيهات مباشرة عبر متصفح الجوال',
   applicationName: 'Buzly Pager',
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -26,7 +37,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0A0A0C',
+  themeColor: '#09090B',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -39,11 +50,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={cairo.variable}>
-      <head>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>" />
-      </head>
-      <body className="bg-obsidian text-white min-h-screen antialiased selection:bg-emerald-500 selection:text-black">
+    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-obsidian text-white min-h-screen antialiased selection:bg-emerald-500 selection:text-black font-sans">
         <QueueProvider>{children}</QueueProvider>
       </body>
     </html>

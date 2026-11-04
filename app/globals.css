@@ -3,36 +3,37 @@
 @tailwind utilities;
 
 :root {
-  --background: #0A0A0C;
-  --foreground: #EDEDED;
+  --background: #09090B;
+  --foreground: #F4F4F5;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom sleek scrollbar for queue lists */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #121217;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #23232C;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #343442;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* RTL Helpers */
@@ -44,11 +45,6 @@ body {
   direction: rtl;
 }
 
-/* Subtle glow effects */
-.glow-emerald {
-  box-shadow: 0 0 35px rgba(16, 185, 129, 0.25);
-}
-
-.glow-amber {
-  box-shadow: 0 0 35px rgba(245, 158, 11, 0.25);
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

@@ -11,11 +11,11 @@ import {
   Maximize2,
   Clock,
   Bell,
-  Flame,
-  CheckCircle2,
-  Sparkles,
   Mic,
   MicOff,
+  Sparkles,
+  Check,
+  ChevronLeft,
 } from 'lucide-react';
 
 export default function KitchenTvBoardPage() {
@@ -29,7 +29,7 @@ export default function KitchenTvBoardPage() {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [audioEnabled, setAudioEnabled] = useState<boolean>(false);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
-  const [newReadyFlash, setNewReadyFlash] = useState<boolean>(false);
+  const [highlightOrderNumber, setHighlightOrderNumber] = useState<string | null>(null);
   const previousReadyCount = useRef<number>(0);
 
   // Digital clock tick
@@ -60,42 +60,41 @@ export default function KitchenTvBoardPage() {
     [orders]
   );
 
-  // React to new ready orders & play airport chime + optional Arabic voice on TV
+  // Trigger alert banner and audio
+  const triggerNewReady = (orderNum: string) => {
+    setHighlightOrderNumber(orderNum);
+    if (audioEnabled) {
+      soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+      if (voiceEnabled) {
+        setTimeout(() => {
+          soundManager.announceOrderArabic(orderNum, restaurant.name);
+        }, 1300);
+      }
+    }
+    setTimeout(() => {
+      setHighlightOrderNumber(null);
+    }, 4500);
+  };
+
   useEffect(() => {
     if (readyOrders.length > previousReadyCount.current && previousReadyCount.current !== 0) {
-      if (audioEnabled) {
-        soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
-        if (voiceEnabled && readyOrders[0]) {
-          setTimeout(() => {
-            soundManager.announceOrderArabic(readyOrders[0].orderNumber, restaurant.name);
-          }, 1400);
-        }
+      if (readyOrders[0]) {
+        triggerNewReady(readyOrders[0].orderNumber);
       }
-      setNewReadyFlash(true);
-      setTimeout(() => setNewReadyFlash(false), 2500);
     }
     previousReadyCount.current = readyOrders.length;
-  }, [readyOrders, audioEnabled, voiceEnabled, restaurant.chimeTheme, restaurant.name]);
+  }, [readyOrders]);
 
-  // Listener for direct realtime events
   useEffect(() => {
     if (!lastEvent) return;
     if (
       (lastEvent.type === 'ORDER_READY' || lastEvent.type === 'ORDER_REPING') &&
-      lastEvent.restaurantSlug === slug
+      lastEvent.restaurantSlug === slug &&
+      lastEvent.orderNumber
     ) {
-      if (audioEnabled) {
-        soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
-        if (voiceEnabled && lastEvent.orderNumber) {
-          setTimeout(() => {
-            soundManager.announceOrderArabic(lastEvent.orderNumber!, restaurant.name);
-          }, 1400);
-        }
-      }
-      setNewReadyFlash(true);
-      setTimeout(() => setNewReadyFlash(false), 2500);
+      triggerNewReady(lastEvent.orderNumber);
     }
-  }, [lastEvent, slug, audioEnabled, voiceEnabled, restaurant.chimeTheme, restaurant.name]);
+  }, [lastEvent, slug]);
 
   const toggleAudio = async () => {
     if (!audioEnabled) {
@@ -121,21 +120,14 @@ export default function KitchenTvBoardPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen bg-obsidian text-white flex flex-col font-cairo overflow-hidden select-none transition-colors duration-500 ${
-        newReadyFlash ? 'bg-emerald-950/40 ring-8 ring-emerald-500/50 inset-0' : ''
-      }`}
-    >
+    <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans overflow-hidden select-none relative">
       {/* ========================================================================= */}
-      {/* TV HEADER BAR */}
+      {/* 1. TOP AIRPORT-STYLE HEADER */}
       {/* ========================================================================= */}
-      <header className="border-b-2 border-obsidian-border bg-obsidian-surface/90 backdrop-blur-md px-6 py-4 flex items-center justify-between shadow-2xl">
-        {/* Brand & Logo */}
-        <div className="flex items-center gap-4">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg border border-white/10 overflow-hidden"
-            style={{ backgroundColor: `${restaurant.themeColor}25` }}
-          >
+      <header className="border-b border-white/[0.08] bg-[#09090B] px-6 py-4 flex items-center justify-between z-20">
+        {/* Brand */}
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden bg-[#18181C]">
             {restaurant.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -144,112 +136,147 @@ export default function KitchenTvBoardPage() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Bell className="w-8 h-8" style={{ color: restaurant.themeColor }} />
+              <Bell className="w-5 h-5 text-emerald-400" />
             )}
           </div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-white font-cairo tracking-tight">
-              {restaurant.name}
-            </h1>
-            <p className="text-xs lg:text-sm text-zinc-400 font-semibold flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>شاشة نداء الطلبات الحية (Live Order Status)</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
+                {restaurant.name}
+              </h1>
+              <span className="text-[10px] font-mono uppercase bg-white/[0.04] text-zinc-400 px-2 py-0.5 rounded border border-white/[0.06]">
+                شاشة الصالة
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 font-normal mt-0.5">
+              شاشة الاستدعاء ومتابعة جاهزية الطلبات
             </p>
           </div>
         </div>
 
-        {/* Live Clock & Actions */}
-        <div className="flex items-center gap-6">
+        {/* Status & Controls */}
+        <div className="flex items-center gap-3">
           {/* Digital Clock */}
-          <div className="bg-obsidian-card border border-obsidian-border px-5 py-2.5 rounded-2xl flex items-center gap-2.5 shadow-inner">
-            <Clock className="w-5 h-5 text-buzly-amber" />
-            <span className="font-mono text-2xl lg:text-3xl font-black text-white tracking-wider">
+          <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2">
+            <Clock className="w-4 h-4 text-zinc-400" />
+            <span className="font-mono text-xl lg:text-2xl font-bold text-white tabular-nums tracking-wider">
               {currentTime || '--:--:--'}
             </span>
           </div>
 
-          {/* Sound Toggle Button */}
+          {/* Sound Toggle */}
           <button
             onClick={toggleAudio}
-            className={`flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
               audioEnabled
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                : 'bg-obsidian-card hover:bg-obsidian-border text-zinc-400 border-obsidian-border'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-[#121215] hover:bg-[#18181C] text-zinc-400 border-white/[0.08]'
             }`}
-            title="تفعيل صوت جرس النداء للشاشة"
+            title="تفعيل رنين الشاشة"
           >
-            {audioEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5" />}
-            <span className="hidden md:inline">{audioEnabled ? 'جرس التنبيه مفعل' : 'انقر لتفعيل الصوت'}</span>
+            {audioEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4" />}
+            <span className="hidden sm:inline">{audioEnabled ? 'جرس التنبيه مفعل' : 'تفعيل الرنين'}</span>
           </button>
 
-          {/* Arabic Voice Callout Toggle */}
+          {/* Voice Toggle */}
           <button
             onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className={`flex items-center gap-2 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
               voiceEnabled
-                ? 'bg-buzly-amber/20 text-buzly-amber border-buzly-amber/40'
-                : 'bg-obsidian-card hover:bg-obsidian-border text-zinc-500 border-obsidian-border'
+                ? 'bg-white/[0.06] text-zinc-200 border-white/[0.12]'
+                : 'bg-[#121215] text-zinc-500 border-white/[0.08]'
             }`}
-            title="تفعيل النداء الصوتي بالعربي"
+            title="تفعيل النداء الصوتي العربي"
           >
-            {voiceEnabled ? <Mic className="w-5 h-5 text-buzly-amber" /> : <MicOff className="w-5 h-5" />}
-            <span className="hidden lg:inline">{voiceEnabled ? 'النداء الصوتي بالعربي 🎙️' : 'النداء الصوتي معطل'}</span>
+            {voiceEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
+            <span className="hidden md:inline">{voiceEnabled ? 'النداء الصوتي مفعل' : 'النداء الصوتي معطل'}</span>
           </button>
 
-          {/* Fullscreen Button */}
+          {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
-            className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border transition-colors"
-            title="ملء الشاشة للتلفاز"
+            className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors"
+            title="ملء الشاشة"
           >
-            <Maximize2 className="w-5 h-5" />
+            <Maximize2 className="w-4 h-4" />
           </button>
         </div>
       </header>
 
       {/* ========================================================================= */}
-      {/* 2 GIANT COLUMNS: PREPARING (Right) & READY (Left) */}
+      {/* 2. SCALE-UP HIGHLIGHT BANNER (When order is called) */}
       {/* ========================================================================= */}
-      <main className="flex-1 grid grid-cols-2 divide-x-2 divide-x-reverse divide-obsidian-border p-6 gap-6 overflow-hidden">
-        {/* COLUMN 1: PREPARING (قيد التحضير) */}
-        <div className="flex flex-col bg-obsidian-surface/60 rounded-3xl border border-obsidian-border p-6 shadow-2xl overflow-hidden">
-          {/* Section Header */}
-          <div className="flex items-center justify-between pb-4 border-b-2 border-obsidian-border/80 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-buzly-amber/15 border border-buzly-amber/30 flex items-center justify-center text-buzly-amber">
-                <Flame className="w-6 h-6 animate-pulse" />
+      <AnimatePresence>
+        {highlightOrderNumber && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 20 }}
+            className="absolute top-20 inset-x-0 z-30 flex justify-center px-4 pointer-events-none"
+          >
+            <div className="bg-[#09090B] border-2 border-emerald-500/80 rounded-2xl p-5 shadow-2xl flex items-center gap-6 max-w-xl w-full">
+              <div className="w-16 h-16 rounded-xl bg-emerald-500 text-[#052E16] flex items-center justify-center font-mono font-bold text-3xl tabular-nums shrink-0">
+                #{highlightOrderNumber}
               </div>
-              <div>
-                <h2 className="text-2xl lg:text-3xl font-extrabold text-buzly-amber font-cairo">
-                  قيد التحضير (Preparing)
-                </h2>
-                <p className="text-xs lg:text-sm text-zinc-400">يتم إعدادها في المطبخ والبار</p>
+              <div className="flex-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>نداء استلام طلب</span>
+                </span>
+                <h3 className="text-xl font-bold text-white mt-0.5">
+                  الطلب رقم #{highlightOrderNumber} جاهز للاستلام
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  تفضل بمراجعة الكاونتر لاستلام وجبتك
+                </p>
               </div>
             </div>
-            <span className="px-4 py-1.5 rounded-full bg-buzly-amber/10 border border-buzly-amber/30 text-buzly-amber text-lg font-black font-mono">
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 3. SPLIT BOARD: PREPARING (RIGHT) vs READY (LEFT) */}
+      {/* ========================================================================= */}
+      <main className="flex-1 grid grid-cols-2 divide-x-2 divide-x-reverse divide-white/[0.06] p-6 gap-6 overflow-hidden">
+        {/* COLUMN 1: PREPARING (قيد التحضير) */}
+        <div className="flex flex-col bg-[#121215] rounded-2xl border border-white/[0.08] p-5 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06] mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+              <div>
+                <h2 className="text-lg lg:text-xl font-bold text-zinc-200">
+                  قيد التحضير
+                </h2>
+                <p className="text-xs text-zinc-500">يتم إعدادها في المطبخ</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-mono font-bold tabular-nums">
               {preparingOrders.length}
             </span>
           </div>
 
-          {/* Orders Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* Grid */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <AnimatePresence>
                 {preparingOrders.map((order) => (
                   <motion.div
                     key={order.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.94 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="bg-obsidian-card border-2 border-obsidian-border hover:border-buzly-amber/40 rounded-3xl p-5 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group"
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    className="bg-[#18181C] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm"
                   >
-                    <div className="text-xs text-zinc-400 font-bold mb-1">طلب #</div>
-                    <div className="font-mono text-5xl lg:text-6xl font-black text-white tracking-tight group-hover:text-buzly-amber transition-colors">
+                    <span className="text-[11px] font-mono text-zinc-500 mb-1">طلب</span>
+                    <div className="font-mono text-4xl lg:text-5xl font-bold text-white tracking-tight tabular-nums">
                       {order.orderNumber}
                     </div>
-                    <div className="mt-2 text-xs font-semibold text-buzly-amber/90 flex items-center gap-1 font-mono">
-                      <span>{getElapsedMins(order.createdAt)} دقيقة</span>
+                    <div className="mt-2 text-[11px] font-mono text-zinc-400 tabular-nums">
+                      منذ {getElapsedMins(order.createdAt)} د
                     </div>
                   </motion.div>
                 ))}
@@ -258,58 +285,53 @@ export default function KitchenTvBoardPage() {
 
             {preparingOrders.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                <Flame className="w-16 h-16 mb-3 stroke-[1.2] opacity-50" />
-                <p className="text-lg font-bold">لا توجد طلبات قيد التحضير حالياً</p>
+                <p className="text-sm font-medium">لا توجد طلبات قيد التحضير حالياً</p>
               </div>
             )}
           </div>
         </div>
 
         {/* COLUMN 2: READY FOR PICKUP (جاهز للاستلام) */}
-        <div className="flex flex-col bg-emerald-950/20 rounded-3xl border-2 border-emerald-500/30 p-6 shadow-2xl overflow-hidden relative">
-          {/* Ambient Glow */}
-          <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Section Header */}
-          <div className="flex items-center justify-between pb-4 border-b-2 border-emerald-500/20 mb-6 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-black flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <Bell className="w-6 h-6 animate-bounce-subtle" />
-              </div>
+        <div className="flex flex-col bg-emerald-950/20 rounded-2xl border border-emerald-500/20 p-5 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-emerald-500/20 mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <div>
-                <h2 className="text-2xl lg:text-3xl font-extrabold text-emerald-400 font-cairo">
-                  جاهز للاستلام (Ready Now)
+                <h2 className="text-lg lg:text-xl font-bold text-emerald-400">
+                  جاهز للاستلام
                 </h2>
-                <p className="text-xs lg:text-sm text-zinc-300">تفضل بالتوجه إلى الكاونتر</p>
+                <p className="text-xs text-zinc-400">تفضل بالتوجه إلى الكاونتر</p>
               </div>
             </div>
-            <span className="px-4 py-1.5 rounded-full bg-emerald-500 text-black text-lg font-black font-mono shadow-lg shadow-emerald-500/30">
+            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-mono font-bold tabular-nums">
               {readyOrders.length}
             </span>
           </div>
 
-          {/* Orders Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative z-10">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* Grid */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <AnimatePresence>
                 {readyOrders.map((order) => (
                   <motion.div
                     key={order.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.85, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    className="bg-emerald-500 text-black rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-2xl shadow-emerald-500/30 border-4 border-emerald-300 animate-pulse-glow-emerald"
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    className="bg-[#121215] border-2 border-emerald-500/40 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden"
                   >
-                    <div className="text-xs uppercase font-extrabold text-black/75 mb-1">
-                      طلب جاهز 🔔
-                    </div>
-                    <div className="font-mono text-6xl lg:text-7xl font-black text-black tracking-tight">
+                    <span className="text-[10px] uppercase font-semibold text-emerald-400 mb-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span>جاهز الآن</span>
+                    </span>
+                    <div className="font-mono text-5xl lg:text-6xl font-bold text-white tracking-tight tabular-nums my-1">
                       {order.orderNumber}
                     </div>
-                    <div className="mt-2 text-xs font-black bg-black/15 px-3 py-1 rounded-full text-black">
-                      استلم الآن
-                    </div>
+                    <span className="mt-1 text-[10px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                      تفضل للاستلام
+                    </span>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -317,21 +339,20 @@ export default function KitchenTvBoardPage() {
 
             {readyOrders.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                <CheckCircle2 className="w-16 h-16 mb-3 stroke-[1.2] opacity-50" />
-                <p className="text-lg font-bold">بانتظار تجهيز الطلبات</p>
+                <p className="text-sm font-medium">بانتظار جاهزية الطلبات</p>
               </div>
             )}
           </div>
         </div>
       </main>
 
-      {/* Footer Info Ticker */}
-      <footer className="border-t border-obsidian-border bg-obsidian-surface/60 px-6 py-2.5 flex items-center justify-between text-xs text-zinc-400">
-        <span className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
-          <span>تظهر الأرقام تلقائياً فور تجهيزها مع تنبيه صوتي فندقي</span>
+      {/* Footer Ticker */}
+      <footer className="border-t border-white/[0.08] bg-[#09090B] px-6 py-2.5 flex items-center justify-between text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5 font-normal">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+          <span>تظهر الأرقام تلقائياً فور جاهزية الطلب بالمطبخ</span>
         </span>
-        <span className="font-mono font-semibold">Buzly Smart Kitchen Display v3.0</span>
+        <span className="font-mono text-[11px] text-zinc-600">Buzly Display System</span>
       </footer>
     </div>
   );

@@ -20,14 +20,17 @@ import {
   QrCode,
   Shield,
   MessageCircle,
+  Wifi,
+  Cloud,
+  Camera,
 } from 'lucide-react';
 
 const COLOR_OPTIONS = [
-  { name: 'زمردي فاخر (Emerald)', hex: '#10B981' },
-  { name: 'كهرماني دافئ (Amber)', hex: '#F59E0B' },
-  { name: 'أزرق ملكي (Royal Blue)', hex: '#3B82F6' },
-  { name: 'وردي جريء (Rose)', hex: '#F43F5E' },
-  { name: 'بنفسجي عصري (Purple)', hex: '#8B5CF6' },
+  { name: 'زمردي كلاسيكي', hex: '#10B981' },
+  { name: 'كهرماني دافئ', hex: '#F59E0B' },
+  { name: 'أزرق ملكي', hex: '#3B82F6' },
+  { name: 'وردي ياقوتي', hex: '#F43F5E' },
+  { name: 'أرجواني عصري', hex: '#8B5CF6' },
 ];
 
 export default function TenantAdminBrandingPage() {
@@ -170,20 +173,20 @@ export default function TenantAdminBrandingPage() {
         <body>
           <div class="stand-card">
             ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="logo" />` : ''}
-            <div class="badge">🔔 جهاز النداء الذكي</div>
+            <div class="badge">نظام النداء الذكي</div>
             <h1>${name}</h1>
-            <p>امسح الكود بجوالك لتتبع حالة طلبك.. خذ راحتك وسيرن جوالك أول ما يجهز!</p>
+            <p>امسح الرمز بكاميرا الهاتف لمتابعة طلبك مباشرة. استرح وسيقوم هاتفك بالرنين والاهتزاز فور جهوزيته.</p>
             
             <div class="qr-box">
               <img src="${qrDataUrl}" alt="QR" />
             </div>
 
             <div class="instructions">
-              📷 وجّه كاميرا جوالك للباركود لمتابعة الفاتورة
+              وجّه كاميرا الهاتف للرمز لمتابعة تفاصيل الفاتورة
             </div>
 
             <div class="brand-footer">
-              مدعوم بنظام Buzly Smart Restaurant Pager
+              مدعوم بنظام بوزلي للنداء الذكي
             </div>
           </div>
           <script>
@@ -255,7 +258,7 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Palette className="w-4 h-4" />
-              <span>الهوية والتخصيص (Branding Studio)</span>
+              <span>الهوية والتخصيص</span>
             </button>
 
             <button
@@ -267,7 +270,7 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Printer className="w-4 h-4" />
-              <span>طباعة ستاند الباركود للطاولات (Print QR Stand)</span>
+              <span>طباعة ستاندات الطاولات</span>
             </button>
           </div>
         </div>
@@ -281,13 +284,14 @@ export default function TenantAdminBrandingPage() {
               <form onSubmit={handleSave} className="lg:col-span-7 space-y-6">
                 <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-6 shadow-xl space-y-5">
                   <h3 className="text-base font-bold text-white flex items-center gap-2 border-b border-obsidian-border pb-3">
-                    <Sparkles className="w-4 h-4 text-emerald-400" /> بيانات المطعم / الكافيه
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <span>بيانات المنشأة التجارية</span>
                   </h3>
 
                   {/* Name */}
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      اسم المطعم التجاري (يظهر للزبائن في الشاشات والإشعارات)
+                      اسم المطعم أو الكافيه
                     </label>
                     <input
                       type="text"
@@ -301,7 +305,7 @@ export default function TenantAdminBrandingPage() {
                   {/* Logo URL */}
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      رابط شعار المطعم (Logo Image URL)
+                      رابط شعار المتجر
                     </label>
                     <input
                       type="url"
@@ -315,7 +319,7 @@ export default function TenantAdminBrandingPage() {
                   {/* Accent Color Picker */}
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                      اللون الرئيسي للعلامة التجارية (Theme Accent Color)
+                      اللون الرئيسي للهوية
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {COLOR_OPTIONS.map((c) => {
@@ -345,17 +349,17 @@ export default function TenantAdminBrandingPage() {
                   {/* 4-digit PIN */}
                   <div className="pt-2 border-t border-obsidian-border">
                     <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                      الرقم السري للكاشير (Staff 4-Digit PIN)
+                      رمز الدخول السري للكاشير
                     </label>
                     <p className="text-[11px] text-zinc-500 mb-2">
-                      يمنع العملاء من فتح شاشة الكاشير في حال خمنوا الرابط
+                      يمنع فتح لوحة التحكم وأخذ الإجراءات لغير الموظفين المصرح لهم
                     </p>
                     <input
                       type="text"
                       maxLength={4}
                       value={staffPin}
                       onChange={(e) => setStaffPin(e.target.value.replace(/[^0-9]/g, ''))}
-                      className="w-36 bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-2.5 text-lg font-mono text-center tracking-widest text-white focus:outline-none focus:border-emerald-500"
+                      className="w-36 bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-2.5 text-lg font-mono tabular-nums text-center tracking-widest text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
@@ -363,10 +367,10 @@ export default function TenantAdminBrandingPage() {
                   <div className="pt-2 border-t border-obsidian-border flex items-center justify-between">
                     <div>
                       <span className="text-xs font-semibold text-zinc-200 block">
-                        تفعيل التنبيه المباشر عبر الواتساب (WhatsApp Fallback)
+                        تفعيل خيار التنبيه عبر واتساب
                       </span>
                       <span className="text-[11px] text-zinc-500">
-                        إظهار زر مراسلة الواتساب للكاشير في حال رغبة العميل بالتنبيه على رقمه
+                        إظهار زر مراسلة فورية للكاشير في حال تعذر إشعارات الويب لدى العميل
                       </span>
                     </div>
                     <input
@@ -386,7 +390,7 @@ export default function TenantAdminBrandingPage() {
                     {savedSuccess ? (
                       <>
                         <Check className="w-5 h-5" />
-                        <span>تم حفظ التعديلات بنجاح!</span>
+                        <span>تم حفظ التعديلات بنجاح</span>
                       </>
                     ) : (
                       <>
@@ -401,7 +405,8 @@ export default function TenantAdminBrandingPage() {
               {/* Live Preview Card */}
               <div className="lg:col-span-5 bg-obsidian-surface border border-obsidian-border rounded-3xl p-6 shadow-xl sticky top-24">
                 <h3 className="text-sm font-bold text-zinc-400 mb-4 flex items-center gap-2">
-                  <Smartphone className="w-4 h-4" /> معاينة مظهر شاشة العميل
+                  <Smartphone className="w-4 h-4" />
+                  <span>معاينة مظهر شاشة العميل</span>
                 </h3>
 
                 <div className="bg-obsidian border-2 border-obsidian-border rounded-3xl p-6 text-center shadow-inner relative overflow-hidden">
@@ -417,11 +422,11 @@ export default function TenantAdminBrandingPage() {
                     )}
                   </div>
                   <h4 className="text-xl font-black text-white">{name || 'اسم المطعم'}</h4>
-                  <p className="text-xs text-zinc-400 mt-1">طلبك يُحضّر بحب وإتقان ✨</p>
+                  <p className="text-xs text-zinc-400 mt-1">طلبك يُحضّر بكل عناية وإتقان</p>
 
                   <div className="my-6 py-4 px-6 rounded-2xl bg-obsidian-card border border-obsidian-border inline-block">
                     <span className="text-xs text-zinc-500 block">رقم الطلب</span>
-                    <span className="font-mono text-4xl font-black" style={{ color: themeColor }}>
+                    <span className="font-mono tabular-nums text-4xl font-black" style={{ color: themeColor }}>
                       #104
                     </span>
                   </div>
@@ -430,7 +435,7 @@ export default function TenantAdminBrandingPage() {
                     className="py-3 px-4 rounded-xl text-black font-extrabold text-xs shadow-md"
                     style={{ backgroundColor: themeColor }}
                   >
-                    جاهز للاستلام 🔔
+                    جاهز للاستلام
                   </div>
                 </div>
               </div>
@@ -450,7 +455,7 @@ export default function TenantAdminBrandingPage() {
                   className="py-2.5 px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>طباعة الستاند الآن (Print)</span>
+                  <span>طباعة الستاند</span>
                 </button>
               </div>
 
@@ -465,13 +470,14 @@ export default function TenantAdminBrandingPage() {
                       setActiveBaseUrl(url);
                       localStorage.setItem('buzly_base_url_override', url);
                     }}
-                    className={`p-2 rounded-xl border text-right transition-all text-xs ${
+                    className={`p-2.5 rounded-xl border text-right transition-all text-xs flex items-center gap-2 ${
                       activeBaseUrl === 'http://192.168.100.12:3000'
                         ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
                         : 'bg-obsidian-card border-obsidian-border text-zinc-400'
                     }`}
                   >
-                    📶 شبكة الواي فاي (192.168.100.12:3000)
+                    <Wifi className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>شبكة الواي فاي المحلية (192.168.100.12)</span>
                   </button>
                   <button
                     type="button"
@@ -480,13 +486,14 @@ export default function TenantAdminBrandingPage() {
                       setActiveBaseUrl(url);
                       localStorage.setItem('buzly_base_url_override', url);
                     }}
-                    className={`p-2 rounded-xl border text-right transition-all text-xs ${
+                    className={`p-2.5 rounded-xl border text-right transition-all text-xs flex items-center gap-2 ${
                       activeBaseUrl === 'https://buzly-smart-pager.vercel.app'
                         ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
                         : 'bg-obsidian-card border-obsidian-border text-zinc-400'
                     }`}
                   >
-                    ☁️ رابط Vercel السحابي الحي
+                    <Cloud className="w-4 h-4 text-sky-400 shrink-0" />
+                    <span>رابط السحابة المباشر</span>
                   </button>
                 </div>
                 <p className="text-[10px] text-zinc-500 mt-2 font-mono dir-ltr truncate">
@@ -516,12 +523,12 @@ export default function TenantAdminBrandingPage() {
                   className="inline-block text-white text-[11px] font-black px-3 py-1 rounded-full mb-2"
                   style={{ backgroundColor: themeColor }}
                 >
-                  جهاز النداء الذكي 🔔
+                  جهاز النداء الذكي
                 </span>
 
                 <h3 className="text-2xl font-black text-black mb-1">{name}</h3>
                 <p className="text-xs text-zinc-600 mb-4 leading-relaxed">
-                  امسح الكود بجوالك لمتابعة تجهيز وجبتك وليرن هاتفك أول ما تجهز!
+                  امسح الرمز بكاميرا الهاتف لمتابعة تجهيز وجبتك ورنين هاتفك فور جهوزيتها
                 </p>
 
                 {/* QR Code Container */}
@@ -539,8 +546,9 @@ export default function TenantAdminBrandingPage() {
                   )}
                 </div>
 
-                <div className="bg-zinc-100 p-2.5 rounded-xl text-xs font-bold text-zinc-800">
-                  📷 وجّه كاميرا جوالك للباركود لمتابعة طلبك
+                <div className="bg-zinc-100 p-2.5 rounded-xl text-xs font-bold text-zinc-800 flex items-center justify-center gap-1.5">
+                  <Camera className="w-4 h-4 text-zinc-600" />
+                  <span>وجّه كاميرا الهاتف للرمز لمتابعة طلبك</span>
                 </div>
 
                 <div className="text-[10px] text-zinc-400 mt-4">

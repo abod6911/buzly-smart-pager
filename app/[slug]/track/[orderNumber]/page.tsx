@@ -136,8 +136,8 @@ function TenantCustomerTrackerInner() {
         } catch {}
       }
 
-      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام! 🍔 (${restaurant.name})`, {
-        body: 'توجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
+      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام (${restaurant.name})`, {
+        body: 'تفضل إلى الكاونتر لاستلام طلبك وهو طازج.',
       });
     } else if (order.status === 'completed') {
       soundManager.stopReadyAlarm();
@@ -156,7 +156,7 @@ function TenantCustomerTrackerInner() {
       setAlarmActive(true);
       soundManager.startReadyAlarmLoop();
 
-      pwaHelper.showSystemNotification(`تذكير: طلبك #${order.orderNumber} بانتظارك! 🔔`, {
+      pwaHelper.showSystemNotification(`تذكير: طلبك #${order.orderNumber} جاهز للاستلام`, {
         body: `يرجى مراجعة كاونتر ${restaurant.name} لاستلام طلبك.`,
       });
     }
@@ -251,7 +251,7 @@ function TenantCustomerTrackerInner() {
     <div
       className={`min-h-screen text-white flex flex-col font-cairo transition-colors duration-700 selection:bg-emerald-500 selection:text-black ${
         isReady
-          ? 'bg-gradient-to-b from-emerald-950 via-obsidian to-emerald-950 animate-pulse-glow-emerald'
+          ? 'bg-gradient-to-b from-emerald-950/70 via-obsidian to-emerald-950/40'
           : 'bg-obsidian'
       }`}
     >
@@ -280,7 +280,7 @@ function TenantCustomerTrackerInner() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400 font-mono">طلب #{order.orderNumber}</span>
+            <span className="text-xs text-zinc-400 font-mono tabular-nums">طلب #{order.orderNumber}</span>
             <Link
               href={`/${slug}/track`}
               className="text-xs text-zinc-400 hover:text-white bg-obsidian-card px-2.5 py-1 rounded-lg border border-obsidian-border transition-colors"
@@ -331,14 +331,14 @@ function TenantCustomerTrackerInner() {
                 </svg>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xs text-zinc-400 font-semibold mb-0.5">الوقت المقدر</span>
+                  <span className="text-xs text-zinc-400 font-semibold mb-0.5">الوقت المتبقي التقديري</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-mono text-4xl sm:text-5xl font-black text-white">
+                    <span className="font-mono tabular-nums text-4xl sm:text-5xl font-black text-white">
                       {remainingMinutes}
                     </span>
                     <span className="text-xs text-zinc-400 font-bold">دقيقة</span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                  <span className="text-[10px] text-zinc-500 font-mono tabular-nums mt-1">
                     #{order.orderNumber}
                   </span>
                 </div>
@@ -346,11 +346,10 @@ function TenantCustomerTrackerInner() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo mb-2 flex items-center justify-center gap-2">
-              <span>طلبك قيد التحضير بعناية</span>
-              <Flame className="w-6 h-6 text-buzly-amber animate-bounce-subtle" />
+              <span>طلبك قيد التحضير في المطبخ</span>
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto mb-4 leading-relaxed">
-              يرجى إبقاء هذه الصفحة مفتوحة أو تفعيل زر التنبيه بالأعلى. سيرن هاتفك تلقائياً فور جاهزية وجبتك!
+              يرجى إبقاء هذه الصفحة مفتوحة أو تفعيل جرس التنبيه. سيقوم هاتفك بالرنين فور جهوزية الوجبة.
             </p>
 
             {order.notes && (
@@ -365,18 +364,18 @@ function TenantCustomerTrackerInner() {
         {/* 2. READY FOR PICKUP STATE */}
         {isReady && (
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', damping: 20 }}
             className="flex-1 flex flex-col items-center justify-center text-center py-4"
           >
             {alarmActive && (
-              <div className="mb-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold animate-bounce-subtle">
+              <div className="mb-4 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
                 <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>جرس التنبيه يرن الآن...</span>
+                <span>جرس التنبيه يعمل الآن</span>
                 <button
                   onClick={handleSilenceAlarm}
-                  className="mr-2 underline hover:text-white text-[11px]"
+                  className="mr-2 underline hover:text-white text-[11px] cursor-pointer"
                 >
                   كتم الصوت
                 </button>
@@ -384,36 +383,35 @@ function TenantCustomerTrackerInner() {
             )}
 
             <div className="relative mb-6">
-              <div className="absolute -inset-4 bg-emerald-500/30 rounded-full blur-2xl animate-pulse" />
               <div
-                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full text-black flex flex-col items-center justify-center shadow-2xl border-4 border-emerald-300 animate-pulse-glow-emerald"
+                className="w-40 h-40 sm:w-48 sm:h-48 rounded-full text-black flex flex-col items-center justify-center shadow-2xl border-2 border-white/20"
                 style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
               >
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black/70">
+                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black/75">
                   طلب رقم
                 </span>
-                <span className="font-mono text-5xl sm:text-6xl font-black tracking-tight text-black">
+                <span className="font-mono tabular-nums text-5xl sm:text-6xl font-black tracking-tight text-black">
                   #{order.orderNumber}
                 </span>
-                <span className="text-[11px] font-bold mt-1 bg-black/15 px-2.5 py-0.5 rounded-full text-black">
-                  جاهز للاستلام 🔔
+                <span className="text-[11px] font-bold mt-1.5 bg-black/15 px-3 py-0.5 rounded-full text-black">
+                  جاهز للاستلام
                 </span>
               </div>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black text-emerald-400 font-cairo tracking-tight mb-2">
-              طلبك جاهز الآن! 🍔
+              طلبك جاهز للاستلام
             </h1>
-            <p className="text-sm sm:text-base text-zinc-200 max-w-xs mx-auto mb-6 leading-relaxed">
-              تفضل بالتوجه إلى كاونتر <strong className="text-white">{restaurant.name}</strong> واستلم وجبتك ساخنة وطازجة.
+            <p className="text-sm sm:text-base text-zinc-300 max-w-xs mx-auto mb-6 leading-relaxed">
+              تفضل بالتوجه إلى كاونتر <strong className="text-white">{restaurant.name}</strong> لاستلام وجبتك.
             </p>
 
             <button
               onClick={handleIReceivedOrder}
-              className="w-full py-4 px-6 rounded-2xl bg-emerald-400 hover:bg-emerald-300 active:scale-95 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-2xl shadow-emerald-400/30 transition-all cursor-pointer"
+              className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 transition-all cursor-pointer"
             >
               <Check className="w-6 h-6 stroke-[3]" />
-              <span>استلمت طلبي، شكراً لكم! (Confirm Pickup)</span>
+              <span>استلمت طلبي بنجاح</span>
             </button>
           </motion.div>
         )}
@@ -421,21 +419,21 @@ function TenantCustomerTrackerInner() {
         {/* 3. COMPLETED STATE & 5-STAR RATING */}
         {isCompleted && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-4 shadow-xl shadow-emerald-500/10">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-4 shadow-xl">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo mb-2">
-              بالعافية، نتمنى لك وجبة شهية!
+              بالعافية، نتمنى لك وجبة شهية
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto mb-6">
-              تم تسليم الطلب #{order.orderNumber} بنجاح. يسعدنا تقييمك لتجربتك اليوم في {restaurant.name}.
+              تم تسليم الطلب #{order.orderNumber} بنجاح. يسعدنا تقييمك لتجربتك في {restaurant.name}.
             </p>
 
             {/* Interactive 5-Star Feedback Form */}
             {!feedbackSent ? (
               <div className="w-full bg-obsidian-surface border border-obsidian-border rounded-3xl p-5 mb-5 shadow-2xl">
-                <span className="text-xs font-bold text-zinc-300 block mb-3">كيف كانت تجربتك معنا؟</span>
+                <span className="text-xs font-bold text-zinc-300 block mb-3">كيف كانت تجربتك اليوم؟</span>
                 <div className="flex items-center justify-center gap-2 mb-4">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <button
@@ -456,7 +454,7 @@ function TenantCustomerTrackerInner() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 justify-center mb-4">
-                  {['خدمة سريعة ⚡', 'الأكل ساخن ولذيذ 🍔', 'طاقم عمل رائع ✨', 'جرس البيجر ممتاز 🔔'].map((tag) => {
+                  {['خدمة سريعة', 'الأكل ساخن وطازج', 'طاقم عمل متميز', 'تنبيه البيجر دقيق'].map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
                       <button
@@ -497,12 +495,12 @@ function TenantCustomerTrackerInner() {
                   style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>إرسال التقييم للمطعم</span>
+                  <span>إرسال التقييم</span>
                 </button>
               </div>
             ) : (
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 mb-5 text-emerald-400 text-xs font-bold animate-fade-in">
-                ✨ شكراً جزيلاً لتقييمك الكريم! رأيك يساعدنا على التطوير المستمر.
+                شكراً جزيلاً لتقييمك. رأيك يساعدنا على الارتقاء بالخدمة دائماً.
               </div>
             )}
 

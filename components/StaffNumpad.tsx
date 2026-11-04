@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Delete, RotateCcw, Clock, Sparkles } from 'lucide-react';
+import { Plus, RotateCcw, Clock, Check, X, FileText } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 
 interface StaffNumpadProps {
@@ -18,7 +18,6 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
   const [showNotes, setShowNotes] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
 
-  // Handle number click
   const handleDigit = (digit: string) => {
     soundManager.playKeyClick();
     if (orderNumber.length < 5) {
@@ -50,10 +49,8 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
     setTimeout(() => setJustAdded(false), 1200);
   }, [orderNumber, estimatedMinutes, notes, onAddOrder]);
 
-  // Support physical keyboard typing for ultra-fast POS operation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in notes input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         if (e.key === 'Enter') {
           handleSubmit();
@@ -84,25 +81,25 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
   }, [handleSubmit]);
 
   return (
-    <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-5 shadow-2xl flex flex-col justify-between h-full">
+    <div className="bg-[#121215] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between h-full">
       {/* Top Display */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs uppercase tracking-wider font-semibold text-zinc-400">
-            إدخال طلب جديد
+          <span className="text-xs font-semibold text-zinc-300">
+            إدخال رقم الطلب
           </span>
-          <span className="text-[11px] text-zinc-400 bg-obsidian-card px-2 py-0.5 rounded-md border border-obsidian-border">
-            لوحة مفاتيح سريعة
+          <span className="text-[11px] font-mono text-zinc-500 bg-white/[0.03] px-2 py-0.5 rounded border border-white/[0.06]">
+            لوحة سريعة
           </span>
         </div>
 
-        {/* Display Screen */}
-        <div className="relative bg-obsidian-400 border-2 border-obsidian-border rounded-2xl p-4 min-h-[84px] flex items-center justify-between mb-4 shadow-inner">
+        {/* Tactile LCD Readout */}
+        <div className="relative bg-[#09090B] border border-white/[0.08] rounded-xl px-4 py-3.5 min-h-[76px] flex items-center justify-between mb-3.5">
           <div className="flex items-baseline gap-2">
-            <span className="text-zinc-500 font-mono text-2xl font-bold">#</span>
+            <span className="text-zinc-500 font-mono text-xl font-bold">#</span>
             <span
-              className={`font-mono text-4xl sm:text-5xl font-extrabold tracking-wider transition-colors ${
-                orderNumber ? 'text-white' : 'text-zinc-600'
+              className={`font-mono text-4xl sm:text-5xl font-bold tracking-widest tabular-nums transition-colors ${
+                orderNumber ? 'text-white' : 'text-zinc-700'
               }`}
             >
               {orderNumber || '000'}
@@ -112,30 +109,34 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
           {orderNumber && (
             <button
               onClick={handleClear}
-              className="p-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-rose-400 transition-colors"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
               title="مسح"
             >
-              <RotateCcw className="w-5 h-5" />
+              <RotateCcw className="w-4 h-4" />
             </button>
           )}
 
           {justAdded && (
-            <div className="absolute inset-0 bg-emerald-500/20 backdrop-blur-[2px] rounded-2xl flex items-center justify-center text-emerald-400 font-bold text-lg animate-fade-in">
-              <Sparkles className="w-5 h-5 ml-2" /> تم إضافة الطلب بنجاح!
+            <div className="absolute inset-0 bg-emerald-950/90 border border-emerald-500/40 rounded-xl flex items-center justify-center text-emerald-400 font-medium text-sm gap-1.5 animate-fade-in">
+              <Check className="w-4 h-4" />
+              <span>تمت إضافة الطلب</span>
             </div>
           )}
         </div>
 
-        {/* Estimated Prep Time Selectors */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-buzly-amber" /> الوقت المتوقع للتحضير
+        {/* Estimated Prep Time: Segmented Control Bar */}
+        <div className="mb-3.5">
+          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1.5">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              <span>الوقت المقدر</span>
             </span>
-            <span className="font-bold text-buzly-amber font-mono">{estimatedMinutes} دقيقة</span>
+            <span className="font-mono text-xs font-semibold text-zinc-200 tabular-nums">
+              {estimatedMinutes} دقيقة
+            </span>
           </div>
 
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="bg-[#18181C] p-1 rounded-xl border border-white/[0.06] grid grid-cols-5 gap-1">
             {PRESET_MINUTES.map((mins) => {
               const isSelected = estimatedMinutes === mins;
               return (
@@ -146,10 +147,10 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
                     soundManager.playKeyClick();
                     setEstimatedMinutes(mins);
                   }}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`py-1.5 rounded-lg text-xs font-mono font-medium tabular-nums transition-all ${
                     isSelected
-                      ? 'bg-buzly-amber text-black shadow-lg shadow-buzly-amber/30 scale-105'
-                      : 'bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border'
+                      ? 'bg-zinc-800 text-white shadow-sm border border-white/10'
+                      : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
                   {mins} د
@@ -159,37 +160,50 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
           </div>
         </div>
 
-        {/* Optional Note toggle */}
-        <div className="mb-4">
+        {/* Optional Note input */}
+        <div className="mb-3.5">
           {!showNotes ? (
             <button
               type="button"
               onClick={() => setShowNotes(true)}
-              className="text-xs text-zinc-400 hover:text-emerald-400 underline transition-colors"
+              className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1"
             >
-              + إضافة ملاحظة أو صنف (اختياري)
+              <FileText className="w-3.5 h-3.5 text-zinc-500" />
+              <span>إضافة ملاحظة على الطلب</span>
             </button>
           ) : (
-            <input
-              type="text"
-              placeholder="مثال: برجر دبل جبن سفري"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-obsidian-card border border-obsidian-border rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="ملاحظات الطلب (مثال: برجر سفري بدون بصل)..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full bg-[#18181C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setNotes('');
+                  setShowNotes(false);
+                }}
+                className="absolute left-2.5 top-2.5 text-zinc-500 hover:text-zinc-300"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Numeric Keypad Grid (1-9, C, 0, Backspace) */}
+      {/* Tactile Numeric Keypad Grid (Standard POS: 1-9, C, 0, Backspace) */}
       <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-14 sm:h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-bold font-mono border border-obsidian-border active:scale-95 transition-all flex items-center justify-center shadow-sm select-none"
+              className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none shadow-sm"
             >
               {digit}
             </button>
@@ -199,7 +213,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
           <button
             type="button"
             onClick={handleClear}
-            className="h-14 sm:h-16 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-lg font-bold border border-rose-500/20 active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-rose-950/30 text-rose-400 text-sm font-semibold border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none"
           >
             مسح
           </button>
@@ -208,7 +222,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-14 sm:h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-bold font-mono border border-obsidian-border active:scale-95 transition-all flex items-center justify-center shadow-sm select-none"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none shadow-sm"
           >
             0
           </button>
@@ -217,26 +231,26 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-14 sm:h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 text-xl border border-obsidian-border active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 text-sm border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none"
             title="تراجع"
           >
-            <Delete className="w-6 h-6" />
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Submit Button */}
+        {/* Primary CTA Submit Button */}
         <button
           type="button"
           disabled={!orderNumber.trim() || isSubmitting}
           onClick={handleSubmit}
-          className={`w-full py-4 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all shadow-xl select-none ${
+          className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all select-none ${
             orderNumber.trim() && !isSubmitting
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/25 active:scale-[0.98] cursor-pointer'
-              : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
+              ? 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-[#052E16] shadow-sm cursor-pointer font-bold'
+              : 'bg-zinc-900 text-zinc-600 border border-white/[0.04] cursor-not-allowed'
           }`}
         >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-          <span>إضافة إلى الطابور (Add to Queue)</span>
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          <span>إضافة للانتظار</span>
         </button>
       </div>
     </div>

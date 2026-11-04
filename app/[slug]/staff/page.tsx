@@ -13,17 +13,18 @@ import {
   Bell,
   Volume2,
   QrCode,
-  RotateCcw,
   Smartphone,
-  Radio,
   ExternalLink,
   Tv,
   Settings,
   BarChart3,
   Archive,
-  Flame,
   MessageCircle,
   Activity,
+  Layers,
+  RotateCcw,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function TenantStaffCashierPage() {
@@ -40,7 +41,6 @@ export default function TenantStaffCashierPage() {
     cancelOrder,
     archiveCompletedOrders,
     resetToDemoOrders,
-    isSupabaseActive,
   } = useQueue();
 
   const restaurant = getRestaurant(slug);
@@ -52,20 +52,12 @@ export default function TenantStaffCashierPage() {
 
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | undefined>(undefined);
-  const [soundTested, setSoundTested] = useState<boolean>(false);
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
 
   const handleOpenQr = (orderNumber?: string) => {
     setSelectedOrderNumber(orderNumber);
     setQrModalOpen(true);
-  };
-
-  const handleTestSound = async () => {
-    await soundManager.unlock();
-    soundManager.playHospitalityChime();
-    setSoundTested(true);
-    setTimeout(() => setSoundTested(false), 2000);
   };
 
   const handleAddOrderWithTenant = async (
@@ -78,27 +70,17 @@ export default function TenantStaffCashierPage() {
     setShowPhoneInput(false);
   };
 
-  const handleWhatsAppAlert = (phone: string, orderNumber: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const message = `مرحباً من ${restaurant.name} 🌟 طلبك رقم #${orderNumber} جاهز للاستلام الآن على الكاونتر! نتمنى لك وجبة شهية.`;
-    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(url, '_blank');
-  };
-
   return (
     <StaffPinGuard restaurant={restaurant} onUnlocked={() => {}}>
-      <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
-        {/* Top Staff Navigation Bar */}
-        <header className="border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5">
+      <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+        {/* Unified Enterprise App Header */}
+        <header className="border-b border-white/[0.08] bg-[#09090B]/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            {/* Logo & Restaurant Name */}
+            {/* Left: Brand & Live Status */}
             <div className="flex items-center gap-3">
               <Link href={`/${slug}/admin`} className="flex items-center gap-2.5 group">
                 <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform overflow-hidden"
-                  style={{ backgroundColor: `${restaurant.themeColor}20` }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border border-white/10 overflow-hidden bg-[#18181C]"
                 >
                   {restaurant.logoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -108,92 +90,81 @@ export default function TenantStaffCashierPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Bell className="w-5 h-5" style={{ color: restaurant.themeColor }} />
+                    <Bell className="w-4 h-4 text-emerald-400" />
                   )}
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-base lg:text-lg tracking-tight text-white font-cairo">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-white">
                       {restaurant.name}
                     </span>
-                    <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-black font-mono shadow-sm"
-                      style={{ backgroundColor: restaurant.themeColor }}
-                    >
-                      POS
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>متصل لحظياً</span>
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 hidden sm:block">
-                    لوحة الكاشير واستدعاء الزبائن
-                  </p>
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    /{restaurant.slug}
+                  </span>
                 </div>
               </Link>
             </div>
 
-            {/* Quick Multi-Tenant Navigation Links */}
-            <div className="flex items-center gap-2 sm:gap-2.5">
-              {/* TV Screen Link */}
+            {/* Middle: Segmented View Navigation */}
+            <nav className="hidden md:flex items-center bg-[#121215] border border-white/[0.08] p-1 rounded-xl text-xs font-medium text-zinc-400">
+              <span className="px-3 py-1.5 rounded-lg bg-zinc-800 text-white font-semibold shadow-sm">
+                لوحة الكاشير
+              </span>
               <Link
                 href={`/${slug}/tv`}
                 target="_blank"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
-                title="فتح شاشة التلفاز التفاعلية في تبويب أو شاشة ثانية"
+                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
               >
-                <Tv className="w-4 h-4 text-buzly-amber" />
-                <span className="hidden md:inline">شاشة التلفاز TV</span>
+                <Tv className="w-3.5 h-3.5 text-zinc-400" />
+                <span>شاشة العرض TV</span>
               </Link>
-
-              {/* Kitchen Analytics */}
               <Link
                 href={`/${slug}/admin/analytics`}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
-                title="مؤشرات أداء المطبخ وسرعة التحضير"
+                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
               >
-                <BarChart3 className="w-4 h-4 text-emerald-400" />
-                <span className="hidden md:inline">التحليلات</span>
+                <BarChart3 className="w-3.5 h-3.5 text-zinc-400" />
+                <span>التحليلات</span>
               </Link>
-
-              {/* Branding Studio & QR Stand Settings */}
               <Link
                 href={`/${slug}/admin`}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
-                title="إعدادات الهوية وطباعة ستاند الباركود"
+                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
               >
-                <Settings className="w-4 h-4 text-zinc-300" />
-                <span className="hidden lg:inline">إعدادات المتجر</span>
+                <Settings className="w-3.5 h-3.5 text-zinc-400" />
+                <span>إعدادات المتجر</span>
               </Link>
-
-              {/* System Diagnostics */}
               <Link
                 href="/debug"
                 target="_blank"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
-                title="فحص وصحة اتصال الجوال والسيرفر"
+                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
               >
-                <Activity className="w-4 h-4 text-emerald-400" />
-                <span className="hidden xl:inline">فحص النظام</span>
+                <Activity className="w-3.5 h-3.5 text-zinc-400" />
+                <span>فحص النظام</span>
               </Link>
+            </nav>
 
-              {/* Restaurant QR Code */}
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => handleOpenQr(undefined)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all"
-                title="عرض رمز QR للكاونتر"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] text-xs font-medium transition-all"
+                title="عرض رمز الباركود للطاولات"
               >
-                <QrCode className="w-4 h-4 text-zinc-300" />
-                <span className="hidden sm:inline">QR الكاونتر</span>
+                <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                <span>باركود الطاولات</span>
               </button>
 
-              {/* Customer Tracker Link */}
               <Link
                 href={`/${slug}/track`}
                 target="_blank"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-extrabold text-xs shadow-md transition-all text-black"
-                style={{ backgroundColor: restaurant.themeColor }}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 border border-white/[0.08] text-xs font-medium transition-all"
               >
-                <Smartphone className="w-4 h-4" />
-                <span className="hidden sm:inline">شاشة العميل</span>
-                <ExternalLink className="w-3 h-3 opacity-70" />
+                <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
+                <span>شاشة العميل</span>
               </Link>
             </div>
           </div>
@@ -201,113 +172,111 @@ export default function TenantStaffCashierPage() {
 
         {/* Main Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
-          {/* Quick Stats Overview Banner */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <div className="bg-obsidian-surface border border-obsidian-border rounded-2xl p-3 flex items-center justify-between">
+          {/* Linear-Style KPI Summary Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium">الطلبات النشطة</p>
-                <p className="text-xl font-bold font-mono text-white mt-0.5">
+                <p className="text-[11px] text-zinc-400">الطلبات النشطة</p>
+                <p className="text-2xl font-bold font-mono text-white mt-0.5 tabular-nums">
                   {preparingOrders.length + readyOrders.length}
                 </p>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-obsidian-card border border-obsidian-border flex items-center justify-center text-zinc-400">
-                <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-zinc-400">
+                <Layers className="w-4 h-4 text-zinc-400" />
               </div>
             </div>
 
-            <div className="bg-obsidian-surface border border-buzly-amber/20 rounded-2xl p-3 flex items-center justify-between">
+            <div className="bg-[#121215] border border-amber-500/20 rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-buzly-amber font-medium">قيد التحضير</p>
-                <p className="text-xl font-bold font-mono text-buzly-amber mt-0.5">
+                <p className="text-[11px] text-amber-300">قيد التحضير</p>
+                <p className="text-2xl font-bold font-mono text-amber-300 mt-0.5 tabular-nums">
                   {preparingOrders.length}
                 </p>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-buzly-amber/10 border border-buzly-amber/20 flex items-center justify-center text-buzly-amber">
-                <Flame className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-300">
+                <Clock className="w-4 h-4" />
               </div>
             </div>
 
-            <div className="bg-obsidian-surface border border-emerald-500/20 rounded-2xl p-3 flex items-center justify-between">
+            <div className="bg-[#121215] border border-emerald-500/20 rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-emerald-400 font-medium">جاهز للاستلام</p>
-                <p className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
+                <p className="text-[11px] text-emerald-400">جاهز للاستلام</p>
+                <p className="text-2xl font-bold font-mono text-emerald-400 mt-0.5 tabular-nums">
                   {readyOrders.length}
                 </p>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Bell className="w-4 h-4 animate-bounce-subtle" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Bell className="w-4 h-4" />
               </div>
             </div>
 
-            {/* Auto-archive Completed Orders */}
-            <div className="bg-obsidian-surface border border-obsidian-border rounded-2xl p-3 flex items-center justify-between">
+            <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium">مكتمل اليوم</p>
-                <p className="text-xl font-bold font-mono text-zinc-300 mt-0.5">
+                <p className="text-[11px] text-zinc-400">مكتمل اليوم</p>
+                <p className="text-2xl font-bold font-mono text-zinc-300 mt-0.5 tabular-nums">
                   {completedOrders.length}
                 </p>
               </div>
               {completedOrders.length > 0 ? (
                 <button
                   onClick={() => archiveCompletedOrders(slug)}
-                  className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-rose-400 font-medium bg-obsidian-card hover:bg-rose-500/10 px-2 py-1 rounded-lg border border-obsidian-border transition-colors"
-                  title="أرشفة وتصفية الطلبات المكتملة"
+                  className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.06] transition-colors"
+                  title="أرشفة الطلبات المكتملة"
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  <span>تصفية</span>
+                  <span>أرشفة</span>
                 </button>
               ) : (
                 <button
                   onClick={() => resetToDemoOrders(slug)}
-                  className="text-[11px] text-emerald-400 hover:underline font-medium"
+                  className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
-                  إعادة تعيين
+                  إعادة ضبط
                 </button>
               )}
             </div>
           </div>
 
-          {/* Cashier Layout: Numpad (Left) + Queue Grid (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
-            {/* Numpad Section: 4 cols */}
-            <div className="lg:col-span-4 lg:sticky lg:top-24 h-auto space-y-3">
+          {/* POS Split Layout: Tactile Numpad (4 cols) + Active Queue (8 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start">
+            <div className="lg:col-span-4 lg:sticky lg:top-20 h-auto space-y-3">
               <StaffNumpad onAddOrder={handleAddOrderWithTenant} />
 
               {/* Optional WhatsApp Customer Phone Input */}
               {restaurant.whatsappFallbackEnabled && (
-                <div className="bg-obsidian-surface border border-obsidian-border rounded-2xl p-3 text-xs">
+                <div className="bg-[#121215] border border-white/[0.08] rounded-2xl p-3 text-xs">
                   {!showPhoneInput ? (
                     <button
                       type="button"
                       onClick={() => setShowPhoneInput(true)}
-                      className="text-zinc-400 hover:text-emerald-400 flex items-center gap-1.5 transition-colors font-medium"
+                      className="text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 transition-colors font-medium text-xs"
                     >
-                      <MessageCircle className="w-4 h-4 text-emerald-400" />
-                      <span>+ إضافة رقم جوال الزبون (لتنبيه الواتساب)</span>
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>إضافة رقم جوال الزبون لتنبيه الواتساب (اختياري)</span>
                     </button>
                   ) : (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-zinc-400 font-semibold flex items-center gap-1">
-                          <MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> رقم الجوال
+                        <span className="text-[11px] text-zinc-300 font-medium">
+                          رقم جوال العميل (واتساب):
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            setCustomerPhone('');
                             setShowPhoneInput(false);
+                            setCustomerPhone('');
                           }}
-                          className="text-[11px] text-zinc-500 hover:text-white"
+                          className="text-[10px] text-zinc-500 hover:text-zinc-300"
                         >
                           إلغاء
                         </button>
                       </div>
                       <input
                         type="tel"
-                        placeholder="مثال: 9665XXXXXXXX أو 05XXXXXXXX"
+                        placeholder="05XXXXXXXX أو 9665XXXXXXXX"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full bg-obsidian-card border border-obsidian-border rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 dir-ltr"
+                        className="w-full bg-[#18181C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 dir-ltr"
                       />
                     </div>
                   )}
@@ -330,7 +299,7 @@ export default function TenantStaffCashierPage() {
           </div>
         </main>
 
-        {/* QR Modal */}
+        {/* Apple Wallet Style QR Modal */}
         <QrModal
           isOpen={qrModalOpen}
           onClose={() => setQrModalOpen(false)}

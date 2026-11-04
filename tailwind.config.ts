@@ -11,34 +11,37 @@ const config: Config = {
     extend: {
       colors: {
         obsidian: {
-          DEFAULT: "#0A0A0C",
+          DEFAULT: "#09090B",
           50: "#1A1A22",
-          100: "#14141A",
-          200: "#101015",
+          100: "#141418",
+          200: "#101014",
           300: "#0D0D10",
-          400: "#0A0A0C",
-          surface: "#121217",
-          card: "#16161D",
-          border: "#23232C",
-          borderHover: "#32323E",
+          400: "#09090B",
+          surface: "#121215",
+          card: "#18181C",
+          cardHover: "#1F1F25",
+          border: "rgba(255, 255, 255, 0.08)",
+          borderHover: "rgba(255, 255, 255, 0.16)",
         },
         buzly: {
           emerald: {
             DEFAULT: "#10B981",
-            glow: "rgba(16, 185, 129, 0.35)",
+            glow: "rgba(16, 185, 129, 0.15)",
             light: "#34D399",
             dark: "#059669",
           },
           amber: {
             DEFAULT: "#F59E0B",
-            glow: "rgba(245, 158, 11, 0.35)",
+            glow: "rgba(245, 158, 11, 0.15)",
             light: "#FBBF24",
             dark: "#D97706",
           },
         },
       },
       fontFamily: {
-        cairo: ["Cairo", "Tajawal", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "monospace"],
+        cairo: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       animation: {
         "pulse-glow-amber": "pulseGlowAmber 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",

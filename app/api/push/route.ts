@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const {
       subscription: directSubscription,
       orderNumber,
-      title = 'طلبك جاهز للاستلام! 🍔',
+      title = 'طلبك جاهز للاستلام',
       body: messageBody = 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
       url,
     } = body;

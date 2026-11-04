@@ -21,33 +21,33 @@ import {
 } from 'lucide-react';
 
 const COLOR_OPTIONS = [
-  { name: 'زمردي فاخر (Emerald)', hex: '#10B981' },
-  { name: 'كهرماني دافئ (Amber)', hex: '#F59E0B' },
-  { name: 'أزرق ملكي (Royal Blue)', hex: '#3B82F6' },
-  { name: 'وردي جريء (Rose)', hex: '#F43F5E' },
-  { name: 'بنفسجي عصري (Purple)', hex: '#8B5CF6' },
+  { name: 'زمردي كلاسيكي', hex: '#10B981' },
+  { name: 'كهرماني دافئ', hex: '#F59E0B' },
+  { name: 'أزرق ملكي', hex: '#3B82F6' },
+  { name: 'وردي ياقوتي', hex: '#F43F5E' },
+  { name: 'أرجواني عصري', hex: '#8B5CF6' },
 ];
 
 const CHIME_OPTIONS: { id: ChimeSoundTheme; title: string; desc: string }[] = [
   {
     id: 'hospitality',
-    title: 'جرس الضيافة الفندقي (Hotel Concierge)',
-    desc: 'نغمة فاخرة متدرجة مناسبة للمطاعم واللاونجات الراقية',
+    title: 'جرس الضيافة الفندقي',
+    desc: 'نغمة هادئة متدرجة مناسبة للمطاعم واللاونجات الراقية',
   },
   {
     id: 'coffee-zen',
-    title: 'نغمة الكافيه الهادئة (Coffee Zen)',
-    desc: 'صوت فايبرافون عضوي دافئ ومريح لمقاهي القهوة المختصة',
+    title: 'نغمة المقاهي الهادئة',
+    desc: 'صوت فايبرافون دافئ ومريح لمقاهي القهوة المختصة',
   },
   {
     id: 'fast-casual',
-    title: 'تنبيه سريع مرح (Fast Casual Ding)',
-    desc: 'رنين واضح وحيوي للمطاعم السريعة والبرجر والشاورما',
+    title: 'تنبيه الخدمة السريعة',
+    desc: 'رنين واضح وحيوي للمطاعم السريعة والوجبات الخفيفة',
   },
   {
     id: 'buzzer-retro',
-    title: 'بيجر كلاسيكي نبضي (Classic Buzzer)',
-    desc: 'محاكاة لصوت واهتزاز أجهزة البيجر البلاستيكية الشهيرة',
+    title: 'بيجر كلاسيكي نبضي',
+    desc: 'محاكاة لنبضات أجهزة البيجر التقليدية المألوفة',
   },
 ];
 
@@ -155,7 +155,7 @@ export default function RestaurantOnboardingPage() {
             <Store className="w-8 h-8" style={{ color: themeColor }} />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black font-cairo text-white">
-            أنشئ بيجر مطعمك الذكي الآن 🚀
+            أنشئ بيجر مطعمك الذكي الآن
           </h1>
           <p className="text-sm text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
             احصل على رابط خاص بمطعمك، كود QR للطاولات، شاشة تلفاز حية، وكاشير سريع في ثوانٍ.
@@ -182,7 +182,7 @@ export default function RestaurantOnboardingPage() {
           {/* Custom Slug */}
           <div>
             <label className="block text-xs font-bold text-zinc-200 mb-1.5">
-              رابط المتجر بالإنجليزية (URL Slug) <span className="text-rose-400">*</span>
+              المعرف الإنجليزي للرابط <span className="text-rose-400">*</span>
             </label>
             <div className="flex items-center bg-obsidian-card border border-obsidian-border rounded-2xl px-3 py-2 text-sm dir-ltr">
               <span className="text-zinc-500 font-mono text-xs select-none">buzly.app/</span>

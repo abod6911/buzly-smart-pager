@@ -87,7 +87,7 @@ export const ActivationBanner: React.FC<ActivationBannerProps> = ({ onActivated 
           {isIOS && (
             <div className="mt-3 pt-3 border-t border-emerald-500/15 flex items-center justify-between text-xs text-zinc-400">
               <span className="flex items-center gap-1 text-[11px]">
-                <Smartphone className="w-3.5 h-3.5 text-zinc-400" /> مستخدم آيفون (iOS)؟
+                <Smartphone className="w-3.5 h-3.5 text-zinc-400" /> مستخدم آيفون؟
               </span>
               <button
                 type="button"
@@ -106,14 +106,14 @@ export const ActivationBanner: React.FC<ActivationBannerProps> = ({ onActivated 
           {showIosTip && (
             <div className="mt-2.5 p-3 rounded-xl bg-obsidian-card border border-emerald-500/20 text-xs text-zinc-300 space-y-1.5 animate-fade-in">
               <p className="font-semibold text-emerald-400">
-                📲 خطوة إضافية للحصول على إشعار حتى عند إغلاق شاشة الآيفون:
+                خطوة إضافية للحصول على إشعار عند إغلاق شاشة الآيفون:
               </p>
               <ol className="list-decimal list-inside space-y-1 text-zinc-300 pr-1">
                 <li>
-                  اضغط على زر <strong className="text-white">المشاركة (Share)</strong> في أسفل متصفح Safari.
+                  اضغط على زر <strong className="text-white">المشاركة</strong> في أسفل متصفح Safari.
                 </li>
                 <li>
-                  اختر <strong className="text-white">إضافة إلى الشاشة الرئيسية (Add to Home Screen)</strong>.
+                  اختر <strong className="text-white">إضافة إلى الشاشة الرئيسية</strong>.
                 </li>
                 <li>
                   افتح التطبيق من شاشتك وسيصلك الإشعار الصوتي الفوري مثل تطبيقات التوصيل تماماً!

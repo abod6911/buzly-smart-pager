@@ -48,7 +48,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
         <div className="bg-obsidian-400 border border-obsidian-border rounded-2xl py-4 px-6 flex items-center justify-center gap-2 mb-4">
           <span className="text-emerald-500 font-mono text-3xl font-bold">#</span>
           <span
-            className={`font-mono text-5xl font-black tracking-widest ${
+            className={`font-mono tabular-nums text-5xl font-black tracking-widest ${
               orderNumber ? 'text-white' : 'text-zinc-600'
             }`}
           >
@@ -63,7 +63,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
+              className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
             >
               {digit}
             </button>
@@ -80,7 +80,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
+            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
           >
             0
           </button>
@@ -135,12 +135,19 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
                 className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-right transition-all flex items-center justify-between group active:scale-95"
               >
                 <div>
-                  <div className="font-mono font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
+                  <div className="font-mono tabular-nums font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
                     #{ord.orderNumber}
                   </div>
-                  <span className="text-[10px] text-zinc-400">
-                    {ord.status === 'ready' ? '🟢 جاهز للاستلام' : '🟡 قيد التحضير'}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        ord.status === 'ready' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                      }`}
+                    />
+                    <span className="text-[10px] text-zinc-400">
+                      {ord.status === 'ready' ? 'جاهز للاستلام' : 'قيد التحضير'}
+                    </span>
+                  </div>
                 </div>
                 <ArrowLeft className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
               </button>

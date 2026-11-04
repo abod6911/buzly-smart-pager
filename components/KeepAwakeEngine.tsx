@@ -13,6 +13,7 @@ import {
   Volume2,
   Moon,
   Radio,
+  X,
 } from 'lucide-react';
 import { pwaHelper, DEFAULT_VAPID_PUBLIC_KEY } from '@/lib/pwa-helper';
 import { soundManager } from '@/lib/audio';
@@ -143,7 +144,7 @@ export const KeepAwakeEngine: React.FC<KeepAwakeEngineProps> = ({
           {isIOS && !isStandalone && (
             <div className="mt-3.5 pt-3 border-t border-emerald-500/20 flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 text-zinc-400">
-                <Smartphone className="w-3.5 h-3.5 text-zinc-400" /> مستخدم آيفون (iOS)؟
+                <Smartphone className="w-3.5 h-3.5 text-zinc-400" /> مستخدم آيفون؟
               </span>
               <button
                 type="button"
@@ -192,9 +193,9 @@ export const KeepAwakeEngine: React.FC<KeepAwakeEngineProps> = ({
             </div>
             <button
               onClick={() => setShowIosSheet(false)}
-              className="text-zinc-500 hover:text-white"
+              className="text-zinc-500 hover:text-white transition-colors"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -205,11 +206,11 @@ export const KeepAwakeEngine: React.FC<KeepAwakeEngineProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
             <div className="bg-obsidian-surface p-2.5 rounded-xl border border-obsidian-border flex items-center gap-2">
               <Share className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span>1. اضغط زر <strong>المشاركة (Share)</strong> في أسفل سفاري.</span>
+              <span>1. اضغط زر <strong>المشاركة</strong> في أسفل سفاري.</span>
             </div>
             <div className="bg-obsidian-surface p-2.5 rounded-xl border border-obsidian-border flex items-center gap-2">
               <PlusSquare className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span>2. اختر <strong>إضافة للشاشة الرئيسية (Add to Home)</strong>.</span>
+              <span>2. اختر <strong>إضافة للشاشة الرئيسية</strong>.</span>
             </div>
           </div>
 

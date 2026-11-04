@@ -181,7 +181,7 @@ export default function StaffCashierPage() {
             <div>
               <p className="text-[11px] text-zinc-400 font-medium">طريقة الاختبار</p>
               <p className="text-xs font-semibold text-emerald-400 mt-0.5">
-                افتح تبويبين معاً ⚡
+                افتح تبويبين معاً للمزامنة
               </p>
             </div>
             <button

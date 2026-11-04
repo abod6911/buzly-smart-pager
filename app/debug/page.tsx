@@ -277,7 +277,7 @@ export default function DiagnosticsPage() {
                   ? 'bg-buzly-amber/10 text-buzly-amber border border-buzly-amber/30'
                   : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
               }`}>
-                {isLocalhost ? '⚠️ LOCALHOST' : '✓ MOBILE READY'}
+                {isLocalhost ? 'مضيف محلي' : 'جاهز للجوال'}
               </span>
             </div>
             <div>
@@ -318,7 +318,7 @@ export default function DiagnosticsPage() {
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-emerald-400" />
-                <span>زر الاختبار الشامل التلقائي (Automated End-to-End Test)</span>
+                <span>بدء الفحص الشامل التلقائي للمنظومة</span>
               </h2>
               <p className="text-xs text-zinc-400 mt-1">
                 ينشئ طلباً اختبارياً (#999) ويفحص مزامنته الفورية، توليد الباركود، رنين الجرس، وأرشفة الطلب.
@@ -390,36 +390,40 @@ export default function DiagnosticsPage() {
                 await soundManager.unlock();
                 soundManager.playHospitalityChime();
               }}
-              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center"
+              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center flex items-center justify-center gap-1.5"
             >
-              🛎️ جرس الفندق
+              <Volume2 className="w-4 h-4 text-emerald-400" />
+              <span>جرس الفندق</span>
             </button>
             <button
               onClick={async () => {
                 await soundManager.unlock();
                 soundManager.playCoffeeZenChime();
               }}
-              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center"
+              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center flex items-center justify-center gap-1.5"
             >
-              ☕ كافيه زين
+              <Volume2 className="w-4 h-4 text-buzly-amber" />
+              <span>كافيه زين</span>
             </button>
             <button
               onClick={async () => {
                 await soundManager.unlock();
                 soundManager.playFastCasualDing();
               }}
-              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center"
+              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center flex items-center justify-center gap-1.5"
             >
-              🍔 رنين سريع
+              <Volume2 className="w-4 h-4 text-sky-400" />
+              <span>رنين سريع</span>
             </button>
             <button
               onClick={async () => {
                 await soundManager.unlock();
                 soundManager.playRetroBuzzer();
               }}
-              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center"
+              className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-zinc-200 hover:text-white transition-all text-center flex items-center justify-center gap-1.5"
             >
-              📟 بيجر نبضي
+              <Volume2 className="w-4 h-4 text-purple-400" />
+              <span>بيجر نبضي</span>
             </button>
           </div>
         </div>
