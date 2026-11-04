@@ -220,6 +220,7 @@ export default function StaffCashierPage() {
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         orderNumber={selectedOrderNumber}
+        restaurantSlug="demo-cafe"
       />
     </div>
   );

@@ -20,15 +20,20 @@ import { OrderStatus, PushSubscriptionData } from '@/types/queue';
 
 interface KeepAwakeEngineProps {
   orderNumber: string;
-  orderStatus: OrderStatus;
+  orderStatus?: OrderStatus;
+  restaurantName?: string;
   onPushSubscribed?: (sub: PushSubscriptionData) => void;
+  onSubscriptionObtained?: (sub: PushSubscriptionData) => void;
 }
 
 export const KeepAwakeEngine: React.FC<KeepAwakeEngineProps> = ({
   orderNumber,
-  orderStatus,
+  orderStatus = 'preparing',
+  restaurantName,
   onPushSubscribed,
+  onSubscriptionObtained,
 }) => {
+  const handlePushSub = onPushSubscribed || onSubscriptionObtained;
   const [isActivated, setIsActivated] = useState<boolean>(false);
   const [isActivating, setIsActivating] = useState<boolean>(false);
   const [wakeLockActive, setWakeLockActive] = useState<boolean>(false);
@@ -78,8 +83,8 @@ export const KeepAwakeEngine: React.FC<KeepAwakeEngineProps> = ({
         if (pushSub) {
           setPushStatus('subscribed');
           const serialized: PushSubscriptionData = JSON.parse(JSON.stringify(pushSub));
-          if (onPushSubscribed) {
-            onPushSubscribed(serialized);
+          if (handlePushSub) {
+            handlePushSub(serialized);
           }
         } else {
           setPushStatus('permission_granted');

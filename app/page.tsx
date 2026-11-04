@@ -18,6 +18,7 @@ import {
   Zap,
   ExternalLink,
   ShieldCheck,
+  Activity,
 } from 'lucide-react';
 
 export default function LandingRoleSwitcherPage() {
@@ -79,6 +80,15 @@ export default function LandingRoleSwitcherPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/debug"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
+              title="فحص وصحة النظام والجوال"
+            >
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">فحص النظام والجوال</span>
+            </Link>
+
             <button
               onClick={handleTestChime}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${

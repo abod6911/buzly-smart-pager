@@ -52,14 +52,18 @@ export default function TenantAdminBrandingPage() {
   // QR Stand State
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [origin, setOrigin] = useState<string>('');
+  const [activeBaseUrl, setActiveBaseUrl] = useState<string>('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedOverride = localStorage.getItem('buzly_base_url_override');
+      const base = savedOverride?.trim() || window.location.origin;
       setOrigin(window.location.origin);
+      setActiveBaseUrl(base);
     }
   }, []);
 
-  const tableStandUrl = `${origin}/${slug}/track`;
+  const tableStandUrl = `${(activeBaseUrl || origin || '').replace(/\/+$/, '')}/${slug}/track`;
 
   useEffect(() => {
     if (tableStandUrl) {
@@ -448,6 +452,46 @@ export default function TenantAdminBrandingPage() {
                   <Printer className="w-4 h-4" />
                   <span>طباعة الستاند الآن (Print)</span>
                 </button>
+              </div>
+
+              {/* Base URL selector for printing */}
+              <div className="w-full bg-obsidian-surface border border-obsidian-border rounded-2xl p-3.5 mb-2 text-right">
+                <span className="text-xs font-bold text-zinc-300 block mb-2">رابط الموقع المطبوع داخل الباركود:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = 'http://192.168.100.12:3000';
+                      setActiveBaseUrl(url);
+                      localStorage.setItem('buzly_base_url_override', url);
+                    }}
+                    className={`p-2 rounded-xl border text-right transition-all text-xs ${
+                      activeBaseUrl === 'http://192.168.100.12:3000'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
+                        : 'bg-obsidian-card border-obsidian-border text-zinc-400'
+                    }`}
+                  >
+                    📶 شبكة الواي فاي (192.168.100.12:3000)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = 'https://buzly-smart-pager.vercel.app';
+                      setActiveBaseUrl(url);
+                      localStorage.setItem('buzly_base_url_override', url);
+                    }}
+                    className={`p-2 rounded-xl border text-right transition-all text-xs ${
+                      activeBaseUrl === 'https://buzly-smart-pager.vercel.app'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
+                        : 'bg-obsidian-card border-obsidian-border text-zinc-400'
+                    }`}
+                  >
+                    ☁️ رابط Vercel السحابي الحي
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-2 font-mono dir-ltr truncate">
+                  الرابط المشفر: {tableStandUrl}
+                </p>
               </div>
 
               {/* Physical Stand Card Preview */}

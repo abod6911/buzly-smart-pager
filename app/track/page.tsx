@@ -50,7 +50,7 @@ export default function TrackEntryPage() {
         </div>
 
         {/* Numpad */}
-        <CustomerNumpad activeOrders={activeOrders} />
+        <CustomerNumpad activeOrders={activeOrders} slug="demo-cafe" />
 
         {/* Reassuring Footer */}
         <div className="mt-8 text-center text-xs text-zinc-500 flex items-center gap-2">

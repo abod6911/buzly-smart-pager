@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useEffect, useState, useMemo, useRef, Suspense } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import { useQueue } from '@/context/QueueContext';
 import { KeepAwakeEngine } from '@/components/KeepAwakeEngine';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
+import { Order, OrderStatus } from '@/types/queue';
 import {
   Bell,
   CheckCircle2,
@@ -22,10 +23,12 @@ import {
   RotateCcw,
   Star,
   Send,
+  Sparkles,
 } from 'lucide-react';
 
-export default function TenantCustomerTrackerPage() {
+function TenantCustomerTrackerInner() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = (params.slug as string) || 'demo-cafe';
   const rawOrderNumber = params.orderNumber as string;
   const decodedOrderNumber = decodeURIComponent(rawOrderNumber || '').trim();
@@ -37,9 +40,33 @@ export default function TenantCustomerTrackerPage() {
     registerPushSubscription,
     submitOrderFeedback,
     lastEvent,
+    syncNow,
   } = useQueue();
   const restaurant = getRestaurant(slug);
-  const order = getOrder(decodedOrderNumber, slug);
+  const liveOrder = getOrder(decodedOrderNumber, slug);
+
+  // Self-healing fallback from QR URL params if cross-device sync is still propagating
+  const fallbackOrder = useMemo(() => {
+    if (liveOrder) return liveOrder;
+    const estParam = searchParams.get('est');
+    const statusParam = searchParams.get('status') as OrderStatus;
+    if (estParam || statusParam) {
+      return {
+        id: `fb-${decodedOrderNumber}`,
+        orderNumber: decodedOrderNumber,
+        restaurantSlug: slug,
+        status: statusParam || 'preparing',
+        estimatedMinutes: parseInt(estParam || '10', 10),
+        notes: searchParams.get('notes') || undefined,
+        createdAt: searchParams.get('created') || new Date().toISOString(),
+        rePingCount: 0,
+      } as Order;
+    }
+    return undefined;
+  }, [liveOrder, searchParams, decodedOrderNumber, slug]);
+
+  const order = liveOrder || fallbackOrder;
+  const [isSyncing, setIsSyncing] = useState<boolean>(!order);
 
   const [alarmActive, setAlarmActive] = useState<boolean>(false);
   const [hasUserSilenced, setHasUserSilenced] = useState<boolean>(false);
@@ -49,6 +76,34 @@ export default function TenantCustomerTrackerPage() {
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
 
+  // Immediate single-order fetch from server bridge if not yet in state
+  useEffect(() => {
+    if (liveOrder) {
+      setIsSyncing(false);
+      return;
+    }
+
+    let isCancelled = false;
+    fetch(`/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!isCancelled) {
+          if (data && data.success && data.order) {
+            syncNow();
+          }
+          setIsSyncing(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) setIsSyncing(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [liveOrder, slug, decodedOrderNumber, syncNow]);
+
+  // Elapsed time counter
   useEffect(() => {
     if (!order) return;
     const updateTimes = () => {
@@ -128,6 +183,18 @@ export default function TenantCustomerTrackerPage() {
     setHasUserSilenced(true);
   };
 
+  // 1. Loading State while checking server bridge
+  if (isSyncing) {
+    return (
+      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
+        <div className="w-14 h-14 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
+        <h2 className="text-xl font-bold font-cairo">جارِ الاتصال بكاونتر {restaurant.name}...</h2>
+        <p className="text-zinc-400 text-xs mt-2">نبحث عن الطلب #{decodedOrderNumber} لتجهيز جرس التنبيه</p>
+      </div>
+    );
+  }
+
+  // 2. Not Found Fallback (only if no live order and no URL params)
   if (!order) {
     return (
       <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo p-4">
@@ -149,13 +216,22 @@ export default function TenantCustomerTrackerPage() {
           <p className="text-zinc-400 text-sm mt-2 mb-6">
             قد يكون الرقم غير مسجل في {restaurant.name} أو تم تسليمه مسبقاً.
           </p>
-          <Link
-            href={`/${slug}/track`}
-            className="px-6 py-3 rounded-2xl text-black font-extrabold text-sm transition-all shadow-lg"
-            style={{ backgroundColor: restaurant.themeColor }}
-          >
-            إدخال رقم الطلب مجدداً
-          </Link>
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              onClick={() => syncNow()}
+              className="w-full py-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-bold text-xs flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>إعادة المحاولة والمزامنة</span>
+            </button>
+            <Link
+              href={`/${slug}/track`}
+              className="w-full py-3 rounded-2xl text-black font-extrabold text-sm transition-all shadow-lg text-center"
+              style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
+            >
+              إدخال رقم الطلب مجدداً
+            </Link>
+          </div>
         </main>
       </div>
     );
@@ -198,7 +274,7 @@ export default function TenantCustomerTrackerPage() {
                 <Bell className="w-4 h-4" style={{ color: restaurant.themeColor }} />
               )}
             </div>
-            <span className="font-black text-sm tracking-tight text-white font-cairo">
+            <span className="font-extrabold text-sm tracking-tight text-white font-cairo">
               {restaurant.name}
             </span>
           </Link>
@@ -215,30 +291,94 @@ export default function TenantCustomerTrackerPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-md w-full mx-auto p-4 sm:p-6 flex flex-col justify-between">
-        {/* KeepAwake Engine & Web Push Shield */}
-        <div className="mb-4">
-          <KeepAwakeEngine
-            orderNumber={order.orderNumber}
-            orderStatus={order.status}
-            onPushSubscribed={(sub) => registerPushSubscription(order.orderNumber, sub, slug)}
-          />
-        </div>
+      {/* Main Container */}
+      <main className="flex-1 max-w-md w-full mx-auto p-4 sm:p-6 flex flex-col justify-between space-y-4">
+        {/* Triple Keep Awake & Notification activator */}
+        <KeepAwakeEngine
+          orderNumber={order.orderNumber}
+          restaurantName={restaurant.name}
+          onSubscriptionObtained={(sub) => {
+            registerPushSubscription(order.orderNumber, sub, slug);
+          }}
+        />
 
-        {/* STATE 1: READY (FULL-SCREEN ALERT BUZZER MODE) */}
+        {/* 1. PREPARING STATE */}
+        {isPreparing && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+            <div className="relative mb-6">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-obsidian-border flex items-center justify-center relative">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    fill="transparent"
+                    stroke="#1E1E24"
+                    strokeWidth="7"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    fill="transparent"
+                    stroke={restaurant.themeColor || '#10B981'}
+                    strokeWidth="7"
+                    strokeDasharray={276}
+                    strokeDashoffset={276 - (276 * progressPercent) / 100}
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xs text-zinc-400 font-semibold mb-0.5">الوقت المقدر</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono text-4xl sm:text-5xl font-black text-white">
+                      {remainingMinutes}
+                    </span>
+                    <span className="text-xs text-zinc-400 font-bold">دقيقة</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                    #{order.orderNumber}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo mb-2 flex items-center justify-center gap-2">
+              <span>طلبك قيد التحضير بعناية</span>
+              <Flame className="w-6 h-6 text-buzly-amber animate-bounce-subtle" />
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto mb-4 leading-relaxed">
+              يرجى إبقاء هذه الصفحة مفتوحة أو تفعيل زر التنبيه بالأعلى. سيرن هاتفك تلقائياً فور جاهزية وجبتك!
+            </p>
+
+            {order.notes && (
+              <div className="w-full bg-obsidian-surface border border-obsidian-border rounded-2xl p-3 text-right">
+                <span className="text-[11px] text-zinc-400 font-bold block mb-1">ملاحظات طلبك:</span>
+                <p className="text-xs text-zinc-200">{order.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 2. READY FOR PICKUP STATE */}
         {isReady && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 20 }}
             className="flex-1 flex flex-col items-center justify-center text-center py-4"
           >
             {alarmActive && (
               <div className="mb-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold animate-bounce-subtle">
                 <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>الجرس يرن لتنبيهك...</span>
-                <button onClick={handleSilenceAlarm} className="mr-2 underline hover:text-white text-[11px]">
-                  كتم
+                <span>جرس التنبيه يرن الآن...</span>
+                <button
+                  onClick={handleSilenceAlarm}
+                  className="mr-2 underline hover:text-white text-[11px]"
+                >
+                  كتم الصوت
                 </button>
               </div>
             )}
@@ -265,127 +405,48 @@ export default function TenantCustomerTrackerPage() {
               طلبك جاهز الآن! 🍔
             </h1>
             <p className="text-sm sm:text-base text-zinc-200 max-w-xs mx-auto mb-6 leading-relaxed">
-              تفضل بالتوجه إلى كاونتر <strong>{restaurant.name}</strong> لإبراز رقمك واستلام وجبتك.
+              تفضل بالتوجه إلى كاونتر <strong className="text-white">{restaurant.name}</strong> واستلم وجبتك ساخنة وطازجة.
             </p>
 
-            <div className="w-full space-y-3">
-              <button
-                onClick={handleIReceivedOrder}
-                className="w-full py-4 px-6 rounded-2xl bg-emerald-400 hover:bg-emerald-300 active:scale-95 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-2xl transition-all cursor-pointer"
-              >
-                <Check className="w-6 h-6 stroke-[3]" />
-                <span>استلمت طلبي (إيقاف الجرس)</span>
-              </button>
-
-              {alarmActive && (
-                <button
-                  onClick={handleSilenceAlarm}
-                  className="w-full py-3 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-obsidian-border"
-                >
-                  <VolumeX className="w-4 h-4" />
-                  <span>إسكات صوت الجرس فقط</span>
-                </button>
-              )}
-            </div>
+            <button
+              onClick={handleIReceivedOrder}
+              className="w-full py-4 px-6 rounded-2xl bg-emerald-400 hover:bg-emerald-300 active:scale-95 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-2xl shadow-emerald-400/30 transition-all cursor-pointer"
+            >
+              <Check className="w-6 h-6 stroke-[3]" />
+              <span>استلمت طلبي، شكراً لكم! (Confirm Pickup)</span>
+            </button>
           </motion.div>
         )}
 
-        {/* STATE 2: PREPARING (RADAR / PULSE RING) */}
-        {isPreparing && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            <div className="relative mb-6">
-              <div className="absolute -inset-6 bg-buzly-amber/15 rounded-full blur-2xl animate-pulse" />
-
-              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-obsidian-surface border-4 border-buzly-amber/40 flex flex-col items-center justify-center relative shadow-2xl shadow-buzly-amber/10 animate-pulse-glow-amber">
-                <svg className="absolute inset-0 w-full h-full -rotate-90">
-                  <circle cx="50%" cy="50%" r="44%" className="stroke-obsidian-border fill-none" strokeWidth="6" />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="44%"
-                    className="stroke-buzly-amber fill-none transition-all duration-1000 ease-out"
-                    strokeWidth="6"
-                    strokeDasharray={276}
-                    strokeDashoffset={276 - (276 * progressPercent) / 100}
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                <div className="relative z-10 flex flex-col items-center">
-                  <span className="text-[11px] font-bold text-zinc-400">طلبك رقم</span>
-                  <span className="font-mono text-4xl sm:text-5xl font-extrabold text-white">
-                    #{order.orderNumber}
-                  </span>
-                  <div className="flex items-center gap-1 text-buzly-amber text-xs font-bold mt-1">
-                    <Flame className="w-3.5 h-3.5 animate-pulse" />
-                    <span>يُحضّر الآن</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-obsidian-card border border-buzly-amber/30 rounded-2xl px-5 py-3 mb-4 inline-flex items-center gap-3 shadow-lg">
-              <Clock className="w-5 h-5 text-buzly-amber" />
-              <div className="text-right">
-                <span className="text-[11px] text-zinc-400 block">الوقت المتبقي التقديري</span>
-                <span className="font-bold text-base text-buzly-amber font-mono">
-                  {remainingMinutes > 0 ? `قرابة ${remainingMinutes} دقيقة` : 'لحظات ويجهز...'}
-                </span>
-              </div>
-            </div>
-
-            <h2 className="text-xl sm:text-2xl font-black text-white font-cairo mb-2">
-              طلبك يُحضّر بحب وإتقان ✨
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto leading-relaxed">
-              خذ راحتك ولا داعي للانتظار أمام الكاونتر.. سيرن هاتفك تلقائياً أول ما يجهز طلبك في <strong>{restaurant.name}</strong>.
-            </p>
-
-            {order.notes && (
-              <div className="mt-4 p-3 rounded-xl bg-obsidian-card border border-obsidian-border text-xs text-zinc-300 max-w-xs text-right">
-                <span className="text-zinc-500 font-bold ml-1">الأصناف:</span>
-                {order.notes}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* STATE 3: COMPLETED & 5-STAR FEEDBACK */}
+        {/* 3. COMPLETED STATE & 5-STAR RATING */}
         {isCompleted && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-4 w-full">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-3 shadow-xl">
-              <CheckCircle2 className="w-8 h-8" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-4 shadow-xl shadow-emerald-500/10">
+              <CheckCircle2 className="w-10 h-10" />
             </div>
 
-            <h2 className="text-2xl font-extrabold text-white font-cairo mb-1">
-              بالعافية مقدماً! 💚
-            </h2>
-            <p className="text-xs text-zinc-400 max-w-xs mx-auto mb-4">
-              تم تسليم طلبك رقم <span className="text-white font-bold font-mono">#{order.orderNumber}</span> بنجاح من {restaurant.name}.
+            <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo mb-2">
+              بالعافية، نتمنى لك وجبة شهية!
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto mb-6">
+              تم تسليم الطلب #{order.orderNumber} بنجاح. يسعدنا تقييمك لتجربتك اليوم في {restaurant.name}.
             </p>
 
-            {/* Interactive Feedback Module */}
+            {/* Interactive 5-Star Feedback Form */}
             {!feedbackSent ? (
-              <div className="w-full bg-obsidian-card border border-obsidian-border rounded-3xl p-5 mb-5 text-center shadow-xl space-y-3">
-                <span className="text-xs font-bold text-zinc-300 block">
-                  كيف كانت تجربتك مع سرعة التجهيز والخدمة؟
-                </span>
-
-                {/* 5 Stars */}
-                <div className="flex items-center justify-center gap-2 py-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
+              <div className="w-full bg-obsidian-surface border border-obsidian-border rounded-3xl p-5 mb-5 shadow-2xl">
+                <span className="text-xs font-bold text-zinc-300 block mb-3">كيف كانت تجربتك معنا؟</span>
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  {[1, 2, 3, 4, 5].map((s) => (
                     <button
-                      key={star}
+                      key={s}
                       type="button"
-                      onClick={() => {
-                        soundManager.playKeyClick();
-                        setRating(star);
-                      }}
-                      className="p-1 hover:scale-125 transition-transform"
+                      onClick={() => setRating(s)}
+                      className="p-1 hover:scale-110 active:scale-95 transition-transform"
                     >
                       <Star
-                        className={`w-7 h-7 transition-colors ${
-                          star <= rating
+                        className={`w-7 h-7 ${
+                          s <= rating
                             ? 'text-buzly-amber fill-buzly-amber'
                             : 'text-zinc-600'
                         }`}
@@ -394,14 +455,8 @@ export default function TenantCustomerTrackerPage() {
                   ))}
                 </div>
 
-                {/* Quick Feedback Tags */}
-                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-                  {[
-                    'خدمة سريعة ⚡',
-                    'أكل ساخن وطازج 🍔',
-                    'جرس التنبيه ممتاز 🔔',
-                    'تعامل راقي ✨',
-                  ].map((tag) => {
+                <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+                  {['خدمة سريعة ⚡', 'الأكل ساخن ولذيذ 🍔', 'طاقم عمل رائع ✨', 'جرس البيجر ممتاز 🔔'].map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
                       <button
@@ -412,10 +467,10 @@ export default function TenantCustomerTrackerPage() {
                             isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
                           );
                         }}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                        className={`text-[11px] px-3 py-1.5 rounded-xl border transition-all ${
                           isSelected
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                            : 'bg-obsidian-surface text-zinc-400 border-obsidian-border hover:border-zinc-500'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+                            : 'bg-obsidian-card text-zinc-400 border-obsidian-border hover:text-white'
                         }`}
                       >
                         {tag}
@@ -467,9 +522,24 @@ export default function TenantCustomerTrackerPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             المزامنة الفورية نشطة ({restaurant.slug})
           </span>
-          <span className="font-mono">Buzly v3.0</span>
+          <span className="font-mono">Buzly v3.1</span>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function TenantCustomerTrackerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo">
+          <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+          <p className="text-zinc-500 text-xs">تحميل شاشة التتبع...</p>
+        </div>
+      }
+    >
+      <TenantCustomerTrackerInner />
+    </Suspense>
   );
 }

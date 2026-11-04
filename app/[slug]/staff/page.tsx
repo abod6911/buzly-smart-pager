@@ -23,6 +23,7 @@ import {
   Archive,
   Flame,
   MessageCircle,
+  Activity,
 } from 'lucide-react';
 
 export default function TenantStaffCashierPage() {
@@ -160,6 +161,17 @@ export default function TenantStaffCashierPage() {
               >
                 <Settings className="w-4 h-4 text-zinc-300" />
                 <span className="hidden lg:inline">إعدادات المتجر</span>
+              </Link>
+
+              {/* System Diagnostics */}
+              <Link
+                href="/debug"
+                target="_blank"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
+                title="فحص وصحة اتصال الجوال والسيرفر"
+              >
+                <Activity className="w-4 h-4 text-emerald-400" />
+                <span className="hidden xl:inline">فحص النظام</span>
               </Link>
 
               {/* Restaurant QR Code */}
@@ -323,6 +335,7 @@ export default function TenantStaffCashierPage() {
           isOpen={qrModalOpen}
           onClose={() => setQrModalOpen(false)}
           orderNumber={selectedOrderNumber}
+          restaurantSlug={slug}
         />
       </div>
     </StaffPinGuard>

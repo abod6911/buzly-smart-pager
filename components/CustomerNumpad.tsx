@@ -8,9 +8,10 @@ import { Order } from '@/types/queue';
 
 interface CustomerNumpadProps {
   activeOrders: Order[];
+  slug?: string;
 }
 
-export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders }) => {
+export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, slug }) => {
   const [orderNumber, setOrderNumber] = useState<string>('');
   const router = useRouter();
 
@@ -34,7 +35,8 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders }) 
   const handleTrack = () => {
     if (!orderNumber.trim()) return;
     soundManager.unlock();
-    router.push(`/track/${encodeURIComponent(orderNumber.trim())}`);
+    const targetSlug = slug || 'demo-cafe';
+    router.push(`/${targetSlug}/track/${encodeURIComponent(orderNumber.trim())}`);
   };
 
   return (
@@ -127,7 +129,8 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders }) 
                 key={ord.id}
                 onClick={() => {
                   soundManager.unlock();
-                  router.push(`/track/${encodeURIComponent(ord.orderNumber)}`);
+                  const targetSlug = ord.restaurantSlug || slug || 'demo-cafe';
+                  router.push(`/${targetSlug}/track/${encodeURIComponent(ord.orderNumber)}`);
                 }}
                 className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-right transition-all flex items-center justify-between group active:scale-95"
               >

@@ -149,6 +149,7 @@ interface QueueContextType {
   getOrder: (orderNumber: string, restaurantSlug?: string) => Order | undefined;
   resetToDemoOrders: (slug?: string) => void;
   clearQueue: (slug?: string) => void;
+  syncNow: () => Promise<void>;
   // Legacy aliases for phase 1/2 backwards compatibility
   preparingOrders: Order[];
   readyOrders: Order[];
@@ -241,6 +242,21 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (channelRef.current) {
           channelRef.current.postMessage(event);
         }
+
+        // Cross-device Server Memory Bridge Sync
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: event.type,
+            order: event.order,
+            orderId: event.orderId,
+            orderNumber: event.orderNumber,
+            restaurantSlug: event.restaurantSlug || 'demo-cafe',
+            feedback: event.feedback,
+            orders: newOrders,
+          }),
+        }).catch(() => {});
       }
     },
     []
@@ -414,6 +430,38 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (supabase) supabase.removeChannel(channel);
     };
   }, []);
+
+  // 3.1 Cross-Device Server API Bridge Polling (Syncs Laptop <-> Phone over Wi-Fi & Internet)
+  const syncNow = useCallback(async () => {
+    try {
+      const res = await fetch('/api/orders', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.orders)) {
+          setOrders((prev) => {
+            const prevDigest = prev.map((o) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
+            const nextDigest = data.orders.map((o: Order) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
+            if (prevDigest !== nextDigest) {
+              try {
+                localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
+              } catch {}
+              return data.orders;
+            }
+            return prev;
+          });
+        }
+      }
+    } catch {
+      // Safe offline fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    syncNow();
+    const interval = setInterval(syncNow, 2000);
+    return () => clearInterval(interval);
+  }, [syncNow]);
 
   // 4. Multi-Tenant Restaurant Helpers
   const getRestaurant = useCallback(
@@ -991,6 +1039,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getOrder,
     resetToDemoOrders,
     clearQueue,
+    syncNow,
     preparingOrders,
     readyOrders,
     completedOrders,
