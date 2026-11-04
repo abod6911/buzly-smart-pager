@@ -6,7 +6,7 @@ import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
-import { ActivationBanner } from '@/components/ActivationBanner';
+import { KeepAwakeEngine } from '@/components/KeepAwakeEngine';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import {
@@ -29,7 +29,7 @@ export default function CustomerOrderTrackerPage() {
   const rawOrderNumber = params.orderNumber as string;
   const decodedOrderNumber = decodeURIComponent(rawOrderNumber || '').trim();
 
-  const { orders, lastEvent, completeOrder, isSupabaseActive } = useQueue();
+  const { orders, lastEvent, completeOrder, registerPushSubscription, isSupabaseActive } = useQueue();
 
   // Find order in queue
   const order = useMemo(() => {
@@ -214,9 +214,13 @@ export default function CustomerOrderTrackerPage() {
 
       {/* Main Tracker Container */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 sm:p-6 flex flex-col justify-between">
-        {/* Activation Banner (Always visible until unlocked) */}
+        {/* KeepAwake Engine & Web Push Shield */}
         <div className="mb-4">
-          <ActivationBanner />
+          <KeepAwakeEngine
+            orderNumber={order.orderNumber}
+            orderStatus={order.status}
+            onPushSubscribed={(sub) => registerPushSubscription(order.orderNumber, sub)}
+          />
         </div>
 
         {/* ========================================================================= */}

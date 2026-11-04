@@ -1,11 +1,19 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Order, OrderStatus, QueueRealtimeEvent } from '@/types/queue';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
+import { Order, OrderStatus, PushSubscriptionData, QueueRealtimeEvent } from '@/types/queue';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { soundManager } from '@/lib/audio';
 
-const STORAGE_KEY = 'buzly_active_queue_v1';
+const STORAGE_KEY = 'buzly_active_queue_v2';
 const BROADCAST_CHANNEL_NAME = 'buzly_realtime_queue';
 
 // Initial demo orders for instant zero-config testing
@@ -68,12 +76,31 @@ interface QueueContextType {
   rePing: (orderId: string) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
   cancelOrder: (orderId: string) => Promise<void>;
+  registerPushSubscription: (orderNumber: string, sub: PushSubscriptionData) => Promise<void>;
   getOrder: (orderNumber: string) => Order | undefined;
   resetToDemoOrders: () => void;
   clearQueue: () => void;
 }
 
 const QueueContext = createContext<QueueContextType | undefined>(undefined);
+
+// Helper to trigger backend Web Push API
+async function triggerBackendPush(payload: {
+  orderNumber: string;
+  title: string;
+  body: string;
+  subscription?: PushSubscriptionData | null;
+}) {
+  try {
+    await fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn('Backend push notification trigger failed:', err);
+  }
+}
 
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -108,7 +135,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Helper to persist and broadcast
+  // Helper to persist and broadcast across tabs
   const saveAndBroadcast = useCallback((newOrders: Order[], event: QueueRealtimeEvent) => {
     setOrders(newOrders);
     setLastEvent(event);
@@ -120,7 +147,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Error saving orders to localStorage', e);
       }
 
-      // Broadcast across browser tabs
       if (channelRef.current) {
         channelRef.current.postMessage(event);
       }
@@ -143,7 +169,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           setLastEvent(ev);
 
-          // Refresh from localStorage on any broadcast
           try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) {
@@ -156,10 +181,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       }
     } catch (e) {
-      console.warn('BroadcastChannel not supported, falling back to storage events', e);
+      console.warn('BroadcastChannel fallback to storage events', e);
     }
 
-    // Storage event fallback (for browsers or tabs across distinct contexts)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
@@ -181,17 +205,45 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // 3. Supabase Realtime Subscription (if configured)
+  // 3. Supabase Live Query & Realtime Subscription
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
 
+    // A. Initial Query from Supabase orders_queue
+    supabase
+      .from('orders_queue')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          const dbOrders: Order[] = data.map((row) => ({
+            id: row.id,
+            orderNumber: row.order_number,
+            customerName: row.customer_name,
+            notes: row.notes,
+            status: row.status as OrderStatus,
+            estimatedMinutes: row.estimated_mins,
+            pushSubscription: row.push_subscription,
+            rePingCount: row.ping_count || 0,
+            createdAt: row.created_at,
+            readyAt: row.ready_at,
+            completedAt: row.completed_at,
+            lastPingAt: row.last_ping_at,
+          }));
+
+          setOrders(dbOrders);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dbOrders));
+        }
+      });
+
+    // B. Realtime Subscription on orders_queue
     const sbChannel = supabase
-      .channel('buzly_orders_realtime')
+      .channel('realtime_orders')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders_queue' },
         (payload) => {
-          // Transform Postgres row to Order format
           if (payload.eventType === 'INSERT') {
             const row = payload.new;
             const newOrder: Order = {
@@ -200,13 +252,15 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               customerName: row.customer_name,
               notes: row.notes,
               status: row.status as OrderStatus,
-              estimatedMinutes: row.estimated_minutes,
+              estimatedMinutes: row.estimated_mins,
+              pushSubscription: row.push_subscription,
+              rePingCount: row.ping_count || 0,
               createdAt: row.created_at,
               readyAt: row.ready_at,
               completedAt: row.completed_at,
-              rePingCount: row.re_ping_count || 0,
               lastPingAt: row.last_ping_at,
             };
+
             setOrders((prev) => {
               if (prev.some((o) => o.id === newOrder.id)) return prev;
               const next = [newOrder, ...prev];
@@ -223,12 +277,20 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     status: row.status as OrderStatus,
                     readyAt: row.ready_at,
                     completedAt: row.completed_at,
-                    rePingCount: row.re_ping_count || o.rePingCount,
-                    lastPingAt: row.last_ping_at || o.lastPingAt,
+                    rePingCount: row.ping_count ?? o.rePingCount,
+                    lastPingAt: row.last_ping_at ?? o.lastPingAt,
+                    pushSubscription: row.push_subscription ?? o.pushSubscription,
                   };
                 }
                 return o;
               });
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+              return next;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const oldRow = payload.old;
+            setOrders((prev) => {
+              const next = prev.filter((o) => o.id !== oldRow.id);
               localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
               return next;
             });
@@ -258,23 +320,21 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rePingCount: 0,
       };
 
-      // If Supabase is connected, insert asynchronously to DB
       if (isSupabaseConfigured() && supabase) {
         supabase
-          .from('orders')
+          .from('orders_queue')
           .insert({
             order_number: newOrder.orderNumber,
             notes: newOrder.notes,
             status: 'preparing',
-            estimated_minutes: newOrder.estimatedMinutes,
+            estimated_mins: newOrder.estimatedMinutes,
           })
-          .then(({ data, error }) => {
+          .then(({ error }) => {
             if (error) console.error('Supabase insert error:', error);
           });
       }
 
       setOrders((prev) => {
-        // Remove duplicate if same active number existed
         const filtered = prev.filter((o) => o.orderNumber !== cleanNum || o.status === 'completed');
         const next = [newOrder, ...filtered];
         saveAndBroadcast(next, {
@@ -294,7 +354,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 5. Action: Mark Order Ready (Triggers customer buzzer chime!)
+  // 5. Action: Mark Order Ready (Triggers local chime + Web Push notification!)
   const markReady = useCallback(
     async (orderId: string) => {
       const nowIso = new Date().toISOString();
@@ -324,17 +384,28 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             sourceTabId: tabIdRef.current,
           });
 
-          // Also update Supabase
+          // Supabase Live Update
           if (isSupabaseConfigured() && supabase) {
             supabase
-              .from('orders')
+              .from('orders_queue')
               .update({
                 status: 'ready',
                 ready_at: nowIso,
                 last_ping_at: nowIso,
               })
-              .eq('order_number', targetOrder.orderNumber);
+              .eq('order_number', targetOrder.orderNumber)
+              .then(({ error }) => {
+                if (error) console.error('Supabase markReady error:', error);
+              });
           }
+
+          // Trigger Web Push Notification (even if phone screen is closed!)
+          triggerBackendPush({
+            orderNumber: targetOrder.orderNumber,
+            title: `طلبك #${targetOrder.orderNumber} جاهز للاستلام! 🍔`,
+            body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
+            subscription: targetOrder.pushSubscription,
+          });
         }
 
         return next;
@@ -343,7 +414,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 6. Action: Re-Ping Customer (Sends repeated alert chime)
+  // 6. Action: Re-Ping Customer (Increments ping_count & fires push again)
   const rePing = useCallback(
     async (orderId: string) => {
       const nowIso = new Date().toISOString();
@@ -372,16 +443,27 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             sourceTabId: tabIdRef.current,
           });
 
-          // Supabase update
+          // Supabase Live Update (Increment ping_count)
           if (isSupabaseConfigured() && supabase) {
             supabase
-              .from('orders')
+              .from('orders_queue')
               .update({
-                re_ping_count: targetOrder.rePingCount,
+                ping_count: targetOrder.rePingCount,
                 last_ping_at: nowIso,
               })
-              .eq('order_number', targetOrder.orderNumber);
+              .eq('order_number', targetOrder.orderNumber)
+              .then(({ error }) => {
+                if (error) console.error('Supabase rePing error:', error);
+              });
           }
+
+          // Trigger Repeat Web Push Notification
+          triggerBackendPush({
+            orderNumber: targetOrder.orderNumber,
+            title: `تذكير: طلبك #${targetOrder.orderNumber} بانتظارك! 🔔`,
+            body: 'يرجى مراجعة الكاونتر لاستلام طلبك.',
+            subscription: targetOrder.pushSubscription,
+          });
         }
 
         return next;
@@ -390,7 +472,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 7. Action: Complete Order (Customer picked up)
+  // 7. Action: Complete Order (Picked up)
   const completeOrder = useCallback(
     async (orderId: string) => {
       const nowIso = new Date().toISOString();
@@ -421,12 +503,15 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           if (isSupabaseConfigured() && supabase) {
             supabase
-              .from('orders')
+              .from('orders_queue')
               .update({
                 status: 'completed',
                 completed_at: nowIso,
               })
-              .eq('order_number', targetOrder.orderNumber);
+              .eq('order_number', targetOrder.orderNumber)
+              .then(({ error }) => {
+                if (error) console.error('Supabase completeOrder error:', error);
+              });
           }
         }
 
@@ -438,11 +523,63 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 8. Action: Cancel Order
+  // 8. Action: Register / Save Web Push Subscription for an order
+  const registerPushSubscription = useCallback(
+    async (orderNumber: string, sub: PushSubscriptionData) => {
+      const cleanNum = orderNumber.trim();
+
+      setOrders((prev) => {
+        const next = prev.map((ord) => {
+          if (ord.orderNumber === cleanNum) {
+            return {
+              ...ord,
+              pushSubscription: sub,
+            };
+          }
+          return ord;
+        });
+
+        saveAndBroadcast(next, {
+          type: 'PUSH_REGISTERED',
+          orderNumber: cleanNum,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
+        });
+
+        return next;
+      });
+
+      // Persist in Supabase orders_queue
+      if (isSupabaseConfigured() && supabase) {
+        supabase
+          .from('orders_queue')
+          .update({ push_subscription: sub })
+          .eq('order_number', cleanNum)
+          .then(({ error }) => {
+            if (error) console.warn('Failed to update push_subscription in Supabase:', error);
+          });
+      }
+    },
+    [saveAndBroadcast]
+  );
+
+  // 9. Action: Cancel Order
   const cancelOrder = useCallback(
     async (orderId: string) => {
       setOrders((prev) => {
-        const next = prev.filter((ord) => ord.id !== orderId && ord.orderNumber !== orderId);
+        let deletedNum: string | undefined;
+        const next = prev.filter((ord) => {
+          if (ord.id === orderId || ord.orderNumber === orderId) {
+            deletedNum = ord.orderNumber;
+            return false;
+          }
+          return true;
+        });
+
+        if (deletedNum && isSupabaseConfigured() && supabase) {
+          supabase.from('orders_queue').delete().eq('order_number', deletedNum).then();
+        }
+
         saveAndBroadcast(next, {
           type: 'ORDER_CANCELLED',
           orderId,
@@ -455,7 +592,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 9. Helper: Get order by orderNumber
   const getOrder = useCallback(
     (orderNumber: string): Order | undefined => {
       const clean = orderNumber.trim();
@@ -464,7 +600,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [orders]
   );
 
-  // 10. Reset to demo orders
   const resetToDemoOrders = useCallback(() => {
     saveAndBroadcast(INITIAL_DEMO_ORDERS, {
       type: 'QUEUE_RESET',
@@ -474,7 +609,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [saveAndBroadcast]);
 
-  // 11. Clear all active orders
   const clearQueue = useCallback(() => {
     saveAndBroadcast([], {
       type: 'QUEUE_RESET',
@@ -484,7 +618,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [saveAndBroadcast]);
 
-  // Derived collections
   const preparingOrders = useMemo(
     () => orders.filter((o) => o.status === 'preparing'),
     [orders]
@@ -512,6 +645,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     rePing,
     completeOrder,
     cancelOrder,
+    registerPushSubscription,
     getOrder,
     resetToDemoOrders,
     clearQueue,

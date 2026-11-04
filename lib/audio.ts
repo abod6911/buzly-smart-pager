@@ -1,10 +1,13 @@
-// Web Audio API Synthesizer for Buzly Smart Pager
-// Zero external mp3 dependencies, works completely offline, synthesized on-the-fly!
+// Web Audio API Synthesizer & iOS Background Keep-Alive for Buzly Smart Pager
+// Zero external mp3 dependencies, works offline and in background!
 
 class AudioSynthesizer {
   private ctx: AudioContext | null = null;
   private loopIntervalId: ReturnType<typeof setInterval> | null = null;
   private isAlarmPlaying: boolean = false;
+  private silentOscillator: OscillatorNode | null = null;
+  private silentGain: GainNode | null = null;
+  private isSilentKeepAliveRunning: boolean = false;
 
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -27,7 +30,7 @@ class AudioSynthesizer {
 
   /**
    * Must be called during a user gesture (e.g., button click)
-   * to unlock AudioContext on iOS Safari and modern Chromium.
+   * to prime and unlock AudioContext on iOS Safari and modern Chromium.
    */
   public async unlock(): Promise<boolean> {
     const ctx = this.getAudioContext();
@@ -45,6 +48,66 @@ class AudioSynthesizer {
     source.start(0);
 
     return ctx.state === 'running';
+  }
+
+  /**
+   * iOS Background Keep-Alive:
+   * Plays an imperceptible, ultra-low frequency oscillator (30Hz at ~0.0001 gain)
+   * which registers an active audio session on iOS Safari and Android.
+   * This prevents iOS from freezing the JS runtime when the screen dims or the user
+   * switches apps briefly while waiting for their food.
+   */
+  public startSilentKeepAlive(): void {
+    if (this.isSilentKeepAliveRunning) return;
+
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      // 30 Hz is below typical phone speaker reproduction threshold
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(30, ctx.currentTime);
+
+      // Microscopic gain
+      gain.gain.setValueAtTime(0.00005, ctx.currentTime);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+
+      this.silentOscillator = osc;
+      this.silentGain = gain;
+      this.isSilentKeepAliveRunning = true;
+    } catch (err) {
+      console.warn('Silent keep-alive start error:', err);
+    }
+  }
+
+  public stopSilentKeepAlive(): void {
+    if (!this.isSilentKeepAliveRunning) return;
+
+    try {
+      if (this.silentOscillator) {
+        this.silentOscillator.stop();
+        this.silentOscillator.disconnect();
+        this.silentOscillator = null;
+      }
+      if (this.silentGain) {
+        this.silentGain.disconnect();
+        this.silentGain = null;
+      }
+    } catch {
+      // Ignore
+    }
+    this.isSilentKeepAliveRunning = false;
   }
 
   /**
@@ -75,7 +138,7 @@ class AudioSynthesizer {
 
       // Bell overtone (Soft triangle at 2nd harmonic for crispness)
       overtone.type = 'triangle';
-      overtone.frequency.setValueAtTime(freq * 2.002, now + delay); // subtle natural detune
+      overtone.frequency.setValueAtTime(freq * 2.002, now + delay);
 
       // Envelope: Fast attack, natural exponential release
       const startTime = now + delay;
@@ -83,7 +146,6 @@ class AudioSynthesizer {
       gainNode.gain.exponentialRampToValueAtTime(targetGain, startTime + 0.02);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
 
-      // Connect nodes
       osc.connect(gainNode);
       overtone.connect(gainNode);
       gainNode.connect(ctx.destination);
@@ -97,7 +159,7 @@ class AudioSynthesizer {
 
   /**
    * High-contrast Ready Buzzer Alert:
-   * Plays the luxury chime, followed by a double confirmation ping.
+   * Plays the luxury chime, followed by phone vibration.
    */
   public playOrderReadyBurst(): void {
     const ctx = this.getAudioContext();
@@ -110,7 +172,7 @@ class AudioSynthesizer {
       try {
         navigator.vibrate([400, 150, 400, 150, 800]);
       } catch {
-        // Safe fallback if permission/device doesn't support vibrate
+        // Safe fallback
       }
     }
   }
@@ -120,6 +182,9 @@ class AudioSynthesizer {
    * when their buzzer is ringing.
    */
   public startReadyAlarmLoop(): void {
+    // Stop the silent background audio when switching to the loud alarm
+    this.stopSilentKeepAlive();
+
     if (this.isAlarmPlaying) return;
     this.isAlarmPlaying = true;
 
@@ -145,7 +210,7 @@ class AudioSynthesizer {
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(0); // stop vibration
+        navigator.vibrate(0);
       } catch {
         // Ignore
       }
@@ -194,9 +259,9 @@ class AudioSynthesizer {
     const gain = ctx.createGain();
 
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(523.25, now); // C5
+    osc1.frequency.setValueAtTime(523.25, now);
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(659.25, now + 0.08); // E5
+    osc2.frequency.setValueAtTime(659.25, now + 0.08);
 
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);

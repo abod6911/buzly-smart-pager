@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   title: 'Buzly | بيجر المطاعم الذكي',
   description: 'نظام بيجر ونداء واستدعاء الزبائن الذكي في المطاعم والكافيهات مباشرة عبر متصفح الجوال',
   applicationName: 'Buzly Pager',
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

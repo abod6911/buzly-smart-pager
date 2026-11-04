@@ -139,17 +139,18 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                         </div>
 
                         {/* Quick QR & Cancel */}
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => onOpenQr(order.orderNumber)}
-                            className="p-1.5 rounded-lg bg-obsidian-400 hover:bg-obsidian-border text-zinc-400 hover:text-white transition-colors"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-obsidian-400 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
                             title="عرض QR للعميل"
                           >
-                            <QrCode className="w-4 h-4" />
+                            <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>كود QR</span>
                           </button>
                           <button
                             onClick={() => onCancel(order.id)}
-                            className="p-1.5 rounded-lg bg-obsidian-400 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors"
+                            className="p-1.5 rounded-xl bg-obsidian-400 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-obsidian-border transition-colors"
                             title="إلغاء الطلب"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -243,10 +244,11 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                         {/* QR modal trigger */}
                         <button
                           onClick={() => onOpenQr(order.orderNumber)}
-                          className="p-1.5 rounded-lg bg-obsidian-400 hover:bg-obsidian-border text-zinc-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-obsidian-400 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 border border-obsidian-border text-xs font-bold transition-all shadow-sm"
                           title="عرض QR للعميل"
                         >
-                          <QrCode className="w-4 h-4" />
+                          <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>كود QR</span>
                         </button>
                       </div>
 
