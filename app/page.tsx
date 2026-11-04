@@ -52,7 +52,7 @@ export default function LandingRoleSwitcherPage() {
             </span>
             <span>•</span>
             <button
-              onClick={resetToDemoOrders}
+              onClick={() => resetToDemoOrders('demo-cafe')}
               className="text-emerald-400 hover:underline font-bold"
             >
               إعادة ضبط البيانات التجريبية
@@ -116,110 +116,108 @@ export default function LandingRoleSwitcherPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* TWO PROMINENT HERO ROLE CARDS: STAFF POS vs CUSTOMER TRACKER */}
+        {/* MULTI-TENANT HERO ACTION TILES */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto w-full mb-12">
           {/* Card 1: Staff Cashier Pad */}
           <Link
-            href="/staff"
-            className="group relative bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-emerald-500/50 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-2xl flex flex-col justify-between overflow-hidden"
+            href="/demo-cafe/staff"
+            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-emerald-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
           >
-            {/* Ambient hover glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
-
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <Store className="w-7 h-7" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Store className="w-6 h-6" />
               </div>
-
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                  لوحة الكاشير وطاقم العمل
-                </span>
-                <span className="text-[11px] bg-obsidian-card px-2.5 py-0.5 rounded-full border border-obsidian-border text-zinc-400">
-                  مخصصة للآيباد والكمبيوتر
-                </span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-cairo mb-3 group-hover:text-emerald-400 transition-colors">
-                شاشة الكاشير (Staff Pad)
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">
+                الكاشير (محمي برقم سري: 1234)
+              </span>
+              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-emerald-400 transition-colors">
+                شاشة الكاشير POS
               </h2>
-
-              <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-                لوحة إدخال سريعة بالأرقام لإضافة الطلب في ثانيتين، نداء العميل بضغطة واحدة، إعادة التنبيه، وإدارة الطابور بالكامل لحظياً.
+              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                لوحة إدخال بالأرقام في ثانيتين، نداء فوري، تنبيه واتساب، وتوليد كود QR للطلب.
               </p>
-
-              <div className="space-y-2 mb-6 text-xs text-zinc-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>لوحة أرقام سريعة + مؤقت جاهزية (5 إلى 30 د)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>نداء فوري (Call Ready) يطلق رنين الزبون</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>توليد كود QR ديناميكي للطلب أو الكاونتر</span>
-                </div>
-              </div>
             </div>
-
-            <div className="w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all group-hover:translate-x-1">
-              <span>فتح لوحة الكاشير</span>
-              <ArrowLeft className="w-4 h-4" />
+            <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
+              <span>فتح الكاشير</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
             </div>
           </Link>
 
-          {/* Card 2: Customer Order Tracker */}
+          {/* Card 2: Kitchen TV Screen */}
           <Link
-            href="/track"
-            className="group relative bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-buzly-amber/50 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-2xl flex flex-col justify-between overflow-hidden"
+            href="/demo-cafe/tv"
+            target="_blank"
+            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-buzly-amber/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
           >
-            {/* Ambient hover glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-buzly-amber/10 rounded-full blur-2xl group-hover:bg-buzly-amber/20 transition-all pointer-events-none" />
-
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-buzly-amber/10 border border-buzly-amber/30 text-buzly-amber flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <Smartphone className="w-7 h-7" />
+              <div className="w-12 h-12 rounded-2xl bg-buzly-amber/10 border border-buzly-amber/30 text-buzly-amber flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Layers className="w-6 h-6" />
               </div>
-
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-buzly-amber">
-                  واجهة العميل والزبون
-                </span>
-                <span className="text-[11px] bg-obsidian-card px-2.5 py-0.5 rounded-full border border-obsidian-border text-zinc-400">
-                  مخصصة للجوال
-                </span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-cairo mb-3 group-hover:text-buzly-amber transition-colors">
-                شاشة العميل (Customer View)
+              <span className="text-[10px] font-bold text-buzly-amber uppercase tracking-wider block mb-1">
+                تلفاز الصالة والمطبخ (TV)
+              </span>
+              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-buzly-amber transition-colors">
+                شاشة التلفاز التفاعلية
               </h2>
-
-              <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-                تجربة العميل عند مسح الباركود: عداد الوقت المتبقي، إبقاء الشاشة نشطة (WakeLock)، وتحول الشاشة للون الأخضر مع رنين مستمر واهتزاز.
+              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                شاشة عريضة 16:9 بجودة فائقة تعرض أرقام التحضير وجاهزية الطلبات مع صوت جرس فندقي.
               </p>
-
-              <div className="space-y-2 mb-6 text-xs text-zinc-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-buzly-amber" />
-                  <span>حالة التحضير مع عداد تنازلي وموسيقى هادئة</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-buzly-amber" />
-                  <span>تنبيه كامل الشاشة مع صوت جرس فندقي واهتزاز</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-buzly-amber" />
-                  <span>إشعار نظام (System Notification) لخلفية المتصفح</span>
-                </div>
-              </div>
             </div>
+            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-buzly-amber font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
+              <span>عرض شاشة التلفاز</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </div>
+          </Link>
 
-            <div className="w-full py-3.5 px-5 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all group-hover:translate-x-1">
-              <span>فتح شاشة العميل</span>
-              <ArrowLeft className="w-4 h-4" />
+          {/* Card 3: Customer Tracker */}
+          <Link
+            href="/demo-cafe/track"
+            target="_blank"
+            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-teal-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider block mb-1">
+                جوال العميل والزبون
+              </span>
+              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-teal-400 transition-colors">
+                شاشة بيجر العميل
+              </h2>
+              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                تتبع العداد التنازلي، تحول الشاشة للأخضر مع رنين واهتزاز مستمر وإشعارات شاشة مقفلة.
+              </p>
+            </div>
+            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
+              <span>تجربة شاشة العميل</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+
+          {/* Card 4: Settings & Analytics */}
+          <Link
+            href="/demo-cafe/admin"
+            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-purple-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block mb-1">
+                الهوية والطباعة والتحليلات
+              </span>
+              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-purple-400 transition-colors">
+                إدارة المتجر والطباعة
+              </h2>
+              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                تخصيص الألوان والشعار، طباعة ستاند الطاولات A5، ومؤشرات أداء وسرعة تحضير المطبخ.
+              </p>
+            </div>
+            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-purple-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
+              <span>إعدادات المتجر والطباعة</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
             </div>
           </Link>
         </div>

@@ -8,10 +8,23 @@ export interface PushSubscriptionData {
   };
 }
 
+export interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl?: string;
+  themeColor: string;
+  staffPin: string;
+  whatsappFallbackEnabled: boolean;
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
+  restaurantSlug: string;
   customerName?: string;
+  customerPhone?: string;
   notes?: string;
   status: OrderStatus;
   estimatedMinutes: number; // mapped from DB estimated_mins
@@ -32,14 +45,17 @@ export type QueueEventType =
   | 'ORDER_CANCELLED'
   | 'QUEUE_SYNC'
   | 'QUEUE_RESET'
-  | 'PUSH_REGISTERED';
+  | 'PUSH_REGISTERED'
+  | 'RESTAURANT_UPDATED';
 
 export interface QueueRealtimeEvent {
   type: QueueEventType;
+  restaurantSlug?: string;
   orderId?: string;
   orderNumber?: string;
   order?: Order;
   orders?: Order[];
+  restaurant?: Restaurant;
   timestamp: number;
   sourceTabId?: string;
 }

@@ -115,7 +115,7 @@ export default function StaffCashierPage() {
 
             {/* Reset Demo Orders */}
             <button
-              onClick={resetToDemoOrders}
+              onClick={() => resetToDemoOrders('demo-cafe')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
               title="إعادة تعيين الطلبات التجريبية"
             >
@@ -185,7 +185,7 @@ export default function StaffCashierPage() {
               </p>
             </div>
             <button
-              onClick={clearQueue}
+              onClick={() => clearQueue('demo-cafe')}
               className="text-[11px] text-rose-400 hover:text-rose-300 underline font-medium"
             >
               مسح الكل
