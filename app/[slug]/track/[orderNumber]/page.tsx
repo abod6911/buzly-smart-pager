@@ -20,6 +20,8 @@ import {
   Flame,
   Check,
   RotateCcw,
+  Star,
+  Send,
 } from 'lucide-react';
 
 export default function TenantCustomerTrackerPage() {
@@ -28,13 +30,23 @@ export default function TenantCustomerTrackerPage() {
   const rawOrderNumber = params.orderNumber as string;
   const decodedOrderNumber = decodeURIComponent(rawOrderNumber || '').trim();
 
-  const { getRestaurant, getOrder, completeOrder, registerPushSubscription, lastEvent } = useQueue();
+  const {
+    getRestaurant,
+    getOrder,
+    completeOrder,
+    registerPushSubscription,
+    submitOrderFeedback,
+    lastEvent,
+  } = useQueue();
   const restaurant = getRestaurant(slug);
   const order = getOrder(decodedOrderNumber, slug);
 
   const [alarmActive, setAlarmActive] = useState<boolean>(false);
   const [hasUserSilenced, setHasUserSilenced] = useState<boolean>(false);
   const [elapsedMinutes, setElapsedMinutes] = useState<number>(0);
+  const [rating, setRating] = useState<number>(5);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -338,25 +350,112 @@ export default function TenantCustomerTrackerPage() {
           </div>
         )}
 
-        {/* STATE 3: COMPLETED */}
+        {/* STATE 3: COMPLETED & 5-STAR FEEDBACK */}
         {isCompleted && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-4 shadow-xl">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-4 w-full">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center mb-3 shadow-xl">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-cairo mb-2">
+            <h2 className="text-2xl font-extrabold text-white font-cairo mb-1">
               بالعافية مقدماً! 💚
             </h2>
-            <p className="text-sm text-zinc-400 max-w-xs mx-auto mb-6">
+            <p className="text-xs text-zinc-400 max-w-xs mx-auto mb-4">
               تم تسليم طلبك رقم <span className="text-white font-bold font-mono">#{order.orderNumber}</span> بنجاح من {restaurant.name}.
             </p>
 
+            {/* Interactive Feedback Module */}
+            {!feedbackSent ? (
+              <div className="w-full bg-obsidian-card border border-obsidian-border rounded-3xl p-5 mb-5 text-center shadow-xl space-y-3">
+                <span className="text-xs font-bold text-zinc-300 block">
+                  كيف كانت تجربتك مع سرعة التجهيز والخدمة؟
+                </span>
+
+                {/* 5 Stars */}
+                <div className="flex items-center justify-center gap-2 py-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => {
+                        soundManager.playKeyClick();
+                        setRating(star);
+                      }}
+                      className="p-1 hover:scale-125 transition-transform"
+                    >
+                      <Star
+                        className={`w-7 h-7 transition-colors ${
+                          star <= rating
+                            ? 'text-buzly-amber fill-buzly-amber'
+                            : 'text-zinc-600'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Quick Feedback Tags */}
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                  {[
+                    'خدمة سريعة ⚡',
+                    'أكل ساخن وطازج 🍔',
+                    'جرس التنبيه ممتاز 🔔',
+                    'تعامل راقي ✨',
+                  ].map((tag) => {
+                    const isSelected = selectedTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTags((prev) =>
+                            isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
+                          );
+                        }}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                          isSelected
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-obsidian-surface text-zinc-400 border-obsidian-border hover:border-zinc-500'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await submitOrderFeedback(
+                      order.id,
+                      {
+                        rating,
+                        tags: selectedTags,
+                        submittedAt: new Date().toISOString(),
+                      },
+                      slug
+                    );
+                    setFeedbackSent(true);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-black flex items-center justify-center gap-1.5 shadow-lg transition-all cursor-pointer"
+                  style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>إرسال التقييم للمطعم</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 mb-5 text-emerald-400 text-xs font-bold animate-fade-in">
+                ✨ شكراً جزيلاً لتقييمك الكريم! رأيك يساعدنا على التطوير المستمر.
+              </div>
+            )}
+
             <Link
               href={`/${slug}/track`}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-sm font-bold text-white transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-xs font-bold text-white transition-all"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
               <span>تتبع طلب آخر</span>
             </Link>
           </div>

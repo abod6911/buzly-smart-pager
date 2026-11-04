@@ -14,6 +14,8 @@ import {
   Flame,
   CheckCircle2,
   Sparkles,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 
 export default function KitchenTvBoardPage() {
@@ -26,6 +28,7 @@ export default function KitchenTvBoardPage() {
 
   const [currentTime, setCurrentTime] = useState<string>('');
   const [audioEnabled, setAudioEnabled] = useState<boolean>(false);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [newReadyFlash, setNewReadyFlash] = useState<boolean>(false);
   const previousReadyCount = useRef<number>(0);
 
@@ -57,17 +60,22 @@ export default function KitchenTvBoardPage() {
     [orders]
   );
 
-  // React to new ready orders & play airport chime on TV
+  // React to new ready orders & play airport chime + optional Arabic voice on TV
   useEffect(() => {
     if (readyOrders.length > previousReadyCount.current && previousReadyCount.current !== 0) {
       if (audioEnabled) {
-        soundManager.playHospitalityChime();
+        soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+        if (voiceEnabled && readyOrders[0]) {
+          setTimeout(() => {
+            soundManager.announceOrderArabic(readyOrders[0].orderNumber, restaurant.name);
+          }, 1400);
+        }
       }
       setNewReadyFlash(true);
       setTimeout(() => setNewReadyFlash(false), 2500);
     }
     previousReadyCount.current = readyOrders.length;
-  }, [readyOrders.length, audioEnabled]);
+  }, [readyOrders, audioEnabled, voiceEnabled, restaurant.chimeTheme, restaurant.name]);
 
   // Listener for direct realtime events
   useEffect(() => {
@@ -77,12 +85,17 @@ export default function KitchenTvBoardPage() {
       lastEvent.restaurantSlug === slug
     ) {
       if (audioEnabled) {
-        soundManager.playHospitalityChime();
+        soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+        if (voiceEnabled && lastEvent.orderNumber) {
+          setTimeout(() => {
+            soundManager.announceOrderArabic(lastEvent.orderNumber!, restaurant.name);
+          }, 1400);
+        }
       }
       setNewReadyFlash(true);
       setTimeout(() => setNewReadyFlash(false), 2500);
     }
-  }, [lastEvent, slug, audioEnabled]);
+  }, [lastEvent, slug, audioEnabled, voiceEnabled, restaurant.chimeTheme, restaurant.name]);
 
   const toggleAudio = async () => {
     if (!audioEnabled) {
@@ -167,6 +180,20 @@ export default function KitchenTvBoardPage() {
           >
             {audioEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5" />}
             <span className="hidden md:inline">{audioEnabled ? 'جرس التنبيه مفعل' : 'انقر لتفعيل الصوت'}</span>
+          </button>
+
+          {/* Arabic Voice Callout Toggle */}
+          <button
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className={`flex items-center gap-2 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all border ${
+              voiceEnabled
+                ? 'bg-buzly-amber/20 text-buzly-amber border-buzly-amber/40'
+                : 'bg-obsidian-card hover:bg-obsidian-border text-zinc-500 border-obsidian-border'
+            }`}
+            title="تفعيل النداء الصوتي بالعربي"
+          >
+            {voiceEnabled ? <Mic className="w-5 h-5 text-buzly-amber" /> : <MicOff className="w-5 h-5" />}
+            <span className="hidden lg:inline">{voiceEnabled ? 'النداء الصوتي بالعربي 🎙️' : 'النداء الصوتي معطل'}</span>
           </button>
 
           {/* Fullscreen Button */}

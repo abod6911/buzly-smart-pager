@@ -122,6 +122,7 @@ interface QueueContextType {
   isSupabaseActive: boolean;
   getRestaurant: (slug: string) => Restaurant;
   updateRestaurant: (slug: string, data: Partial<Restaurant>) => Promise<void>;
+  createRestaurant: (data: Omit<Restaurant, 'id' | 'createdAt'>) => Promise<Restaurant>;
   addOrder: (
     orderNumber: string,
     estimatedMinutes: number,
@@ -133,6 +134,11 @@ interface QueueContextType {
   rePing: (orderId: string, restaurantSlug?: string) => Promise<void>;
   completeOrder: (orderId: string, restaurantSlug?: string) => Promise<void>;
   cancelOrder: (orderId: string, restaurantSlug?: string) => Promise<void>;
+  submitOrderFeedback: (
+    orderId: string,
+    feedback: import('@/types/queue').OrderFeedback,
+    restaurantSlug?: string
+  ) => Promise<void>;
   archiveCompletedOrders: (restaurantSlug: string) => Promise<void>;
   registerPushSubscription: (
     orderNumber: string,
@@ -462,6 +468,52 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [getRestaurant, orders, restaurants, saveAndBroadcast]
   );
 
+  const createRestaurant = useCallback(
+    async (data: Omit<Restaurant, 'id' | 'createdAt'>): Promise<Restaurant> => {
+      const slug = data.slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-');
+      const newRest: Restaurant = {
+        ...data,
+        id: 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        slug,
+        createdAt: new Date().toISOString(),
+      };
+
+      const nextRestaurants = {
+        ...restaurants,
+        [slug]: newRest,
+      };
+
+      saveAndBroadcast(
+        orders,
+        {
+          type: 'RESTAURANT_CREATED',
+          restaurantSlug: slug,
+          restaurant: newRest,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
+        },
+        nextRestaurants
+      );
+
+      if (isSupabaseConfigured() && supabase) {
+        supabase
+          .from('restaurants')
+          .insert({
+            slug,
+            name: newRest.name,
+            logo_url: newRest.logoUrl,
+            theme_color: newRest.themeColor,
+            staff_pin: newRest.staffPin,
+            whatsapp_fallback_enabled: newRest.whatsappFallbackEnabled,
+          })
+          .then();
+      }
+
+      return newRest;
+    },
+    [orders, restaurants, saveAndBroadcast]
+  );
+
   // 5. Action: Add Order
   const addOrder = useCallback(
     async (
@@ -698,6 +750,43 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
+  // 8.1 Action: Submit Order Feedback
+  const submitOrderFeedback = useCallback(
+    async (orderId: string, feedback: import('@/types/queue').OrderFeedback, restaurantSlug?: string) => {
+      setOrders((prev) => {
+        let targetOrder: Order | undefined;
+        const next = prev.map((ord) => {
+          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
+          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+            targetOrder = {
+              ...ord,
+              feedback,
+            };
+            return targetOrder;
+          }
+          return ord;
+        });
+
+        if (targetOrder) {
+          saveAndBroadcast(next, {
+            type: 'ORDER_FEEDBACK',
+            restaurantSlug: targetOrder.restaurantSlug,
+            orderId: targetOrder.id,
+            orderNumber: targetOrder.orderNumber,
+            feedback,
+            timestamp: Date.now(),
+            sourceTabId: tabIdRef.current,
+          });
+        }
+
+        return next;
+      });
+
+      soundManager.playSuccessTone();
+    },
+    [saveAndBroadcast]
+  );
+
   // 9. Action: Auto-Archive Completed Orders
   const archiveCompletedOrders = useCallback(
     async (restaurantSlug: string) => {
@@ -728,6 +817,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     [saveAndBroadcast]
   );
+
 
   // 10. Action: Cancel Order
   const cancelOrder = useCallback(
@@ -888,11 +978,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isSupabaseActive,
     getRestaurant,
     updateRestaurant,
+    createRestaurant,
     addOrder,
     markReady,
     rePing,
     completeOrder,
     cancelOrder,
+    submitOrderFeedback,
     archiveCompletedOrders,
     registerPushSubscription,
     getOrdersForRestaurant,

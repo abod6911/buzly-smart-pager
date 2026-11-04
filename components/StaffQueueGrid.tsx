@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, RefreshCw, CheckCircle2, Clock, QrCode, Trash2, AlertCircle } from 'lucide-react';
+import { Bell, RefreshCw, CheckCircle2, Clock, QrCode, Trash2, AlertCircle, Search, X } from 'lucide-react';
 import { Order } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
 
@@ -26,6 +26,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
   onOpenQr,
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'preparing' | 'ready'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [now, setNow] = useState<number>(Date.now());
 
   // Update timer tick every 10 seconds to update relative times
@@ -40,6 +41,26 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
     if (diffMins < 1) return 'الآن';
     return `منذ ${diffMins} د`;
   };
+
+  const matchesSearch = (o: Order) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      o.orderNumber.toLowerCase().includes(q) ||
+      (o.notes && o.notes.toLowerCase().includes(q)) ||
+      (o.customerPhone && o.customerPhone.includes(q))
+    );
+  };
+
+  const filteredPreparing = useMemo(
+    () => preparingOrders.filter(matchesSearch),
+    [preparingOrders, searchQuery]
+  );
+
+  const filteredReady = useMemo(
+    () => readyOrders.filter(matchesSearch),
+    [readyOrders, searchQuery]
+  );
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -77,6 +98,26 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
         </button>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-zinc-500 absolute top-3.5 right-3.5" />
+        <input
+          type="text"
+          placeholder="بحث سريع برقم الطلب # أو الملاحظة أو رقم الجوال..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-obsidian-surface border border-obsidian-border rounded-2xl pr-10 pl-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute top-3 left-3 text-zinc-500 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {/* Main Split Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1 min-h-[480px]">
         {/* COLUMN 1: PREPARING (قيد التحضير) */}
@@ -89,23 +130,23 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                 <h3 className="font-bold text-white text-lg font-cairo">قيد التحضير (Preparing)</h3>
               </div>
               <span className="px-3 py-1 rounded-full bg-buzly-amber/10 border border-buzly-amber/30 text-buzly-amber text-xs font-bold font-mono">
-                {preparingOrders.length} طلبات
+                {filteredPreparing.length} طلبات
               </span>
             </div>
 
             {/* List */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar max-h-[580px]">
               <AnimatePresence mode="popLayout">
-                {preparingOrders.length === 0 ? (
+                {filteredPreparing.length === 0 ? (
                   <div className="h-64 flex flex-col items-center justify-center text-center text-zinc-500">
                     <Clock className="w-10 h-10 mb-2 stroke-[1.5] text-zinc-600" />
                     <p className="text-sm font-medium">لا توجد طلبات قيد التحضير حالياً</p>
                     <p className="text-xs text-zinc-600 mt-1">
-                      أدخل رقم طلب من اللوحة لإضافته هنا
+                      {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'أدخل رقم طلب من اللوحة لإضافته هنا'}
                     </p>
                   </div>
                 ) : (
-                  preparingOrders.map((order) => (
+                  filteredPreparing.map((order) => (
                     <motion.div
                       key={order.id}
                       layout
@@ -187,23 +228,23 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                 <h3 className="font-bold text-emerald-400 text-lg font-cairo">جاهز للاستلام (Ready)</h3>
               </div>
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
-                {readyOrders.length} جاهز
+                {filteredReady.length} جاهز
               </span>
             </div>
 
             {/* List */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar max-h-[580px]">
               <AnimatePresence mode="popLayout">
-                {readyOrders.length === 0 ? (
+                {filteredReady.length === 0 ? (
                   <div className="h-64 flex flex-col items-center justify-center text-center text-zinc-500">
                     <CheckCircle2 className="w-10 h-10 mb-2 stroke-[1.5] text-zinc-600" />
                     <p className="text-sm font-medium">لا توجد طلبات بانتظار الاستلام</p>
                     <p className="text-xs text-zinc-600 mt-1">
-                      عند نداء أي طلب جاهز سيظهر هنا فوراً
+                      {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'عند نداء أي طلب جاهز سيظهر هنا فوراً'}
                     </p>
                   </div>
                 ) : (
-                  readyOrders.map((order) => (
+                  filteredReady.map((order) => (
                     <motion.div
                       key={order.id}
                       layout

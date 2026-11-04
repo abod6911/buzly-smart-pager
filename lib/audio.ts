@@ -1,5 +1,7 @@
-// Web Audio API Synthesizer & iOS Background Keep-Alive for Buzly Smart Pager
-// Zero external mp3 dependencies, works offline and in background!
+// Web Audio API Synthesizer & Multi-Theme Audio Engine for Buzly Smart Pager
+// Zero external MP3 dependencies, works offline and in background!
+
+import { ChimeSoundTheme } from '@/types/queue';
 
 class AudioSynthesizer {
   private ctx: AudioContext | null = null;
@@ -8,6 +10,7 @@ class AudioSynthesizer {
   private silentOscillator: OscillatorNode | null = null;
   private silentGain: GainNode | null = null;
   private isSilentKeepAliveRunning: boolean = false;
+  private currentTheme: ChimeSoundTheme = 'hospitality';
 
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -28,10 +31,10 @@ class AudioSynthesizer {
     return this.ctx;
   }
 
-  /**
-   * Must be called during a user gesture (e.g., button click)
-   * to prime and unlock AudioContext on iOS Safari and modern Chromium.
-   */
+  public setTheme(theme: ChimeSoundTheme) {
+    this.currentTheme = theme;
+  }
+
   public async unlock(): Promise<boolean> {
     const ctx = this.getAudioContext();
     if (!ctx) return false;
@@ -40,7 +43,6 @@ class AudioSynthesizer {
       await ctx.resume();
     }
 
-    // Play a silent buffer to ensure the context is primed
     const buffer = ctx.createBuffer(1, 1, 22050);
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -50,13 +52,6 @@ class AudioSynthesizer {
     return ctx.state === 'running';
   }
 
-  /**
-   * iOS Background Keep-Alive:
-   * Plays an imperceptible, ultra-low frequency oscillator (30Hz at ~0.0001 gain)
-   * which registers an active audio session on iOS Safari and Android.
-   * This prevents iOS from freezing the JS runtime when the screen dims or the user
-   * switches apps briefly while waiting for their food.
-   */
   public startSilentKeepAlive(): void {
     if (this.isSilentKeepAliveRunning) return;
 
@@ -71,23 +66,19 @@ class AudioSynthesizer {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      // 30 Hz is below typical phone speaker reproduction threshold
       osc.type = 'sine';
       osc.frequency.setValueAtTime(30, ctx.currentTime);
-
-      // Microscopic gain
       gain.gain.setValueAtTime(0.00005, ctx.currentTime);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.start();
 
       this.silentOscillator = osc;
       this.silentGain = gain;
       this.isSilentKeepAliveRunning = true;
     } catch (err) {
-      console.warn('Silent keep-alive start error:', err);
+      console.warn('Silent keep-alive warning:', err);
     }
   }
 
@@ -111,9 +102,7 @@ class AudioSynthesizer {
   }
 
   /**
-   * Synthesizes a luxury multi-harmonic airport / hotel concierge chime:
-   * Notes: D5 (587.33Hz) -> F#5 (739.99Hz) -> A5 (880Hz) -> D6 (1174.66Hz)
-   * Rich sine + triangle harmonics with warm decay.
+   * Theme 1: Luxury Hospitality Concierge (Airport / Luxury Hotel Chime)
    */
   public playHospitalityChime(): void {
     const ctx = this.getAudioContext();
@@ -132,15 +121,12 @@ class AudioSynthesizer {
       const overtone = ctx.createOscillator();
       const gainNode = ctx.createGain();
 
-      // Fundamental frequency (Sine for warm bell tone)
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, now + delay);
 
-      // Bell overtone (Soft triangle at 2nd harmonic for crispness)
       overtone.type = 'triangle';
       overtone.frequency.setValueAtTime(freq * 2.002, now + delay);
 
-      // Envelope: Fast attack, natural exponential release
       const startTime = now + delay;
       gainNode.gain.setValueAtTime(0.0001, startTime);
       gainNode.gain.exponentialRampToValueAtTime(targetGain, startTime + 0.02);
@@ -158,49 +144,172 @@ class AudioSynthesizer {
   }
 
   /**
-   * High-contrast Ready Buzzer Alert:
-   * Plays the luxury chime, followed by phone vibration.
+   * Theme 2: Coffee Zen Vibraphone (Warm, calm, organic cafe chime)
    */
-  public playOrderReadyBurst(): void {
+  public playCoffeeZenChime(): void {
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
-    this.playHospitalityChime();
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 440.0, delay: 0.0, dur: 1.8, gain: 0.28 },  // A4
+      { freq: 659.25, delay: 0.2, dur: 2.0, gain: 0.32 }, // E5
+      { freq: 880.0, delay: 0.45, dur: 2.5, gain: 0.35 }, // A5
+    ];
 
-    // Subtle vibration on supported mobile devices
+    notes.forEach(({ freq, delay, dur, gain: targetGain }) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const startTime = now + delay;
+      gainNode.gain.setValueAtTime(0.0001, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(targetGain, startTime + 0.04);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + dur);
+    });
+  }
+
+  /**
+   * Theme 3: Fast-Casual Modern Ding (Crisp, high-energy notification)
+   */
+  public playFastCasualDing(): void {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 783.99, delay: 0.0, dur: 0.8, gain: 0.35 },  // G5
+      { freq: 1046.5, delay: 0.12, dur: 1.4, gain: 0.42 }, // C6
+    ];
+
+    notes.forEach(({ freq, delay, dur, gain: targetGain }) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const startTime = now + delay;
+      gainNode.gain.setValueAtTime(0.0001, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(targetGain, startTime + 0.015);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + dur);
+    });
+  }
+
+  /**
+   * Theme 4: Retro Vibrating Restaurant Buzzer (Classic physical buzzer beep)
+   */
+  public playRetroBuzzer(): void {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const pulses = [0, 0.22, 0.44];
+
+    pulses.forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now + delay);
+      osc.frequency.linearRampToValueAtTime(260, now + delay + 0.14);
+
+      const startTime = now + delay;
+      gain.gain.setValueAtTime(0.18, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.15);
+    });
+  }
+
+  /**
+   * Plays the sound according to the selected theme
+   */
+  public playThemedChime(theme: ChimeSoundTheme = this.currentTheme): void {
+    switch (theme) {
+      case 'coffee-zen':
+        this.playCoffeeZenChime();
+        break;
+      case 'fast-casual':
+        this.playFastCasualDing();
+        break;
+      case 'buzzer-retro':
+        this.playRetroBuzzer();
+        break;
+      case 'hospitality':
+      default:
+        this.playHospitalityChime();
+        break;
+    }
+
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([400, 150, 400, 150, 800]);
-      } catch {
-        // Safe fallback
-      }
+      } catch {}
     }
   }
 
   /**
-   * Starts the continuous looping alarm on customer's phone
-   * when their buzzer is ringing.
+   * Arabic Voice Order Callout (Web Speech API)
+   * Example: "الطلب رقم مائة وأربعة جاهز للاستلام"
    */
-  public startReadyAlarmLoop(): void {
-    // Stop the silent background audio when switching to the loud alarm
+  public announceOrderArabic(orderNumber: string, restaurantName?: string): void {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel(); // Cancel any lingering utterance
+
+      const speechText = `طلب رقم ${orderNumber} جاهز للاستلام`;
+      const utterance = new SpeechSynthesisUtterance(speechText);
+      utterance.lang = 'ar-SA';
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      // Try finding an Arabic voice
+      const voices = window.speechSynthesis.getVoices();
+      const arabicVoice = voices.find((v) => v.lang.startsWith('ar'));
+      if (arabicVoice) {
+        utterance.voice = arabicVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Speech synthesis error:', err);
+    }
+  }
+
+  public startReadyAlarmLoop(theme: ChimeSoundTheme = this.currentTheme): void {
     this.stopSilentKeepAlive();
 
     if (this.isAlarmPlaying) return;
     this.isAlarmPlaying = true;
 
-    // Trigger immediate ring
-    this.playOrderReadyBurst();
+    this.playThemedChime(theme);
 
-    // Repeat every 3.8 seconds until silenced
     this.loopIntervalId = setInterval(() => {
       if (!this.isAlarmPlaying) return;
-      this.playOrderReadyBurst();
+      this.playThemedChime(theme);
     }, 3800);
   }
 
-  /**
-   * Stops the buzzer alarm loop immediately
-   */
   public stopReadyAlarm(): void {
     this.isAlarmPlaying = false;
     if (this.loopIntervalId) {
@@ -211,9 +320,7 @@ class AudioSynthesizer {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(0);
-      } catch {
-        // Ignore
-      }
+      } catch {}
     }
   }
 
@@ -221,9 +328,6 @@ class AudioSynthesizer {
     return this.isAlarmPlaying;
   }
 
-  /**
-   * Tactile click sound for cashier numpad
-   */
   public playKeyClick(): void {
     const ctx = this.getAudioContext();
     if (!ctx) return;
@@ -246,9 +350,6 @@ class AudioSynthesizer {
     osc.stop(now + 0.035);
   }
 
-  /**
-   * Success notification chime for cashier "Order Added" / "Completed"
-   */
   public playSuccessTone(): void {
     const ctx = this.getAudioContext();
     if (!ctx) return;

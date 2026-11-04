@@ -78,7 +78,7 @@ export default function LandingRoleSwitcherPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={handleTestChime}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
@@ -88,8 +88,16 @@ export default function LandingRoleSwitcherPage() {
               }`}
             >
               <Volume2 className="w-4 h-4 text-emerald-400" />
-              <span>{isPlayingTestSound ? 'جارِ الرنين 🔔' : 'تجربة صوت الجرس'}</span>
+              <span className="hidden sm:inline">{isPlayingTestSound ? 'جارِ الرنين 🔔' : 'تجربة صوت الجرس'}</span>
             </button>
+
+            <Link
+              href="/onboard"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>سجل مطعمك مجاناً 🚀</span>
+            </Link>
           </div>
         </div>
       </header>
@@ -113,6 +121,24 @@ export default function LandingRoleSwitcherPage() {
           <p className="text-base sm:text-lg text-zinc-400 mt-4 leading-relaxed max-w-2xl mx-auto">
             امسح الكود واستلم طلبك فور جاهزيته. رنين صوتي فاخر واهتزاز مستمر ينبه العميل حتى لو كان هاتفه في جيبه أو شاشته مغلقة.
           </p>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/onboard"
+              className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm shadow-xl shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>أنشئ بيجر مطعمك الآن (30 ثانية)</span>
+            </Link>
+
+            <Link
+              href="/demo-cafe/staff"
+              className="px-5 py-3.5 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-bold text-sm transition-all flex items-center gap-2"
+            >
+              <span>معاينة كاشير Demo Cafe</span>
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
         {/* ========================================================================= */}
