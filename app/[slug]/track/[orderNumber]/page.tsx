@@ -86,18 +86,6 @@ function TenantCustomerTrackerInner() {
   const [showAudioUnlockOverlay, setShowAudioUnlockOverlay] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
 
-  if (!restaurant) {
-    if (isRestaurantsLoaded) {
-      return <RestaurantNotFound slug={slug} />;
-    }
-    return (
-      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
-        <div className="w-14 h-14 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
-        <h2 className="text-xl font-bold font-cairo">جارِ التحقق من المتجر...</h2>
-      </div>
-    );
-  }
-
   // 1. Mobile Audio & Vibration Unlock Guard
   useEffect(() => {
     if (typeof window !== 'undefined' && !soundManager.isAudioUnlocked()) {
@@ -126,7 +114,7 @@ function TenantCustomerTrackerInner() {
     soundManager.startSilentKeepAlive();
     setShowAudioUnlockOverlay(false);
     pwaHelper.requestNotificationPermission().catch(() => {});
-    soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+    soundManager.playThemedChime(restaurant?.chimeTheme || 'hospitality');
   };
 
   // 2. Background Tab & Lock-Screen Reconnection Recovery (visibilitychange)
@@ -142,7 +130,7 @@ function TenantCustomerTrackerInner() {
         // If order became ready while locked, trigger alarm loop
         if (order && order.status === 'ready' && !hasUserSilenced) {
           setAlarmActive(true);
-          soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+          soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
         }
       }
     };
@@ -154,7 +142,7 @@ function TenantCustomerTrackerInner() {
       document.removeEventListener('visibilitychange', handleReconnection);
       window.removeEventListener('focus', handleReconnection);
     };
-  }, [order, hasUserSilenced, restaurant.chimeTheme, syncNow]);
+  }, [order, hasUserSilenced, restaurant?.chimeTheme, syncNow]);
 
   // Immediate single-order fetch from server bridge if not yet in state
   useEffect(() => {
@@ -286,7 +274,7 @@ function TenantCustomerTrackerInner() {
     ) {
       setHasUserSilenced(false);
       setAlarmActive(true);
-      soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+      soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
 
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
         try {
@@ -325,6 +313,19 @@ function TenantCustomerTrackerInner() {
     setAlarmActive(false);
     setHasUserSilenced(true);
   };
+
+  // 1. Restaurant Guard & Loading State
+  if (!restaurant) {
+    if (isRestaurantsLoaded) {
+      return <RestaurantNotFound slug={slug} />;
+    }
+    return (
+      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
+        <div className="w-14 h-14 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
+        <h2 className="text-xl font-bold font-cairo">جارِ التحقق من المتجر...</h2>
+      </div>
+    );
+  }
 
   // 1. Loading State while checking server bridge
   if (isSyncing) {
