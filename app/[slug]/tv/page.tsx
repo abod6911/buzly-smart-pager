@@ -8,14 +8,9 @@ import { soundManager } from '@/lib/audio';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import {
-  Volume2,
-  VolumeX,
   Maximize2,
   Clock,
   Bell,
-  Mic,
-  MicOff,
-  Sparkles,
   UtensilsCrossed,
   Store,
 } from 'lucide-react';
@@ -29,8 +24,7 @@ export default function KitchenTvBoardPage() {
   const orders = getOrdersForRestaurant(slug);
 
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [audioEnabled, setAudioEnabled] = useState<boolean>(false);
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
+  const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const [highlightOrderNumber, setHighlightOrderNumber] = useState<string | null>(null);
   const previousReadyCount = useRef<number>(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -71,12 +65,12 @@ export default function KitchenTvBoardPage() {
     };
   }, []);
 
-  // Digital clock tick
+  // 2. Digital clock tick in standard English/Western numerals (en-US)
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
       setCurrentTime(
-        now.toLocaleTimeString('ar-SA', {
+        now.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -89,7 +83,7 @@ export default function KitchenTvBoardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter active orders
+  // 3. Filter active orders
   const preparingOrders = useMemo(
     () => orders.filter((o) => o.status === 'preparing'),
     [orders]
@@ -99,12 +93,13 @@ export default function KitchenTvBoardPage() {
     [orders]
   );
 
-  // Trigger alert banner and audio
+  // 4. Trigger alert banner and audio
   const triggerNewReady = (orderNum: string) => {
     setHighlightOrderNumber(orderNum);
     if (audioEnabled) {
       soundManager.playThemedChime(restaurant?.chimeTheme || 'hospitality');
-      if (voiceEnabled) {
+      const voiceActive = restaurant?.voiceAnnounceEnabled ?? true;
+      if (voiceActive) {
         setTimeout(() => {
           soundManager.announceOrderArabic(orderNum, restaurant?.name || '');
         }, 1300);
@@ -113,12 +108,6 @@ export default function KitchenTvBoardPage() {
     setTimeout(() => {
       setHighlightOrderNumber(null);
     }, 3500);
-  };
-
-  const handleTestVolume = async () => {
-    await soundManager.unlock();
-    setAudioEnabled(true);
-    soundManager.playHospitalityChime();
   };
 
   useEffect(() => {
@@ -141,16 +130,6 @@ export default function KitchenTvBoardPage() {
     }
   }, [lastEvent, slug]);
 
-  const toggleAudio = async () => {
-    if (!audioEnabled) {
-      await soundManager.unlock();
-      soundManager.playHospitalityChime();
-      setAudioEnabled(true);
-    } else {
-      setAudioEnabled(false);
-    }
-  };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -164,17 +143,20 @@ export default function KitchenTvBoardPage() {
     return Math.max(0, diff);
   };
 
-  // One-time global pointerdown listener for TV display audio unlock
+  // 5. Silent one-time global click/touch listener to unlock Web Audio without visual clutter
   useEffect(() => {
     const handleGlobalUnlock = async () => {
-      if (!audioEnabled) {
-        await soundManager.unlock();
-        setAudioEnabled(true);
-      }
+      await soundManager.unlock();
+      soundManager.startSilentKeepAlive();
+      setAudioEnabled(true);
     };
     window.addEventListener('pointerdown', handleGlobalUnlock, { once: true });
-    return () => window.removeEventListener('pointerdown', handleGlobalUnlock);
-  }, [audioEnabled]);
+    window.addEventListener('keydown', handleGlobalUnlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handleGlobalUnlock);
+      window.removeEventListener('keydown', handleGlobalUnlock);
+    };
+  }, []);
 
   if (!restaurant) {
     if (isRestaurantsLoaded) {
@@ -193,30 +175,11 @@ export default function KitchenTvBoardPage() {
   return (
     <ErrorBoundary fallbackTitle="تعذر تحميل شاشة الصالة والتلفاز">
       <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans overflow-hidden select-none relative">
-        {/* Smart TV One-Tap Audio Unlocker Banner */}
-        {!audioEnabled && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={async () => {
-              await soundManager.unlock();
-              soundManager.playHospitalityChime();
-              setAudioEnabled(true);
-              toggleFullscreen();
-            }}
-            className="bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs py-2.5 px-4 text-center cursor-pointer flex items-center justify-center gap-2 z-30 transition-colors shadow-lg"
-          >
-            <Volume2 className="w-4 h-4 stroke-[2.5]" />
-            <span>اضغط في أي مكان على الشاشة لتفعيل النداء الصوتي ووضع ملء الشاشة</span>
-          </motion.div>
-        )}
-
-        {/* 1. TOP AIRPORT-STYLE HEADER */}
+        {/* 1. ULTRA-CLEAN MINIMAL ENTERPRISE HEADER */}
         <header className="border-b border-white/[0.08] bg-[#09090B] px-6 py-4 flex items-center justify-between z-20">
-          {/* Brand */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden bg-[#18181C]">
+          {/* Brand: Prominent & Clean */}
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden bg-[#18181C] shadow-md shrink-0">
               {restaurant?.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -226,88 +189,36 @@ export default function KitchenTvBoardPage() {
                 />
               ) : (
                 <div
-                  className="w-full h-full flex items-center justify-center font-bold text-lg text-white"
+                  className="w-full h-full flex items-center justify-center font-bold text-xl text-white"
                   style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
                 >
-                  {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Bell className="w-5 h-5 text-white" />}
+                  {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Bell className="w-6 h-6 text-white" />}
                 </div>
               )}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
-                  {restaurant?.name || slug}
-                </h1>
-                <span className="text-[10px] font-mono uppercase bg-white/[0.04] text-zinc-400 px-2 py-0.5 rounded border border-white/[0.06]">
-                  شاشة الصالة
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 font-normal mt-0.5">
-                شاشة الاستدعاء ومتابعة جاهزية الطلبات
-              </p>
+              <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide">
+                {restaurant?.name || slug}
+              </h1>
             </div>
           </div>
 
-          {/* Status & Controls */}
+          {/* Status & Minimal Controls (Clock & Fullscreen Only) */}
           <div className="flex items-center gap-3">
-            {/* Digital Clock */}
-            <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+            {/* Digital Clock in Western / English numerals */}
+            <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <Clock className="w-4 h-4 text-zinc-400" />
-              <span className="font-mono text-xl lg:text-2xl font-bold text-white tabular-nums tracking-wider">
+              <span className="font-mono text-xl lg:text-2xl font-semibold text-zinc-100 tabular-nums tracking-wider dir-ltr">
                 {currentTime || '--:--:--'}
               </span>
             </div>
 
-            {/* Test Volume Button */}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={handleTestVolume}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-[#121215] hover:bg-[#18181E] text-zinc-300 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-              title="تجربة مستوى الصوت والرنين الفندقي"
-            >
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">تجربة مستوى الصوت</span>
-            </motion.button>
-
-            {/* Sound Toggle */}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={toggleAudio}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ${
-                audioEnabled
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-[#121215] hover:bg-[#18181C] text-zinc-400 border-white/[0.08]'
-              }`}
-              title="تفعيل رنين الشاشة"
-            >
-              {audioEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4" />}
-              <span className="hidden sm:inline">{audioEnabled ? 'جرس التنبيه مفعل' : 'تفعيل الرنين'}</span>
-            </motion.button>
-
-            {/* Voice Toggle */}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ${
-                voiceEnabled
-                  ? 'bg-white/[0.06] text-zinc-200 border-white/[0.12]'
-                  : 'bg-[#121215] text-zinc-500 border-white/[0.08]'
-              }`}
-              title="تفعيل النداء الصوتي العربي"
-            >
-              {voiceEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
-              <span className="hidden md:inline">{voiceEnabled ? 'النداء الصوتي مفعل' : 'النداء الصوتي معطل'}</span>
-            </motion.button>
-
-            {/* Fullscreen */}
+            {/* Sleek Fullscreen Toggle */}
             <motion.button
               whileTap={{ scale: 0.92 }}
               whileHover={{ scale: 1.05 }}
               onClick={toggleFullscreen}
-              className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+              className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] cursor-pointer"
               title="ملء الشاشة"
             >
               <Maximize2 className="w-4 h-4" />
@@ -379,18 +290,15 @@ export default function KitchenTvBoardPage() {
         {hasAnyActiveOrders ? (
           <main className="flex-1 grid grid-cols-2 divide-x-2 divide-x-reverse divide-white/[0.06] p-6 gap-6 overflow-hidden">
             {/* COLUMN 1: PREPARING (قيد التحضير) */}
-            <div className="flex flex-col bg-[#121215] rounded-2xl border border-white/[0.08] p-5 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06] mb-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <div>
-                    <h2 className="text-lg lg:text-xl font-bold text-zinc-200">
-                      قيد التحضير
-                    </h2>
-                    <p className="text-xs text-zinc-500">يتم إعدادها في المطبخ</p>
-                  </div>
+            <div className="flex flex-col bg-[#121215] rounded-2xl border border-white/[0.08] p-5 lg:p-6 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.45)]" />
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-zinc-100 tracking-tight">
+                    قيد التحضير
+                  </h2>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-mono font-bold tabular-nums">
+                <span className="px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-base lg:text-lg font-mono font-bold tabular-nums">
                   {preparingOrders.length}
                 </span>
               </div>
@@ -421,25 +329,22 @@ export default function KitchenTvBoardPage() {
 
                 {preparingOrders.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-sm font-medium">لا توجد طلبات قيد التحضير حالياً</p>
+                    <p className="text-base font-medium">لا توجد طلبات قيد التحضير حالياً</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* COLUMN 2: READY FOR PICKUP (جاهز للاستلام) */}
-            <div className="flex flex-col bg-emerald-950/20 rounded-2xl border border-emerald-500/20 p-5 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between pb-3.5 border-b border-emerald-500/20 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <div>
-                    <h2 className="text-lg lg:text-xl font-bold text-emerald-400">
-                      جاهز للاستلام
-                    </h2>
-                    <p className="text-xs text-zinc-400">تفضل بالتوجه إلى الكاونتر</p>
-                  </div>
+            <div className="flex flex-col bg-emerald-950/20 rounded-2xl border border-emerald-500/20 p-5 lg:p-6 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between pb-4 border-b border-emerald-500/20 mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-emerald-400 tracking-tight">
+                    جاهز للاستلام
+                  </h2>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-mono font-bold tabular-nums">
+                <span className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-base lg:text-lg font-mono font-bold tabular-nums">
                   {readyOrders.length}
                 </span>
               </div>
@@ -473,7 +378,7 @@ export default function KitchenTvBoardPage() {
 
                 {readyOrders.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-sm font-medium">بانتظار جاهزية الطلبات</p>
+                    <p className="text-base font-medium">بانتظار جاهزية الطلبات</p>
                   </div>
                 )}
               </div>
@@ -525,7 +430,7 @@ export default function KitchenTvBoardPage() {
               <div className="flex items-center gap-6 text-xs text-zinc-500 font-mono">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-zinc-400" />
-                  <span className="text-zinc-300 font-bold text-sm tabular-nums">{currentTime || '--:--'}</span>
+                  <span className="text-zinc-300 font-bold text-sm tabular-nums dir-ltr">{currentTime || '--:--'}</span>
                 </div>
                 <span className="text-zinc-700">•</span>
                 <div className="flex items-center gap-2">
@@ -536,15 +441,6 @@ export default function KitchenTvBoardPage() {
             </motion.div>
           </main>
         )}
-
-        {/* Footer Ticker */}
-        <footer className="border-t border-white/[0.08] bg-[#09090B] px-6 py-2.5 flex items-center justify-between text-xs text-zinc-500">
-          <span className="flex items-center gap-1.5 font-normal">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span>تظهر الأرقام تلقائياً فور تسجيل الطلب أو جاهزيته في المطبخ</span>
-          </span>
-          <span className="font-mono text-[11px] text-zinc-600">Chimer Display System</span>
-        </footer>
       </div>
     </ErrorBoundary>
   );

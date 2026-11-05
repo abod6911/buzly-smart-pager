@@ -24,7 +24,11 @@ import {
   Wifi,
   Cloud,
   Camera,
+  Volume2,
+  Mic,
 } from 'lucide-react';
+import { ChimeSoundTheme } from '@/types/queue';
+import { soundManager } from '@/lib/audio';
 
 const COLOR_OPTIONS = [
   { name: 'زمردي كلاسيكي', hex: '#10B981' },
@@ -32,6 +36,29 @@ const COLOR_OPTIONS = [
   { name: 'أزرق ملكي', hex: '#3B82F6' },
   { name: 'وردي ياقوتي', hex: '#F43F5E' },
   { name: 'أرجواني عصري', hex: '#8B5CF6' },
+];
+
+const CHIME_THEMES: { id: ChimeSoundTheme; name: string; desc: string }[] = [
+  {
+    id: 'hospitality',
+    name: 'فندقي فاخر (Hospitality)',
+    desc: 'نغمات متدرجة ناعمة وعميقة، مثالية للمطاعم واللاونجات الراقية',
+  },
+  {
+    id: 'coffee-zen',
+    name: 'كافيه هادئ (Coffee Zen)',
+    desc: 'إيقاع ماريمبا دافئ ومتزن، مناسب للمقاهي والمخابز الحديثة',
+  },
+  {
+    id: 'fast-casual',
+    name: 'كاجوال سريع (Fast Casual Ding)',
+    desc: 'نغمة دينغ مزدوجة واضحة ونفاذة للأماكن ذات الحركة السريعة',
+  },
+  {
+    id: 'buzzer-retro',
+    name: 'بيجر كلاسيكي (Retro Buzzer)',
+    desc: 'صوت إلكتروني مميز يحاكي أجهزة البيجر التقليدية للمناطق المزدحمة',
+  },
 ];
 
 export default function TenantAdminBrandingPage() {
@@ -51,6 +78,13 @@ export default function TenantAdminBrandingPage() {
   const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(
     restaurant?.whatsappFallbackEnabled ?? true
   );
+  const [chimeTheme, setChimeTheme] = useState<ChimeSoundTheme>(
+    restaurant?.chimeTheme || 'hospitality'
+  );
+  const [voiceAnnounce, setVoiceAnnounce] = useState<boolean>(
+    restaurant?.voiceAnnounceEnabled ?? true
+  );
+  const [isPlayingTest, setIsPlayingTest] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
   // QR Stand State
@@ -65,6 +99,8 @@ export default function TenantAdminBrandingPage() {
       setThemeColor(restaurant.themeColor || '#10B981');
       setStaffPin(restaurant.staffPin || '1234');
       setWhatsappEnabled(restaurant.whatsappFallbackEnabled ?? true);
+      setChimeTheme(restaurant.chimeTheme || 'hospitality');
+      setVoiceAnnounce(restaurant.voiceAnnounceEnabled ?? true);
     }
   }, [restaurant]);
 
@@ -94,6 +130,21 @@ export default function TenantAdminBrandingPage() {
     }
   }, [tableStandUrl]);
 
+  const handleTestChime = async () => {
+    setIsPlayingTest(true);
+    try {
+      await soundManager.unlock();
+      soundManager.playThemedChime(chimeTheme);
+      if (voiceAnnounce) {
+        setTimeout(() => {
+          soundManager.announceOrderArabic('10', name || 'المطعم');
+        }, 1200);
+      }
+    } finally {
+      setTimeout(() => setIsPlayingTest(false), 2200);
+    }
+  };
+
   if (!restaurant) {
     if (isRestaurantsLoaded) {
       return <RestaurantNotFound slug={slug} />;
@@ -114,6 +165,8 @@ export default function TenantAdminBrandingPage() {
       themeColor,
       staffPin: staffPin.trim() || '1234',
       whatsappFallbackEnabled: whatsappEnabled,
+      chimeTheme,
+      voiceAnnounceEnabled: voiceAnnounce,
     });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
@@ -403,8 +456,100 @@ export default function TenantAdminBrandingPage() {
                       className="w-5 h-5 rounded accent-emerald-500 cursor-pointer"
                     />
                   </div>
+                </div>
 
-                  {/* Submit Button */}
+                {/* TV Display & Audio Public Settings Card */}
+                <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-6 shadow-xl space-y-5">
+                  <div className="flex items-center justify-between border-b border-obsidian-border pb-3">
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="w-5 h-5 text-emerald-400" />
+                      <div>
+                        <h3 className="text-base font-bold text-white">إعدادات شاشة التلفزيون والصوت (TV & Audio)</h3>
+                        <p className="text-xs text-zinc-400">التحكم في نغمات الرنين، النداء الصوتي، وتجربة الصوت للشاشة العامة</p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/${slug}/tv`}
+                      target="_blank"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-zinc-300 border border-obsidian-border transition-colors"
+                    >
+                      <Tv className="w-3.5 h-3.5 text-buzly-amber" />
+                      <span>معاينة الشاشة</span>
+                    </Link>
+                  </div>
+
+                  {/* Chime Sound Theme Picker */}
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-300 mb-2">
+                      نغمة رنين الاستدعاء (Chime Theme)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {CHIME_THEMES.map((theme) => {
+                        const isSelected = chimeTheme === theme.id;
+                        return (
+                          <button
+                            key={theme.id}
+                            type="button"
+                            onClick={() => {
+                              setChimeTheme(theme.id);
+                              soundManager.setTheme(theme.id);
+                            }}
+                            className={`p-3 rounded-2xl border text-right transition-all flex items-start justify-between cursor-pointer ${
+                              isSelected
+                                ? 'border-emerald-500 bg-emerald-500/10 shadow-md'
+                                : 'border-obsidian-border bg-obsidian-card/50 hover:bg-obsidian-card'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className="text-xs font-bold text-zinc-200">{theme.name}</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 mt-1 mr-4">{theme.desc}</p>
+                            </div>
+                            {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Voice Announce Toggle */}
+                  <div className="pt-2 border-t border-obsidian-border flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-zinc-200 block">
+                        النداء الصوتي الآلي باللغة العربية (Arabic Voice)
+                      </span>
+                      <span className="text-[11px] text-zinc-500">
+                        نطق رقم الطلب صوتياً باللغة العربية فور جاهزيته (&quot;طلب رقم 10 جاهز للاستلام&quot;)
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={voiceAnnounce}
+                      onChange={(e) => setVoiceAnnounce(e.target.checked)}
+                      className="w-5 h-5 rounded accent-emerald-500 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Sound Testing Trigger Button */}
+                  <div className="pt-3 border-t border-obsidian-border flex items-center justify-between">
+                    <div className="text-[11px] text-zinc-400">
+                      اختبر كيف ستسمع الشاشة النغمة والصوت في الصالة
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTestChime}
+                      disabled={isPlayingTest}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-emerald-400 border border-emerald-500/30 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      <span>{isPlayingTest ? 'جاري الاختبار...' : 'تجربة مستوى الصوت'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   <button
                     type="submit"
                     className="w-full py-4 px-6 rounded-2xl font-extrabold text-sm text-black flex items-center justify-center gap-2 shadow-xl cursor-pointer transition-all"
