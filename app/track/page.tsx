@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
+import { BrandLogo } from '@/components/BrandLogo';
 import { Bell, ArrowRight, ShieldCheck, UtensilsCrossed } from 'lucide-react';
 
 export default function TrackEntryPage() {
@@ -16,10 +17,7 @@ export default function TrackEntryPage() {
       <header className="border-b border-obsidian-border bg-obsidian-surface/70 backdrop-blur-md px-4 py-4 sticky top-0 z-30">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-emerald-500/30 flex items-center justify-center bg-black shadow-md shadow-emerald-500/10 shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Chimer Logo" className="w-full h-full object-cover" />
-            </div>
+            <BrandLogo size="sm" />
             <span className="font-extrabold text-base tracking-tight text-white font-mono">
               CHIMER
             </span>

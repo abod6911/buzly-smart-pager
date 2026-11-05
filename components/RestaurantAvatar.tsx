@@ -43,6 +43,7 @@ export const RestaurantAvatar: React.FC<RestaurantAvatarProps> = ({
   textSize,
   size = 'md',
 }) => {
+  const [currentSrc, setCurrentSrc] = useState<string | null>(logoUrl || null);
   const [imgError, setImgError] = useState<boolean>(false);
   const trimmedName = (name || '').trim();
   const initial = trimmedName ? trimmedName.charAt(0).toUpperCase() : '';
@@ -51,14 +52,22 @@ export const RestaurantAvatar: React.FC<RestaurantAvatarProps> = ({
   const containerClass = className || activeSize.container;
   const textClass = textSize || activeSize.text;
 
-  if (logoUrl && !imgError) {
+  const handleImgError = () => {
+    if (currentSrc === '/logo.png') {
+      setCurrentSrc('/logo.jpg');
+    } else {
+      setImgError(true);
+    }
+  };
+
+  if (currentSrc && !imgError) {
     return (
       <div className={`${containerClass} overflow-hidden bg-[#18181E] border border-white/10 shrink-0 flex items-center justify-center shadow-sm`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={logoUrl}
+          src={currentSrc}
           alt={trimmedName || 'Restaurant Logo'}
-          onError={() => setImgError(true)}
+          onError={handleImgError}
           className="w-full h-full object-cover"
         />
       </div>
@@ -73,8 +82,7 @@ export const RestaurantAvatar: React.FC<RestaurantAvatarProps> = ({
       {initial ? (
         <span className={textClass}>{initial}</span>
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/logo.png" alt="Chimer Logo" className="w-full h-full object-cover" />
+        <Store className={`${activeSize.icon} text-white`} />
       )}
     </div>
   );
