@@ -9,6 +9,7 @@ import { useQueue } from '@/context/QueueContext';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
+import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import {
   Bell,
   CheckCircle2,
@@ -329,8 +330,8 @@ function TenantCustomerTrackerInner() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className={`rounded-3xl relative overflow-hidden transition-all duration-700 ${
             isReady
-              ? 'bg-gradient-to-b from-[#092B1C] via-[#0A2218] to-[#0A1713] border-2 border-emerald-400/60 shadow-[0_0_60px_rgba(16,185,129,0.25)]'
-              : 'bg-[#111115] border border-white/[0.1] shadow-2xl'
+              ? 'bg-gradient-to-b from-[#07251B] via-[#081F17] to-[#071511] border-2 border-emerald-500/40 shadow-2xl'
+              : 'bg-[#111115] border border-white/[0.08] shadow-2xl'
           }`}
         >
           {/* Perforated Notches on edges */}
@@ -342,23 +343,12 @@ function TenantCustomerTrackerInner() {
             {/* Restaurant Brand Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl overflow-hidden border border-white/10 bg-[#18181E] flex items-center justify-center shadow-md shrink-0">
-                  {restaurant?.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={restaurant.logoUrl}
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center font-bold text-base text-white"
-                      style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
-                    >
-                      {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Utensils className="w-5 h-5 text-white" />}
-                    </div>
-                  )}
-                </div>
+                <RestaurantAvatar
+                  logoUrl={restaurant?.logoUrl}
+                  name={restaurant?.name || slug}
+                  themeColor={restaurant?.themeColor}
+                  size="md"
+                />
                 <div>
                   <h1 className="text-base font-bold text-white tracking-tight">
                     {restaurant?.name || slug}
@@ -427,14 +417,14 @@ function TenantCustomerTrackerInner() {
             <div>
               <div className="grid grid-cols-3 gap-2 mb-2">
                 {/* Step 1: Confirmed */}
-                <div className="h-1.5 rounded-full bg-emerald-500 transition-all shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <div className="h-1.5 rounded-full bg-emerald-500 transition-all" />
                 {/* Step 2: Preparing */}
                 <div
                   className={`h-1.5 rounded-full transition-all ${
                     isPreparing
-                      ? 'bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                      ? 'bg-amber-400'
                       : isReady || isCompleted
-                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                      ? 'bg-emerald-500'
                       : 'bg-zinc-800'
                   }`}
                 />
@@ -442,7 +432,7 @@ function TenantCustomerTrackerInner() {
                 <div
                   className={`h-1.5 rounded-full transition-all ${
                     isReady
-                      ? 'bg-emerald-400 animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.8)]'
+                      ? 'bg-emerald-400'
                       : isCompleted
                       ? 'bg-emerald-500'
                       : 'bg-zinc-800'

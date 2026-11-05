@@ -1,8 +1,15 @@
 // High-Decibel Master Restaurant Audio Engine for Buzly Smart Pager
 // Routes via DynamicsCompressorNode + GainNode for maximum punch & loudness in noisy dining areas
 // Zero external MP3 files needed - 100% synthesized Web Audio API
+// Engineered with explicit Node Disconnection onended to prevent memory leaks during 24/7 continuous operation
 
 import { ChimeSoundTheme } from '@/types/queue';
+
+declare global {
+  interface Window {
+    __buzly_audio_ctx?: AudioContext;
+  }
+}
 
 class HighDecibelSoundEngine {
   private ctx: AudioContext | null = null;
@@ -21,12 +28,18 @@ class HighDecibelSoundEngine {
     if (typeof window === 'undefined') return null;
 
     try {
+      // Reuse existing global singleton AudioContext across all invocations & HMR
       if (!this.ctx) {
-        const AudioCtxClass =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        if (AudioCtxClass) {
-          this.ctx = new AudioCtxClass();
+        if (window.__buzly_audio_ctx && window.__buzly_audio_ctx.state !== 'closed') {
+          this.ctx = window.__buzly_audio_ctx;
+        } else {
+          const AudioCtxClass =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          if (AudioCtxClass) {
+            this.ctx = new AudioCtxClass();
+            window.__buzly_audio_ctx = this.ctx;
+          }
         }
       }
 
@@ -87,6 +100,11 @@ class HighDecibelSoundEngine {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
+      source.onended = () => {
+        try {
+          source.disconnect();
+        } catch {}
+      };
       source.start(0);
 
       return ctx.state === 'running';
@@ -168,8 +186,7 @@ class HighDecibelSoundEngine {
 
   /**
    * High-Volume Multi-Harmonic Hospitality Chime
-   * Synthesizes C5 -> E5 -> G5 -> C6 chord layered with triangle & sine oscillators
-   * routed through the dynamics compressor for maximum clarity and punch
+   * Fully cleans up nodes on completion to prevent memory accumulation in 24/7 environments
    */
   public playHospitalityChime(): void {
     const ctx = this.initAudioChain();
@@ -184,13 +201,9 @@ class HighDecibelSoundEngine {
     ];
 
     chordNotes.forEach(({ freq, delay, dur, gain: targetGain }) => {
-      // 1. Fundamental warmth & presence (triangle)
       const oscTriangle = ctx.createOscillator();
-      // 2. High-frequency chime brilliance (sine)
       const oscSine = ctx.createOscillator();
-      // 3. Subtle harmonic shimmer
       const oscShimmer = ctx.createOscillator();
-
       const noteGain = ctx.createGain();
 
       oscTriangle.type = 'triangle';
@@ -204,17 +217,31 @@ class HighDecibelSoundEngine {
 
       const startTime = now + delay;
       noteGain.gain.setValueAtTime(0.0001, startTime);
-      // Fast attack for crisp mallet strike
       noteGain.gain.exponentialRampToValueAtTime(targetGain, startTime + 0.025);
-      // Long, lush harmonic decay
       noteGain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
 
       oscTriangle.connect(noteGain);
       oscSine.connect(noteGain);
       oscShimmer.connect(noteGain);
-
-      // Route through dynamics compressor
       noteGain.connect(this.compressor!);
+
+      // Memory leak guard: sever audio graph upon finish
+      let finishedCount = 0;
+      const cleanup = () => {
+        finishedCount++;
+        if (finishedCount >= 3) {
+          try {
+            oscTriangle.disconnect();
+            oscSine.disconnect();
+            oscShimmer.disconnect();
+            noteGain.disconnect();
+          } catch {}
+        }
+      };
+
+      oscTriangle.onended = cleanup;
+      oscSine.onended = cleanup;
+      oscShimmer.onended = cleanup;
 
       oscTriangle.start(startTime);
       oscSine.start(startTime);
@@ -260,6 +287,20 @@ class HighDecibelSoundEngine {
       overtone.connect(gainNode);
       gainNode.connect(this.compressor!);
 
+      let cleaned = 0;
+      const cleanup = () => {
+        cleaned++;
+        if (cleaned >= 2) {
+          try {
+            osc.disconnect();
+            overtone.disconnect();
+            gainNode.disconnect();
+          } catch {}
+        }
+      };
+      osc.onended = cleanup;
+      overtone.onended = cleanup;
+
       osc.start(startTime);
       overtone.start(startTime);
       osc.stop(startTime + dur);
@@ -295,6 +336,13 @@ class HighDecibelSoundEngine {
       osc.connect(gainNode);
       gainNode.connect(this.compressor!);
 
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gainNode.disconnect();
+        } catch {}
+      };
+
       osc.start(startTime);
       osc.stop(startTime + dur);
     });
@@ -325,6 +373,13 @@ class HighDecibelSoundEngine {
       osc.connect(gain);
       gain.connect(this.compressor!);
 
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
+
       osc.start(startTime);
       osc.stop(startTime + 0.15);
     });
@@ -347,12 +402,7 @@ class HighDecibelSoundEngine {
         break;
     }
 
-    // Android & supported device intense vibration pattern
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([600, 150, 600, 150, 1000]);
-      } catch {}
-    }
+    this.triggerHaptic([600, 150, 600, 150, 1000]);
   }
 
   /**
@@ -381,11 +431,7 @@ class HighDecibelSoundEngine {
       this.loopIntervalId = null;
     }
 
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate(0);
-      } catch {}
-    }
+    this.stopHaptic();
   }
 
   public getIsAlarmPlaying(): boolean {
@@ -409,6 +455,13 @@ class HighDecibelSoundEngine {
 
     osc.connect(gain);
     gain.connect(ctx.destination);
+
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {}
+    };
 
     osc.start(now);
     osc.stop(now + 0.03);
@@ -436,6 +489,20 @@ class HighDecibelSoundEngine {
     osc2.connect(gain);
     gain.connect(this.compressor);
 
+    let ended = 0;
+    const cleanup = () => {
+      ended++;
+      if (ended >= 2) {
+        try {
+          osc1.disconnect();
+          osc2.disconnect();
+          gain.disconnect();
+        } catch {}
+      }
+    };
+    osc1.onended = cleanup;
+    osc2.onended = cleanup;
+
     osc1.start(now);
     osc2.start(now + 0.08);
     osc1.stop(now + 0.4);
@@ -460,6 +527,13 @@ class HighDecibelSoundEngine {
 
     osc.connect(gain);
     gain.connect(this.compressor);
+
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {}
+    };
 
     osc.start(now);
     osc.stop(now + 0.28);

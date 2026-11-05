@@ -57,6 +57,8 @@ interface QueueContextType {
     sub: PushSubscriptionData,
     restaurantSlug?: string
   ) => Promise<void>;
+  revertToPreparing: (orderId: string, restaurantSlug?: string) => Promise<void>;
+  restoreOrder: (order: Order, restaurantSlug?: string) => Promise<void>;
   getOrdersForRestaurant: (slug: string) => Order[];
   getOrder: (orderNumber: string, restaurantSlug?: string) => Order | undefined;
   resetToDemoOrders: (slug?: string) => void;
@@ -445,10 +447,34 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setNetworkStatus('connected');
+        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setNetworkStatus('reconnecting');
+        }
+      });
+
+    const handleOnline = () => {
+      setNetworkStatus('connected');
+      if (typeof window !== 'undefined') {
+        const timeout = setTimeout(() => {
+          syncNow();
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    };
+    const handleOffline = () => {
+      setNetworkStatus('offline');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
       if (supabase) supabase.removeChannel(channel);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
@@ -1260,6 +1286,101 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
+  // 12. Action: Revert order back to preparing
+  const revertToPreparing = useCallback(
+    async (orderId: string, restaurantSlug?: string) => {
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let targetOrder: Order | undefined;
+
+      const next = currentOrders.map((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          targetOrder = {
+            ...ord,
+            status: 'preparing' as OrderStatus,
+            readyAt: undefined,
+          };
+          return targetOrder;
+        }
+        return ord;
+      });
+
+      if (targetOrder) {
+        saveAndBroadcast(next, {
+          type: 'ORDER_UPDATED',
+          restaurantSlug: targetOrder.restaurantSlug,
+          orderId: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          order: targetOrder,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
+        });
+
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({
+              status: 'preparing',
+              ready_at: null,
+            })
+            .eq('order_number', targetOrder.orderNumber)
+            .eq('restaurant_slug', targetOrder.restaurantSlug)
+            .then();
+        }
+      }
+
+      soundManager.playKeyClick();
+    },
+    [saveAndBroadcast]
+  );
+
+  // 13. Action: Restore order (Undo accidental complete/delete)
+  const restoreOrder = useCallback(
+    async (order: Order, restaurantSlug?: string) => {
+      if (!order) return;
+      tombstoneIdsRef.current.delete(order.id);
+      const slug = (restaurantSlug || order.restaurantSlug || order.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+
+      const exists = currentOrders.some((o) => o.id === order.id);
+      const next = exists
+        ? currentOrders.map((o) => (o.id === order.id ? order : o))
+        : [order, ...currentOrders];
+
+      saveAndBroadcast(next, {
+        type: 'ORDER_ADDED',
+        restaurantSlug: slug,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        order,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
+      });
+
+      if (isSupabaseConfigured() && supabase) {
+        supabase
+          .from('orders_queue')
+          .upsert({
+            id: order.id.startsWith('temp-') ? undefined : order.id,
+            order_number: order.orderNumber,
+            restaurant_slug: slug,
+            status: order.status,
+            customer_phone: order.customerPhone,
+            notes: order.notes,
+            estimated_mins: order.estimatedMinutes || 10,
+            ready_at: order.readyAt || null,
+            completed_at: order.completedAt || null,
+          })
+          .then();
+      }
+
+      soundManager.playSuccessTone();
+    },
+    [saveAndBroadcast]
+  );
+
   // Filter active orders to exclude stale/unclosed orders older than 18 hours
   const getOrdersForRestaurant = useCallback(
     (slug: string): Order[] => {
@@ -1280,22 +1401,74 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [orders]
   );
 
+  // Midnight shift rollover & duplicate number resolution
   const getOrder = useCallback(
     (orderNumber: string, restaurantSlug?: string): Order | undefined => {
       const clean = orderNumber.trim().toLowerCase();
       const safeOrders = Array.isArray(orders) ? orders : [];
-      if (restaurantSlug) {
-        const slug = restaurantSlug.toLowerCase().trim();
-        return safeOrders.find((o) => {
-          if (!o) return false;
+      const slug = restaurantSlug ? restaurantSlug.toLowerCase().trim() : undefined;
+
+      const matching = safeOrders.filter((o) => {
+        if (!o) return false;
+        if (o.orderNumber.toLowerCase() !== clean) return false;
+        if (slug) {
           const ordSlug = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
-          return o.orderNumber.toLowerCase() === clean && ordSlug === slug;
-        });
-      }
-      return safeOrders.find((o) => o && o.orderNumber.toLowerCase() === clean);
+          if (ordSlug !== slug) return false;
+        }
+        return true;
+      });
+
+      if (matching.length === 0) return undefined;
+
+      // Active orders ('preparing' or 'ready') take absolute precedence over completed ones.
+      // Within the same group, the newest order (by created_at) wins.
+      matching.sort((a, b) => {
+        const aActive = a.status === 'preparing' || a.status === 'ready' ? 1 : 0;
+        const bActive = b.status === 'preparing' || b.status === 'ready' ? 1 : 0;
+        if (aActive !== bActive) return bActive - aActive;
+
+        const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+        const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+        return timeB - timeA;
+      });
+
+      return matching[0];
     },
     [orders]
   );
+
+  // 14. 15-minute Memory Hygiene: Prune completed orders older than 12 hours & limit tombstones (<50MB RAM)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pruneMemory = () => {
+      const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
+      setOrders((prev) => {
+        const safe = Array.isArray(prev) ? prev : [];
+        const pruned = safe.filter((o) => {
+          if (!o) return false;
+          if (o.status === 'completed' || o.status === 'cancelled') {
+            const finishedTime = new Date(o.completedAt || o.createdAt || o.created_at || 0).getTime();
+            if (finishedTime < twelveHoursAgo) return false;
+          }
+          return true;
+        });
+        if (pruned.length !== safe.length) {
+          try {
+            localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(pruned));
+          } catch {}
+          return pruned;
+        }
+        return safe;
+      });
+
+      if (tombstoneIdsRef.current.size > 200) {
+        tombstoneIdsRef.current.clear();
+      }
+    };
+
+    const interval = setInterval(pruneMemory, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const clearQueue = useCallback(
     (slug: string = 'demo-cafe') => {
@@ -1356,6 +1529,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     submitOrderFeedback,
     archiveCompletedOrders,
     registerPushSubscription,
+    revertToPreparing,
+    restoreOrder,
     getOrdersForRestaurant,
     getOrder,
     resetToDemoOrders,

@@ -50,6 +50,7 @@ const pushPayloadSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let requestedOrderNumber: string | undefined;
   try {
     const ip = getClientIp(req);
     // Rate limit: 20 push requests per minute per IP
@@ -81,6 +82,8 @@ export async function POST(req: NextRequest) {
       body: messageBody = 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
       url,
     } = parseResult.data;
+
+    requestedOrderNumber = orderNumber;
 
     let targetSubscription = directSubscription;
 
@@ -129,7 +132,32 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     const error = err as { statusCode?: number; message?: string };
-    console.error('Web Push delivery error:', error);
+    const statusCode = error.statusCode;
+
+    // Graceful auto-prune for 410 Gone / 404 Not Found dead push subscriptions
+    if (statusCode === 410 || statusCode === 404) {
+      if (requestedOrderNumber && isSupabaseConfigured() && supabase) {
+        try {
+          await supabase
+            .from('orders_queue')
+            .update({ push_subscription: null })
+            .eq('order_number', String(requestedOrderNumber).trim());
+        } catch {}
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          ok: true,
+          pruned: true,
+          statusCode,
+          message: 'Dead push subscription pruned cleanly without blocking caller',
+        },
+        { status: 200 }
+      );
+    }
+
+    console.warn('Web Push delivery warning:', error);
 
     return NextResponse.json(
       {

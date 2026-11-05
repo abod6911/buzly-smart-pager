@@ -13,6 +13,7 @@ import {
   X,
   Inbox,
   AlertCircle,
+  RotateCcw,
 } from 'lucide-react';
 import { Order } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
@@ -26,6 +27,7 @@ interface StaffQueueGridProps {
   onComplete: (orderId: string) => Promise<unknown>;
   onCancel: (orderId: string) => Promise<unknown>;
   onOpenQr: (orderNumber: string) => void;
+  onRevertToPreparing?: (orderId: string) => Promise<unknown>;
 }
 
 export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
@@ -36,6 +38,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
   onComplete,
   onCancel,
   onOpenQr,
+  onRevertToPreparing,
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'preparing' | 'ready'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -310,8 +313,8 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={appleSpringQuick}
-                        className="bg-[#18181C] border border-emerald-500/30 rounded-xl p-3.5 relative overflow-hidden transition-colors shadow-[inset_0_1px_0_0_rgba(16,185,129,0.12)]"
+                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                        className="bg-[#071F18] border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl p-3.5 relative overflow-hidden transition-colors shadow-[inset_0_1px_0_0_rgba(16,185,129,0.14)]"
                       >
                         <div className="flex items-start justify-between mb-3 relative z-10">
                           <div className="flex items-center gap-3">
@@ -321,7 +324,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] text-emerald-400 font-mono tabular-nums flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                   <span>جاهز {readyElapsed === 0 ? 'الآن' : `منذ ${readyElapsed} د`}</span>
                                 </span>
                                 {order.rePingCount > 0 && (
@@ -339,16 +342,29 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                             </div>
                           </div>
 
-                          {/* QR modal trigger */}
-                          <motion.button
-                            whileTap={{ scale: 0.92 }}
-                            whileHover={{ scale: 1.05 }}
-                            onClick={() => onOpenQr(order.orderNumber)}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
-                            title="عرض الباركود للعميل"
-                          >
-                            <QrCode className="w-4 h-4 text-emerald-400" />
-                          </motion.button>
+                          {/* Top Card Actions: Undo back to preparing & QR modal trigger */}
+                          <div className="flex items-center gap-1">
+                            {onRevertToPreparing && (
+                              <motion.button
+                                whileTap={{ scale: 0.92 }}
+                                whileHover={{ scale: 1.05 }}
+                                onClick={() => onRevertToPreparing(order.id)}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                                title="إرجاع للتحضير (تراجع)"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </motion.button>
+                            )}
+                            <motion.button
+                              whileTap={{ scale: 0.92 }}
+                              whileHover={{ scale: 1.05 }}
+                              onClick={() => onOpenQr(order.orderNumber)}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
+                              title="عرض الباركود للعميل"
+                            >
+                              <QrCode className="w-4 h-4 text-emerald-400" />
+                            </motion.button>
+                          </div>
                         </div>
 
                         {/* TWO ACTION BUTTONS: RE-PING & COMPLETED */}

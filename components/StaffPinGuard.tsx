@@ -5,6 +5,7 @@ import { Lock, AlertCircle, KeyRound, ShieldAlert, CheckCircle2 } from 'lucide-r
 import { motion, AnimatePresence } from 'framer-motion';
 import { soundManager } from '@/lib/audio';
 import { Restaurant } from '@/types/queue';
+import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 
 interface StaffPinGuardProps {
   restaurant?: Restaurant;
@@ -152,17 +153,13 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
       >
         {/* Restaurant Header */}
         <div className="mb-6 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-3 border border-white/10 overflow-hidden bg-[#18181C]">
-            {restaurant?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={restaurant.logoUrl}
-                alt={restaurant?.name || ''}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <KeyRound className="w-6 h-6 text-emerald-400" />
-            )}
+          <div className="mb-3">
+            <RestaurantAvatar
+              logoUrl={restaurant?.logoUrl}
+              name={restaurant?.name}
+              themeColor={restaurant?.themeColor}
+              size="lg"
+            />
           </div>
           <h2 className="text-lg font-bold text-white">{restaurant?.name || 'الكاشير'}</h2>
           <span className="text-xs text-zinc-400 mt-1 flex items-center gap-1.5 font-normal">

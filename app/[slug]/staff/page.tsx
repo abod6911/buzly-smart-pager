@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,8 @@ import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
+import { RestaurantAvatar } from '@/components/RestaurantAvatar';
+import { Order } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
 import {
   Bell,
@@ -45,6 +47,8 @@ export default function TenantStaffCashierPage() {
     rePing,
     completeOrder,
     cancelOrder,
+    revertToPreparing,
+    restoreOrder,
     archiveCompletedOrders,
     networkStatus,
   } = useQueue();
@@ -62,6 +66,47 @@ export default function TenantStaffCashierPage() {
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<{
+    order: Order;
+    type: 'completed' | 'cancelled';
+    timer: number;
+  } | null>(null);
+
+  // 4-second undo auto-dismiss countdown
+  useEffect(() => {
+    if (!undoAction) return;
+    if (undoAction.timer <= 0) {
+      setUndoAction(null);
+      return;
+    }
+    const interval = setInterval(() => {
+      setUndoAction((prev) => (prev ? { ...prev, timer: prev.timer - 1 } : null));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [undoAction]);
+
+  const handleCompleteWithUndo = async (orderId: string) => {
+    const target = tenantOrders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    await completeOrder(orderId, slug);
+    if (target) {
+      setUndoAction({ order: target, type: 'completed', timer: 4 });
+    }
+  };
+
+  const handleCancelWithUndo = async (orderId: string) => {
+    const target = tenantOrders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    await cancelOrder(orderId, slug);
+    if (target) {
+      setUndoAction({ order: target, type: 'cancelled', timer: 4 });
+    }
+  };
+
+  const handlePerformUndo = async () => {
+    if (undoAction?.order) {
+      await restoreOrder(undoAction.order, slug);
+      setUndoAction(null);
+    }
+  };
 
   if (!restaurant) {
     if (isRestaurantsLoaded) {
@@ -117,25 +162,12 @@ export default function TenantStaffCashierPage() {
             {/* Left: Brand & Live Status */}
             <div className="flex items-center gap-3">
               <Link href={`/${slug}/admin`} className="flex items-center gap-2.5 group">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border border-white/10 overflow-hidden bg-[#18181C]"
-                >
-                  {restaurant?.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={restaurant.logoUrl}
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center font-bold text-xs text-white"
-                      style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
-                    >
-                      {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Bell className="w-4 h-4 text-white" />}
-                    </div>
-                  )}
-                </div>
+                <RestaurantAvatar
+                  logoUrl={restaurant?.logoUrl}
+                  name={restaurant?.name || slug}
+                  themeColor={restaurant?.themeColor}
+                  size="sm"
+                />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-white">
@@ -361,13 +393,43 @@ export default function TenantStaffCashierPage() {
                 readyOrders={readyOrders}
                 onMarkReady={(orderId) => markReady(orderId, slug)}
                 onRePing={(orderId) => rePing(orderId, slug)}
-                onComplete={(orderId) => completeOrder(orderId, slug)}
-                onCancel={(orderId) => cancelOrder(orderId, slug)}
+                onComplete={handleCompleteWithUndo}
+                onCancel={handleCancelWithUndo}
+                onRevertToPreparing={(orderId) => revertToPreparing(orderId, slug)}
                 onOpenQr={handleOpenQr}
               />
             </div>
           </div>
         </main>
+
+        {/* Accidental Cashier Action Floating Undo Pill ("تراجع سريع") */}
+        <AnimatePresence>
+          {undoAction && (
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 26 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#141418] border border-white/10 text-white shadow-2xl backdrop-blur-md"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-xs text-zinc-200 font-medium">
+                  {undoAction.type === 'completed'
+                    ? `تم تسليم الطلب #${undoAction.order.orderNumber}`
+                    : `تم إلغاء الطلب #${undoAction.order.orderNumber}`}
+                </span>
+              </div>
+              <button
+                onClick={handlePerformUndo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>تراجع ({undoAction.timer}ث)</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Apple Wallet Style QR Modal */}
         <QrModal

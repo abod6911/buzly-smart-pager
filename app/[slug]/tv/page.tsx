@@ -7,6 +7,7 @@ import { useQueue } from '@/context/QueueContext';
 import { soundManager } from '@/lib/audio';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
+import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import {
   Maximize2,
   Clock,
@@ -179,23 +180,12 @@ export default function KitchenTvBoardPage() {
         <header className="border-b border-white/[0.08] bg-[#09090B] px-6 py-4 flex items-center justify-between z-20">
           {/* Brand: Prominent & Clean */}
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden bg-[#18181C] shadow-md shrink-0">
-              {restaurant?.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={restaurant.logoUrl}
-                  alt={restaurant.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center font-bold text-xl text-white"
-                  style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
-                >
-                  {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Bell className="w-6 h-6 text-white" />}
-                </div>
-              )}
-            </div>
+            <RestaurantAvatar
+              logoUrl={restaurant?.logoUrl}
+              name={restaurant?.name || slug}
+              themeColor={restaurant?.themeColor}
+              size="lg"
+            />
             <div>
               <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide">
                 {restaurant?.name || slug}
@@ -336,10 +326,10 @@ export default function KitchenTvBoardPage() {
             </div>
 
             {/* COLUMN 2: READY FOR PICKUP (جاهز للاستلام) */}
-            <div className="flex flex-col bg-emerald-950/20 rounded-2xl border border-emerald-500/20 p-5 lg:p-6 shadow-sm overflow-hidden">
+            <div className="flex flex-col bg-[#071F18]/60 rounded-2xl border border-emerald-500/25 p-5 lg:p-6 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between pb-4 border-b border-emerald-500/20 mb-5">
                 <div className="flex items-center gap-3">
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-400" />
                   <h2 className="text-3xl lg:text-4xl font-extrabold text-emerald-400 tracking-tight">
                     جاهز للاستلام
                   </h2>
@@ -359,7 +349,8 @@ export default function KitchenTvBoardPage() {
                         initial={{ opacity: 0, scale: 0.92 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
-                        className="bg-[#121215] border-2 border-emerald-500/40 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden"
+                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                        className="bg-[#071F18] border border-emerald-500/35 hover:border-emerald-500/50 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden"
                       >
                         <span className="text-[10px] uppercase font-semibold text-emerald-400 mb-1 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -396,22 +387,13 @@ export default function KitchenTvBoardPage() {
               className="max-w-2xl w-full flex flex-col items-center z-10"
             >
               {/* Brand Logo / Initials Badge */}
-              <div className="w-24 h-24 rounded-3xl bg-[#121216] border-2 border-white/10 flex items-center justify-center shadow-2xl mb-6 overflow-hidden">
-                {restaurant?.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={restaurant.logoUrl}
-                    alt={restaurant.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center font-bold text-3xl text-white"
-                    style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
-                  >
-                    {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Store className="w-10 h-10 text-white" />}
-                  </div>
-                )}
+              <div className="mb-6 shadow-2xl">
+                <RestaurantAvatar
+                  logoUrl={restaurant?.logoUrl}
+                  name={restaurant?.name || slug}
+                  themeColor={restaurant?.themeColor}
+                  size="xl"
+                />
               </div>
 
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-4">

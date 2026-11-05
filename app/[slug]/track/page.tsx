@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
+import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import { Bell, ShieldCheck, Utensils, Lock } from 'lucide-react';
 
 export default function TenantTrackEntryPage() {
@@ -37,23 +38,12 @@ export default function TenantTrackEntryPage() {
       {/* Top Header */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between py-2 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl overflow-hidden border border-white/10 bg-[#18181E] flex items-center justify-center shadow-md">
-            {restaurant?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={restaurant.logoUrl}
-                alt={restaurantName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div
-                className="w-full h-full flex items-center justify-center font-bold text-sm text-white"
-                style={{ backgroundColor: themeColor }}
-              >
-                {restaurantName ? restaurantName.charAt(0).toUpperCase() : <Bell className="w-4 h-4 text-white" />}
-              </div>
-            )}
-          </div>
+          <RestaurantAvatar
+            logoUrl={restaurant?.logoUrl}
+            name={restaurantName}
+            themeColor={themeColor}
+            size="md"
+          />
           <div>
             <h1 className="font-bold text-sm text-white tracking-tight">
               {restaurantName}
