@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { soundManager } from '@/lib/audio';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   Volume2,
   VolumeX,
@@ -31,6 +32,43 @@ export default function KitchenTvBoardPage() {
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [highlightOrderNumber, setHighlightOrderNumber] = useState<string | null>(null);
   const previousReadyCount = useRef<number>(0);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // 1. Smart TV Keep-Awake Engine (WakeLock + Silent Audio Keep-Alive)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && !isCancelled) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        } catch {
+          // Wake lock rejected or unsupported
+        }
+      }
+    };
+
+    requestWakeLock();
+    soundManager.startSilentKeepAlive();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        soundManager.startSilentKeepAlive();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isCancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+      }
+      soundManager.stopSilentKeepAlive();
+    };
+  }, []);
 
   // Digital clock tick
   useEffect(() => {
@@ -125,8 +163,40 @@ export default function KitchenTvBoardPage() {
     return Math.max(0, diff);
   };
 
+  // One-time global pointerdown listener for TV display audio unlock
+  useEffect(() => {
+    const handleGlobalUnlock = async () => {
+      if (!audioEnabled) {
+        await soundManager.unlock();
+        setAudioEnabled(true);
+      }
+    };
+    window.addEventListener('pointerdown', handleGlobalUnlock, { once: true });
+    return () => window.removeEventListener('pointerdown', handleGlobalUnlock);
+  }, [audioEnabled]);
+
   return (
-    <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans overflow-hidden select-none relative">
+    <ErrorBoundary fallbackTitle="تعذر تحميل شاشة الصالة والتلفاز">
+      <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans overflow-hidden select-none relative">
+      {/* Smart TV One-Tap Audio Unlocker Banner */}
+      {!audioEnabled && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          onClick={async () => {
+            await soundManager.unlock();
+            soundManager.playHospitalityChime();
+            setAudioEnabled(true);
+            toggleFullscreen();
+          }}
+          className="bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs py-2.5 px-4 text-center cursor-pointer flex items-center justify-center gap-2 z-30 transition-colors shadow-lg"
+        >
+          <Volume2 className="w-4 h-4 stroke-[2.5]" />
+          <span>اضغط في أي مكان على الشاشة لتفعيل النداء الصوتي ووضع ملء الشاشة</span>
+        </motion.div>
+      )}
+
       {/* ========================================================================= */}
       {/* 1. TOP AIRPORT-STYLE HEADER */}
       {/* ========================================================================= */}
@@ -413,5 +483,6 @@ export default function KitchenTvBoardPage() {
         <span className="font-mono text-[11px] text-zinc-600">Buzly Display System</span>
       </footer>
     </div>
+    </ErrorBoundary>
   );
 }

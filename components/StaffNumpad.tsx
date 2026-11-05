@@ -1,23 +1,37 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, RotateCcw, Clock, Check, X, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, RotateCcw, Clock, Check, X, FileText, AlertCircle, BellRing } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
+import { Order } from '@/types/queue';
 
 interface StaffNumpadProps {
-  onAddOrder: (orderNumber: string, estimatedMinutes: number, notes?: string) => Promise<unknown>;
+  onAddOrder: (
+    orderNumber: string,
+    estimatedMinutes: number,
+    notes?: string,
+    options?: { replaceExisting?: boolean }
+  ) => Promise<unknown>;
+  onMarkReady?: (orderId: string) => Promise<unknown>;
+  getActiveOrder?: (orderNumber: string) => Order | undefined;
   isSubmitting?: boolean;
 }
 
 const PRESET_MINUTES = [5, 10, 15, 20, 30];
 
-export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitting = false }) => {
+export const StaffNumpad: React.FC<StaffNumpadProps> = ({
+  onAddOrder,
+  onMarkReady,
+  getActiveOrder,
+  isSubmitting = false,
+}) => {
   const [orderNumber, setOrderNumber] = useState<string>('');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(10);
   const [notes, setNotes] = useState<string>('');
   const [showNotes, setShowNotes] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
+  const [duplicatePromptOrder, setDuplicatePromptOrder] = useState<Order | null>(null);
 
   const handleDigit = (digit: string) => {
     soundManager.playKeyClick();
@@ -35,10 +49,18 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
     soundManager.playKeyClick();
     setOrderNumber('');
     setNotes('');
+    setDuplicatePromptOrder(null);
   };
 
   const handleSubmit = useCallback(async () => {
     if (!orderNumber.trim()) return;
+
+    // Check if duplicate active order exists
+    const active = getActiveOrder ? getActiveOrder(orderNumber.trim()) : undefined;
+    if (active) {
+      setDuplicatePromptOrder(active);
+      return;
+    }
 
     soundManager.unlock();
     await onAddOrder(orderNumber.trim(), estimatedMinutes, notes.trim() || undefined);
@@ -48,7 +70,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
     setNotes('');
     setShowNotes(false);
     setTimeout(() => setJustAdded(false), 1200);
-  }, [orderNumber, estimatedMinutes, notes, onAddOrder]);
+  }, [orderNumber, estimatedMinutes, notes, onAddOrder, getActiveOrder]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,7 +104,71 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
   }, [handleSubmit]);
 
   return (
-    <div className="bg-[#121215] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-[#121215] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between h-full relative overflow-hidden">
+      {/* Duplicate Active Order Guard Prompt */}
+      <AnimatePresence>
+        {duplicatePromptOrder && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-2 bg-[#121216]/98 border-2 border-amber-500/50 rounded-2xl p-4 flex flex-col justify-between z-30 shadow-2xl backdrop-blur-md"
+          >
+            <div className="text-center pt-2">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center mx-auto mb-2">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-white">الطلب #{duplicatePromptOrder.orderNumber} نشط حالياً</h4>
+              <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                حالة الطلب: <span className="font-semibold text-amber-300">{duplicatePromptOrder.status === 'ready' ? 'جاهز للاستلام' : 'قيد التحضير'}</span>. هل ترغب باستدعائه الآن أم استبداله بطلب جديد؟
+              </p>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              {onMarkReady && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={async () => {
+                    soundManager.unlock();
+                    await onMarkReady(duplicatePromptOrder.id);
+                    setDuplicatePromptOrder(null);
+                    setOrderNumber('');
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <BellRing className="w-4 h-4" />
+                  <span>استدعاء الطلب الآن</span>
+                </motion.button>
+              )}
+
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={async () => {
+                  soundManager.unlock();
+                  await onAddOrder(orderNumber.trim(), estimatedMinutes, notes.trim() || undefined, { replaceExisting: true });
+                  setDuplicatePromptOrder(null);
+                  setOrderNumber('');
+                  setJustAdded(true);
+                  setTimeout(() => setJustAdded(false), 1200);
+                }}
+                className="w-full py-2 rounded-xl bg-[#202026] hover:bg-[#282830] text-zinc-200 border border-white/[0.08] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>استبدال بطلب جديد</span>
+              </motion.button>
+
+              <button
+                type="button"
+                onClick={() => setDuplicatePromptOrder(null)}
+                className="w-full py-1 text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer"
+              >
+                إلغاء التعديل
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Display */}
       <div>
         <div className="flex items-center justify-between mb-2">

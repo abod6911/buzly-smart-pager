@@ -9,6 +9,7 @@ import { StaffPinGuard } from '@/components/StaffPinGuard';
 import { StaffNumpad } from '@/components/StaffNumpad';
 import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { soundManager } from '@/lib/audio';
 import {
   Bell,
@@ -36,12 +37,14 @@ export default function TenantStaffCashierPage() {
     getRestaurant,
     getOrdersForRestaurant,
     addOrder,
+    getActiveOrder,
     markReady,
     rePing,
     completeOrder,
     cancelOrder,
     archiveCompletedOrders,
     resetToDemoOrders,
+    networkStatus,
   } = useQueue();
 
   const restaurant = getRestaurant(slug);
@@ -64,17 +67,19 @@ export default function TenantStaffCashierPage() {
   const handleAddOrderWithTenant = async (
     orderNumber: string,
     estimatedMinutes: number,
-    notes?: string
+    notes?: string,
+    options?: { replaceExisting?: boolean }
   ) => {
-    await addOrder(orderNumber, estimatedMinutes, notes, customerPhone, slug);
+    await addOrder(orderNumber, estimatedMinutes, notes, customerPhone, slug, options);
     setCustomerPhone('');
     setShowPhoneInput(false);
   };
 
   return (
-    <StaffPinGuard restaurant={restaurant} onUnlocked={() => {}}>
-      <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
-        {/* Unified Enterprise App Header */}
+    <ErrorBoundary fallbackTitle="تعذر تحميل لوحة الكاشير">
+      <StaffPinGuard restaurant={restaurant} onUnlocked={() => {}}>
+        <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+          {/* Unified Enterprise App Header */}
         <header className="border-b border-white/[0.08] bg-[#09090B]/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             {/* Left: Brand & Live Status */}
@@ -99,10 +104,17 @@ export default function TenantStaffCashierPage() {
                     <span className="font-semibold text-sm text-white">
                       {restaurant.name}
                     </span>
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>متصل لحظياً</span>
-                    </span>
+                    {networkStatus === 'connected' ? (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>متصل لحظياً</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                        <span>جاري إعادة الاتصال...</span>
+                      </span>
+                    )}
                   </div>
                   <span className="text-[11px] text-zinc-500 font-mono">
                     /{restaurant.slug}
@@ -243,7 +255,11 @@ export default function TenantStaffCashierPage() {
           {/* POS Split Layout: Tactile Numpad (4 cols) + Active Queue (8 cols) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start">
             <div className="lg:col-span-4 lg:sticky lg:top-20 h-auto space-y-3">
-              <StaffNumpad onAddOrder={handleAddOrderWithTenant} />
+              <StaffNumpad
+                onAddOrder={handleAddOrderWithTenant}
+                onMarkReady={(id) => markReady(id, slug)}
+                getActiveOrder={(num) => getActiveOrder(num, slug)}
+              />
 
               {/* Optional WhatsApp Customer Phone Input */}
               {restaurant.whatsappFallbackEnabled && (
@@ -311,5 +327,6 @@ export default function TenantStaffCashierPage() {
         />
       </div>
     </StaffPinGuard>
+    </ErrorBoundary>
   );
 }

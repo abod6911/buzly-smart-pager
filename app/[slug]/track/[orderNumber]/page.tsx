@@ -7,6 +7,8 @@ import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { KeepAwakeEngine } from '@/components/KeepAwakeEngine';
+import { AudioUnlockOverlay } from '@/components/AudioUnlockOverlay';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
@@ -77,7 +79,66 @@ function TenantCustomerTrackerInner() {
   const [rating, setRating] = useState<number>(5);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
+  const [showAudioUnlockOverlay, setShowAudioUnlockOverlay] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
+
+  // 1. Mobile Audio & Vibration Unlock Guard
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !soundManager.isAudioUnlocked()) {
+      setShowAudioUnlockOverlay(true);
+    }
+
+    const unlockAll = async () => {
+      await soundManager.unlock();
+      soundManager.startSilentKeepAlive();
+      setShowAudioUnlockOverlay(false);
+      pwaHelper.requestNotificationPermission().catch(() => {});
+    };
+
+    // One-time global touch anywhere unlocks Web Audio and keep-alive
+    window.addEventListener('pointerdown', unlockAll, { once: true });
+    window.addEventListener('touchstart', unlockAll, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAll);
+      window.removeEventListener('touchstart', unlockAll);
+    };
+  }, []);
+
+  const handleExplicitUnlock = async () => {
+    await soundManager.unlock();
+    soundManager.startSilentKeepAlive();
+    setShowAudioUnlockOverlay(false);
+    pwaHelper.requestNotificationPermission().catch(() => {});
+    soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+  };
+
+  // 2. Background Tab & Lock-Screen Reconnection Recovery (visibilitychange)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleReconnection = () => {
+      if (document.visibilityState === 'visible') {
+        syncNow();
+        soundManager.unlock().catch(() => {});
+        soundManager.startSilentKeepAlive();
+
+        // If order became ready while locked, trigger alarm loop
+        if (order && order.status === 'ready' && !hasUserSilenced) {
+          setAlarmActive(true);
+          soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleReconnection);
+    window.addEventListener('focus', handleReconnection);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleReconnection);
+      window.removeEventListener('focus', handleReconnection);
+    };
+  }, [order, hasUserSilenced, restaurant.chimeTheme, syncNow]);
 
   // Immediate single-order fetch from server bridge if not yet in state
   useEffect(() => {
@@ -649,21 +710,29 @@ function TenantCustomerTrackerInner() {
           <span className="font-mono">Buzly v3.1</span>
         </div>
       </main>
+
+      {/* Floating Audio & Vibration Unlock Guard */}
+      <AudioUnlockOverlay
+        isVisible={showAudioUnlockOverlay}
+        onUnlock={handleExplicitUnlock}
+      />
     </div>
   );
 }
 
 export default function TenantCustomerTrackerPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo">
-          <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
-          <p className="text-zinc-500 text-xs">تحميل شاشة التتبع...</p>
-        </div>
-      }
-    >
-      <TenantCustomerTrackerInner />
-    </Suspense>
+    <ErrorBoundary fallbackTitle="تعذر تحميل شاشة تتبع الطلب">
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo">
+            <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+            <p className="text-zinc-500 text-xs">تحميل شاشة التتبع...</p>
+          </div>
+        }
+      >
+        <TenantCustomerTrackerInner />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

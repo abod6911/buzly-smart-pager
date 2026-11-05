@@ -60,6 +60,14 @@ class HighDecibelSoundEngine {
     this.currentTheme = theme;
   }
 
+  public isAudioUnlocked(): boolean {
+    return this.ctx !== null && this.ctx.state === 'running';
+  }
+
+  public getAudioState(): AudioContextState | 'uninitialized' {
+    return this.ctx ? this.ctx.state : 'uninitialized';
+  }
+
   public async unlock(): Promise<boolean> {
     const ctx = this.initAudioChain();
     if (!ctx) return false;

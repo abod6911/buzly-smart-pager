@@ -31,11 +31,21 @@ export default function StaffCashierPage() {
     resetToDemoOrders,
     clearQueue,
     isSupabaseActive,
+    getActiveOrder,
   } = useQueue();
 
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | undefined>(undefined);
   const [soundTested, setSoundTested] = useState<boolean>(false);
+
+  const handleAddOrder = async (
+    orderNumber: string,
+    estimatedMinutes: number,
+    notes?: string,
+    options?: { replaceExisting?: boolean }
+  ) => {
+    await addOrder(orderNumber, estimatedMinutes, notes, undefined, 'demo-cafe', options);
+  };
 
   const handleOpenQr = (orderNumber?: string) => {
     setSelectedOrderNumber(orderNumber);
@@ -197,7 +207,11 @@ export default function StaffCashierPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
           {/* Numpad Section: 4 cols on Desktop */}
           <div className="lg:col-span-4 lg:sticky lg:top-24 h-auto">
-            <StaffNumpad onAddOrder={addOrder} />
+            <StaffNumpad
+              onAddOrder={handleAddOrder}
+              onMarkReady={(id) => markReady(id, 'demo-cafe')}
+              getActiveOrder={(num) => getActiveOrder(num, 'demo-cafe')}
+            />
           </div>
 
           {/* Active Queue Grid: 8 cols on Desktop */}

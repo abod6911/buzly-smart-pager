@@ -75,6 +75,10 @@ class PwaHelper {
     }
   }
 
+  public async requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
+    return this.requestNotification();
+  }
+
   /**
    * Subscribes the device to Web Push API using VAPID
    */

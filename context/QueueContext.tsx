@@ -120,6 +120,7 @@ interface QueueContextType {
   restaurants: Record<string, Restaurant>;
   lastEvent: QueueRealtimeEvent | null;
   isSupabaseActive: boolean;
+  networkStatus: 'connected' | 'reconnecting' | 'offline';
   getRestaurant: (slug: string) => Restaurant;
   updateRestaurant: (slug: string, data: Partial<Restaurant>) => Promise<void>;
   createRestaurant: (data: Omit<Restaurant, 'id' | 'createdAt'>) => Promise<Restaurant>;
@@ -128,8 +129,10 @@ interface QueueContextType {
     estimatedMinutes: number,
     notes?: string,
     customerPhone?: string,
-    restaurantSlug?: string
+    restaurantSlug?: string,
+    options?: { replaceExisting?: boolean }
   ) => Promise<Order>;
+  getActiveOrder: (orderNumber: string, restaurantSlug?: string) => Order | undefined;
   markReady: (orderId: string, restaurantSlug?: string) => Promise<void>;
   rePing: (orderId: string, restaurantSlug?: string) => Promise<void>;
   completeOrder: (orderId: string, restaurantSlug?: string) => Promise<void>;
@@ -176,6 +179,32 @@ async function triggerBackendPush(payload: {
   }
 }
 
+async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3, delay = 400): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (retries <= 1) throw err;
+    await new Promise((res) => setTimeout(res, delay));
+    return retryWithBackoff(fn, retries - 1, delay * 2);
+  }
+}
+
+function safeParseStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch (err) {
+    console.warn(`Self-healing storage: reset corrupted key "${key}":`, err);
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+    return fallback;
+  }
+}
+
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [restaurants, setRestaurants] = useState<Record<string, Restaurant>>({
@@ -183,48 +212,32 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [lastEvent, setLastEvent] = useState<QueueRealtimeEvent | null>(null);
   const [isSupabaseActive] = useState<boolean>(isSupabaseConfigured());
+  const [networkStatus, setNetworkStatus] = useState<'connected' | 'reconnecting' | 'offline'>('connected');
   const channelRef = useRef<BroadcastChannel | null>(null);
   const tabIdRef = useRef<string>('');
 
-  // 1. Initialize from localStorage
+  // 1. Initialize from localStorage with self-healing recovery
   useEffect(() => {
     tabIdRef.current = 'tab_' + Math.random().toString(36).substring(2, 9);
 
     if (typeof window !== 'undefined') {
-      try {
-        const storedRest = localStorage.getItem(STORAGE_RESTAURANTS_KEY);
-        if (storedRest) {
-          setRestaurants(JSON.parse(storedRest));
-        } else {
-          setRestaurants({ 'demo-cafe': DEFAULT_RESTAURANT });
-          localStorage.setItem(
-            STORAGE_RESTAURANTS_KEY,
-            JSON.stringify({ 'demo-cafe': DEFAULT_RESTAURANT })
-          );
-        }
+      const storedRest = safeParseStorage<Record<string, Restaurant>>(
+        STORAGE_RESTAURANTS_KEY,
+        { 'demo-cafe': DEFAULT_RESTAURANT }
+      );
+      setRestaurants(storedRest);
 
-        const storedOrders = localStorage.getItem(STORAGE_ORDERS_KEY);
-        if (storedOrders) {
-          const parsed = JSON.parse(storedOrders);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOrders(parsed);
-          } else {
-            setOrders(INITIAL_DEMO_ORDERS);
-            localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(INITIAL_DEMO_ORDERS));
-          }
-        } else {
-          setOrders(INITIAL_DEMO_ORDERS);
-          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(INITIAL_DEMO_ORDERS));
-        }
-      } catch (err) {
-        console.warn('Storage init warning:', err);
-        setOrders(INITIAL_DEMO_ORDERS);
-      }
+      const storedOrders = safeParseStorage<Order[]>(
+        STORAGE_ORDERS_KEY,
+        INITIAL_DEMO_ORDERS
+      );
+      setOrders(Array.isArray(storedOrders) && storedOrders.length > 0 ? storedOrders : INITIAL_DEMO_ORDERS);
     }
   }, []);
 
   const saveAndBroadcast = useCallback(
     (newOrders: Order[], event: QueueRealtimeEvent, newRestaurants?: Record<string, Restaurant>) => {
+      // 0ms Optimistic UI update
       setOrders(newOrders);
       setLastEvent(event);
       if (newRestaurants) setRestaurants(newRestaurants);
@@ -243,20 +256,26 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           channelRef.current.postMessage(event);
         }
 
-        // Cross-device Server Memory Bridge Sync
-        fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: event.type,
-            order: event.order,
-            orderId: event.orderId,
-            orderNumber: event.orderNumber,
-            restaurantSlug: event.restaurantSlug || 'demo-cafe',
-            feedback: event.feedback,
-            orders: newOrders,
-          }),
-        }).catch(() => {});
+        // Cross-device Server Memory Bridge Sync with automatic retry wrapper
+        retryWithBackoff(async () => {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: event.type,
+              order: event.order,
+              orderId: event.orderId,
+              orderNumber: event.orderNumber,
+              restaurantSlug: event.restaurantSlug || 'demo-cafe',
+              feedback: event.feedback,
+              orders: newOrders,
+            }),
+          });
+          if (!res.ok) throw new Error('Failed to post to /api/orders');
+          return res;
+        }).catch((err) => {
+          console.warn('Background sync retry exhausted:', err);
+        });
       }
     },
     []
@@ -431,14 +450,43 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // 3.1 Cross-Device Server API Bridge Polling (Syncs Laptop <-> Phone over Wi-Fi & Internet)
+  // 3.1 Hybrid Dual-Sync Engine (Cross-Device Server Heartbeat + WebSocket Fallback)
   const syncNow = useCallback(async () => {
     try {
-      const res = await fetch('/api/orders', { cache: 'no-store' });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+      const res = await fetch('/api/orders', {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
+        setNetworkStatus('connected');
         const data = await res.json();
         if (data && Array.isArray(data.orders)) {
           setOrders((prev) => {
+            // Self-healing: Detect if an order moved to 'ready' or was re-pinged while device was asleep
+            data.orders.forEach((newOrd: Order) => {
+              const prevOrd = prev.find((p) => p.id === newOrd.id || (p.orderNumber === newOrd.orderNumber && p.restaurantSlug === newOrd.restaurantSlug));
+              if (
+                prevOrd &&
+                ((prevOrd.status === 'preparing' && newOrd.status === 'ready') ||
+                  (newOrd.rePingCount > (prevOrd.rePingCount || 0)))
+              ) {
+                setLastEvent({
+                  type: prevOrd.status === 'preparing' && newOrd.status === 'ready' ? 'ORDER_READY' : 'ORDER_REPING',
+                  restaurantSlug: newOrd.restaurantSlug,
+                  orderId: newOrd.id,
+                  orderNumber: newOrd.orderNumber,
+                  order: newOrd,
+                  timestamp: Date.now(),
+                  sourceTabId: 'heartbeat-sync',
+                });
+              }
+            });
+
             const prevDigest = prev.map((o) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
             const nextDigest = data.orders.map((o: Order) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
             if (prevDigest !== nextDigest) {
@@ -450,17 +498,45 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             return prev;
           });
         }
+      } else {
+        setNetworkStatus('reconnecting');
       }
     } catch {
-      // Safe offline fallback
+      setNetworkStatus('reconnecting');
     }
   }, []);
 
+  // Active 3-second heartbeat polling
   useEffect(() => {
     if (typeof window === 'undefined') return;
     syncNow();
-    const interval = setInterval(syncNow, 2000);
+    const interval = setInterval(syncNow, 3000);
     return () => clearInterval(interval);
+  }, [syncNow]);
+
+  // Background Tab & Lock-Screen Reconnection Recovery (visibilitychange & focus)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleRecovery = () => {
+      if (document.visibilityState === 'visible') {
+        syncNow();
+        soundManager.unlock().catch(() => {});
+      }
+    };
+
+    const handleFocus = () => {
+      syncNow();
+      soundManager.unlock().catch(() => {});
+    };
+
+    document.addEventListener('visibilitychange', handleRecovery);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleRecovery);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [syncNow]);
 
   // 4. Multi-Tenant Restaurant Helpers
@@ -562,17 +638,41 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [orders, restaurants, saveAndBroadcast]
   );
 
-  // 5. Action: Add Order
+  // 4.1 Duplicate Prevention Helper: Check if order is active within the last 18 hours
+  const getActiveOrder = useCallback(
+    (orderNumber: string, restaurantSlug?: string): Order | undefined => {
+      const clean = orderNumber.trim();
+      const slug = (restaurantSlug || 'demo-cafe').toLowerCase();
+      const cutoff = Date.now() - 18 * 60 * 60 * 1000;
+      return orders.find(
+        (o) =>
+          o.orderNumber === clean &&
+          o.restaurantSlug === slug &&
+          (o.status === 'preparing' || o.status === 'ready') &&
+          new Date(o.createdAt).getTime() > cutoff
+      );
+    },
+    [orders]
+  );
+
+  // 5. Action: Add Order with Duplicate Guard & 0ms Optimistic Confirmation
   const addOrder = useCallback(
     async (
       orderNumber: string,
       estimatedMinutes: number = 10,
       notes?: string,
       customerPhone?: string,
-      restaurantSlug: string = 'demo-cafe'
+      restaurantSlug: string = 'demo-cafe',
+      options?: { replaceExisting?: boolean }
     ): Promise<Order> => {
       const cleanNum = orderNumber.trim();
       const slug = restaurantSlug.toLowerCase();
+
+      // Check if duplicate active order exists and caller didn't explicitly replace
+      const existingActive = getActiveOrder(cleanNum, slug);
+      if (existingActive && !options?.replaceExisting) {
+        return existingActive;
+      }
 
       const newOrder: Order = {
         id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -588,17 +688,16 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
 
       if (isSupabaseConfigured() && supabase) {
-        supabase
-          .from('orders_queue')
-          .insert({
+        retryWithBackoff(async () => {
+          return await supabase!.from('orders_queue').insert({
             order_number: newOrder.orderNumber,
             restaurant_slug: slug,
             customer_phone: newOrder.customerPhone,
             notes: newOrder.notes,
             status: 'preparing',
             estimated_mins: newOrder.estimatedMinutes,
-          })
-          .then();
+          });
+        }).catch((err) => console.warn('Supabase insert queued:', err));
       }
 
       setOrders((prev) => {
@@ -621,7 +720,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       soundManager.playSuccessTone();
       return newOrder;
     },
-    [saveAndBroadcast]
+    [getActiveOrder, saveAndBroadcast]
   );
 
   // 6. Action: Mark Ready
@@ -946,10 +1045,18 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
+  // Filter active orders to exclude stale/unclosed orders older than 18 hours
   const getOrdersForRestaurant = useCallback(
     (slug: string): Order[] => {
       const cleanSlug = slug.toLowerCase();
-      return orders.filter((o) => o.restaurantSlug === cleanSlug);
+      const cutoff = Date.now() - 18 * 60 * 60 * 1000;
+      return orders.filter((o) => {
+        if (o.restaurantSlug !== cleanSlug) return false;
+        if ((o.status === 'preparing' || o.status === 'ready') && new Date(o.createdAt).getTime() <= cutoff) {
+          return false;
+        }
+        return true;
+      });
     },
     [orders]
   );
@@ -1005,15 +1112,17 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // Backward compatibility filters
-  const preparingOrders = useMemo(
-    () => orders.filter((o) => o.status === 'preparing'),
-    [orders]
-  );
-  const readyOrders = useMemo(
-    () => orders.filter((o) => o.status === 'ready'),
-    [orders]
-  );
+  // Backward compatibility filters with 18-hour cutoff
+  const preparingOrders = useMemo(() => {
+    const cutoff = Date.now() - 18 * 60 * 60 * 1000;
+    return orders.filter((o) => o.status === 'preparing' && new Date(o.createdAt).getTime() > cutoff);
+  }, [orders]);
+
+  const readyOrders = useMemo(() => {
+    const cutoff = Date.now() - 18 * 60 * 60 * 1000;
+    return orders.filter((o) => o.status === 'ready' && new Date(o.createdAt).getTime() > cutoff);
+  }, [orders]);
+
   const completedOrders = useMemo(
     () => orders.filter((o) => o.status === 'completed'),
     [orders]
@@ -1024,10 +1133,12 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     restaurants,
     lastEvent,
     isSupabaseActive,
+    networkStatus,
     getRestaurant,
     updateRestaurant,
     createRestaurant,
     addOrder,
+    getActiveOrder,
     markReady,
     rePing,
     completeOrder,
