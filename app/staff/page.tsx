@@ -67,8 +67,9 @@ export default function StaffCashierPage() {
           {/* Logo & Role Badge */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                <Bell className="w-5 h-5 text-black" />
+              <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/30 flex items-center justify-center bg-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="Chimer Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">

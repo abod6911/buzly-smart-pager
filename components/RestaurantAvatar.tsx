@@ -73,7 +73,8 @@ export const RestaurantAvatar: React.FC<RestaurantAvatarProps> = ({
       {initial ? (
         <span className={textClass}>{initial}</span>
       ) : (
-        <Store className={`${activeSize.icon} text-white`} />
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo.png" alt="Chimer Logo" className="w-full h-full object-cover" />
       )}
     </div>
   );

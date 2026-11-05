@@ -30,7 +30,7 @@ export async function GET(
           id: data.id,
           slug: data.slug,
           name: data.name,
-          logoUrl: data.logo_url || undefined,
+          logoUrl: data.logo_url || '/logo.png',
           themeColor: data.theme_color || '#10B981',
           whatsappFallbackEnabled: data.whatsapp_fallback_enabled ?? true,
           createdAt: data.created_at,

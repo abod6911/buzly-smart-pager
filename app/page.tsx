@@ -66,8 +66,9 @@ export default function LandingRoleSwitcherPage() {
       <header className="border-b border-obsidian-border/80 px-4 sm:px-6 py-4 bg-obsidian-surface/60 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-xl shadow-lg shadow-emerald-500/20">
-              <Bell className="w-5 h-5 text-black" />
+            <div className="w-10 h-10 rounded-2xl overflow-hidden border border-emerald-500/30 flex items-center justify-center bg-black shadow-lg shadow-emerald-500/20 shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Chimer Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight text-white font-mono">

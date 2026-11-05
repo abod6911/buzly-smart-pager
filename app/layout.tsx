@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   applicationName: 'Chimer Pager',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icon.svg',
+    icon: '/logo.png',
     apple: '/apple-touch-icon.png',
   },
   appleWebApp: {

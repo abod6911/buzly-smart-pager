@@ -281,7 +281,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: r.id,
               slug: r.slug,
               name: r.name,
-              logoUrl: r.logo_url,
+              logoUrl: r.logo_url || '/logo.png',
               themeColor: r.theme_color || '#10B981',
               whatsappFallbackEnabled: r.whatsapp_fallback_enabled ?? true,
               createdAt: r.created_at,
