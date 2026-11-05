@@ -190,6 +190,8 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
           <>
             {/* 4-digit PIN dots */}
             <motion.div
+              dir="ltr"
+              style={{ direction: 'ltr' }}
               animate={errorShake ? { x: [-10, 10, -8, 8, -4, 4, 0] } : {}}
               transition={{ duration: 0.4 }}
               className="flex justify-center items-center gap-4 mb-6"
@@ -232,7 +234,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
             </AnimatePresence>
 
             {/* iOS / Apple Tactile Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-2 mb-4">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <motion.button
                   key={digit}

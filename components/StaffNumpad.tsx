@@ -220,9 +220,11 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
 
         {/* Tactile LCD Readout */}
         <div className="relative bg-[#09090B] border border-white/[0.08] rounded-xl px-4 py-3.5 min-h-[76px] flex items-center justify-between mb-3.5">
-          <div className="flex items-baseline gap-2">
-            <span className="text-zinc-500 font-mono text-xl font-bold">#</span>
+          <div dir="ltr" style={{ direction: 'ltr' }} className="flex items-baseline gap-2">
+            <span className="text-zinc-500 font-mono text-xl font-bold select-none">#</span>
             <div
+              dir="ltr"
+              style={{ direction: 'ltr' }}
               className={`font-mono text-4xl sm:text-5xl font-bold tracking-widest tabular-nums transition-colors ${
                 orderNumber ? 'text-white' : 'text-zinc-700'
               }`}
@@ -324,7 +326,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
 
       {/* Tactile Numeric Keypad Grid (Standard POS: 1-9, C, 0, Backspace) */}
       <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-1.5">
+        <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-1.5">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <motion.button
               key={digit}

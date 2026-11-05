@@ -46,9 +46,15 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
       <div className="bg-obsidian-surface border-2 border-obsidian-border rounded-3xl p-5 shadow-2xl text-center">
         <p className="text-xs text-zinc-400 mb-2 font-semibold">أدخل رقم الفاتورة أو الاستلام</p>
 
-        <div className="bg-obsidian-400 border border-obsidian-border rounded-2xl py-4 px-6 flex items-center justify-center gap-2 mb-4">
-          <span className="text-emerald-500 font-mono text-3xl font-bold">#</span>
+        <div
+          dir="ltr"
+          style={{ direction: 'ltr' }}
+          className="bg-obsidian-400 border border-obsidian-border rounded-2xl py-4 px-6 flex items-center justify-center gap-2 mb-4"
+        >
+          <span className="text-emerald-500 font-mono text-3xl font-bold select-none">#</span>
           <span
+            dir="ltr"
+            style={{ direction: 'ltr' }}
             className={`font-mono tabular-nums text-5xl font-black tracking-widest ${
               orderNumber ? 'text-white' : 'text-zinc-600'
             }`}
@@ -58,7 +64,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
         </div>
 
         {/* Numpad 1-9, C, 0, Backspace */}
-        <div className="grid grid-cols-3 gap-2.5 mb-4">
+        <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-2.5 mb-4">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <motion.button
               key={digit}

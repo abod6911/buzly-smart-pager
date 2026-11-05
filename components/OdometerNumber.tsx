@@ -52,7 +52,11 @@ export const OdometerNumber: React.FC<OdometerNumberProps> = ({
   const characters = String(value).split('');
 
   return (
-    <span className={`inline-flex items-center font-mono tabular-nums ${className}`}>
+    <span
+      dir="ltr"
+      style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+      className={`inline-flex flex-row items-center font-mono tabular-nums ${className}`}
+    >
       {characters.map((char, index) => (
         <OdometerDigit key={index} digit={char} className={className} />
       ))}
