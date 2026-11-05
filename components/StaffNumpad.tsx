@@ -33,7 +33,11 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
   const [notes, setNotes] = useState<string>('');
   const [showNotes, setShowNotes] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
+  const [lastAddedOrderNum, setLastAddedOrderNum] = useState<string | null>(null);
+  const [isInternalSubmitting, setIsInternalSubmitting] = useState<boolean>(false);
   const [duplicatePromptOrder, setDuplicatePromptOrder] = useState<Order | null>(null);
+
+  const isBusy = isSubmitting || isInternalSubmitting;
 
   const handleDigit = (digit: string) => {
     soundManager.playKeyClick();
@@ -55,24 +59,38 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!orderNumber.trim()) return;
+    const cleanNum = orderNumber.trim();
+    if (!cleanNum || isBusy) return;
 
     // Check if duplicate active order exists
-    const active = getActiveOrder ? getActiveOrder(orderNumber.trim()) : undefined;
+    const active = getActiveOrder ? getActiveOrder(cleanNum) : undefined;
     if (active) {
       setDuplicatePromptOrder(active);
       return;
     }
 
+    setIsInternalSubmitting(true);
     soundManager.unlock();
-    await onAddOrder(orderNumber.trim(), estimatedMinutes, notes.trim() || undefined);
 
-    setJustAdded(true);
+    // Smoothly reset input state so cashier can immediately begin typing next order
     setOrderNumber('');
     setNotes('');
     setShowNotes(false);
-    setTimeout(() => setJustAdded(false), 1200);
-  }, [orderNumber, estimatedMinutes, notes, onAddOrder, getActiveOrder]);
+    setLastAddedOrderNum(cleanNum);
+    setJustAdded(true);
+
+    try {
+      await onAddOrder(cleanNum, estimatedMinutes, notes.trim() || undefined);
+    } catch (err) {
+      console.error('Failed to add order:', err);
+    } finally {
+      setIsInternalSubmitting(false);
+      setTimeout(() => {
+        setJustAdded(false);
+        setLastAddedOrderNum(null);
+      }, 2500);
+    }
+  }, [orderNumber, isBusy, getActiveOrder, onAddOrder, estimatedMinutes, notes]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -182,6 +200,24 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           </span>
         </div>
 
+        {/* Subtle Success Toast / Badge */}
+        <AnimatePresence>
+          {lastAddedOrderNum && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.96 }}
+              className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium px-3 py-1.5 rounded-xl flex items-center justify-between mb-2 shadow-sm"
+            >
+              <span className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
+                <span>تمت إضافة الطلب #{lastAddedOrderNum}</span>
+              </span>
+              <span className="text-[10px] text-emerald-400/80 font-mono">قيد التحضير</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Tactile LCD Readout */}
         <div className="relative bg-[#09090B] border border-white/[0.08] rounded-xl px-4 py-3.5 min-h-[76px] flex items-center justify-between mb-3.5">
           <div className="flex items-baseline gap-2">
@@ -205,10 +241,10 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
             </button>
           )}
 
-          {justAdded && (
-            <div className="absolute inset-0 bg-emerald-950/90 border border-emerald-500/40 rounded-xl flex items-center justify-center text-emerald-400 font-medium text-sm gap-1.5 animate-fade-in">
+          {justAdded && !orderNumber && (
+            <div className="absolute inset-0 bg-emerald-950/90 border border-emerald-500/40 rounded-xl flex items-center justify-center text-emerald-400 font-medium text-sm gap-1.5 animate-fade-in z-20">
               <Check className="w-4 h-4" />
-              <span>تمت إضافة الطلب</span>
+              <span>تمت إضافة الطلب #{lastAddedOrderNum}</span>
             </div>
           )}
         </div>
@@ -340,18 +376,18 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
         {/* Primary CTA Submit Button */}
         <motion.button
           type="button"
-          whileTap={orderNumber.trim() && !isSubmitting ? { scale: 0.96 } : undefined}
-          whileHover={orderNumber.trim() && !isSubmitting ? { scale: 1.01 } : undefined}
-          disabled={!orderNumber.trim() || isSubmitting}
+          whileTap={orderNumber.trim() && !isBusy ? { scale: 0.96 } : undefined}
+          whileHover={orderNumber.trim() && !isBusy ? { scale: 1.01 } : undefined}
+          disabled={!orderNumber.trim() || isBusy}
           onClick={handleSubmit}
           className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors select-none ${
-            orderNumber.trim() && !isSubmitting
+            orderNumber.trim() && !isBusy
               ? 'bg-emerald-500 hover:bg-emerald-400 text-[#052E16] shadow-sm cursor-pointer font-bold'
               : 'bg-zinc-900 text-zinc-600 border border-white/[0.04] cursor-not-allowed'
           }`}
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>إضافة للانتظار</span>
+          <span>{isBusy ? 'جاري الإضافة...' : 'إضافة للانتظار'}</span>
         </motion.button>
       </div>
     </div>

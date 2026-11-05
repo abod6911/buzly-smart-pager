@@ -34,6 +34,9 @@ export interface Order {
   id: string;
   orderNumber: string;
   restaurantSlug: string;
+  restaurant_slug?: string;
+  restaurantId?: string;
+  restaurant_id?: string;
   customerName?: string;
   customerPhone?: string;
   notes?: string;
@@ -42,6 +45,7 @@ export interface Order {
   pushSubscription?: PushSubscriptionData | null; // mapped from DB push_subscription
   rePingCount: number; // mapped from DB ping_count
   createdAt: string; // ISO string
+  created_at?: string; // ISO string
   readyAt?: string; // ISO string
   completedAt?: string; // ISO string
   lastPingAt?: string; // ISO string

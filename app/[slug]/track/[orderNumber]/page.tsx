@@ -11,6 +11,7 @@ import { AudioUnlockOverlay } from '@/components/AudioUnlockOverlay';
 import { DynamicIslandTracker } from '@/components/DynamicIslandTracker';
 import { OdometerNumber } from '@/components/OdometerNumber';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
@@ -48,6 +49,7 @@ function TenantCustomerTrackerInner() {
     submitOrderFeedback,
     lastEvent,
     syncNow,
+    isRestaurantsLoaded,
   } = useQueue();
   const restaurant = getRestaurant(slug);
   const liveOrder = getOrder(decodedOrderNumber, slug);
@@ -83,6 +85,18 @@ function TenantCustomerTrackerInner() {
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
   const [showAudioUnlockOverlay, setShowAudioUnlockOverlay] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
+
+  if (!restaurant) {
+    if (isRestaurantsLoaded) {
+      return <RestaurantNotFound slug={slug} />;
+    }
+    return (
+      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
+        <div className="w-14 h-14 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
+        <h2 className="text-xl font-bold font-cairo">جارِ التحقق من المتجر...</h2>
+      </div>
+    );
+  }
 
   // 1. Mobile Audio & Vibration Unlock Guard
   useEffect(() => {
@@ -190,7 +204,7 @@ function TenantCustomerTrackerInner() {
       setAlarmActive(true);
 
       // Channel 1: High-Decibel Looping Web Audio Chime (DynamicsCompressorNode boosted)
-      soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+      soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
 
       // Channel 2: Intense Haptic Vibration Pattern
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -200,7 +214,7 @@ function TenantCustomerTrackerInner() {
       }
 
       // Channel 3: System Web Push / Service Worker Notification
-      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام (${restaurant.name})`, {
+      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام (${restaurant?.name || slug})`, {
         body: 'تفضل إلى الكاونتر لاستلام طلبك وهو طازج.',
       });
 
@@ -212,7 +226,7 @@ function TenantCustomerTrackerInner() {
             particleCount: 120,
             spread: 90,
             origin: { y: 0.6 },
-            colors: [restaurant.themeColor || '#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
+            colors: [restaurant?.themeColor || '#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
           });
         } catch {}
       }
@@ -220,7 +234,7 @@ function TenantCustomerTrackerInner() {
       soundManager.stopReadyAlarm();
       setAlarmActive(false);
     }
-  }, [order?.status, hasUserSilenced, order?.orderNumber, restaurant.themeColor, restaurant.name, restaurant.chimeTheme]);
+  }, [order?.status, hasUserSilenced, order?.orderNumber, restaurant?.themeColor, restaurant?.name, restaurant?.chimeTheme, slug]);
 
   // Channel 4: Dynamic Browser Tab Title Flashing while Ready
   useEffect(() => {
@@ -281,10 +295,10 @@ function TenantCustomerTrackerInner() {
       }
 
       pwaHelper.showSystemNotification(`تذكير: طلبك #${order.orderNumber} جاهز للاستلام`, {
-        body: `يرجى مراجعة كاونتر ${restaurant.name} لاستلام طلبك.`,
+        body: `يرجى مراجعة كاونتر ${restaurant?.name || slug} لاستلام طلبك.`,
       });
     }
-  }, [lastEvent, order, slug, restaurant.name, restaurant.chimeTheme]);
+  }, [lastEvent, order, slug, restaurant?.name, restaurant?.chimeTheme]);
 
   useEffect(() => {
     return () => {
@@ -294,7 +308,7 @@ function TenantCustomerTrackerInner() {
 
   const handleTestVolume = async () => {
     await soundManager.unlock();
-    soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+    soundManager.playThemedChime(restaurant?.chimeTheme || 'hospitality');
   };
 
   const handleIReceivedOrder = async () => {
@@ -317,7 +331,7 @@ function TenantCustomerTrackerInner() {
     return (
       <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
         <div className="w-14 h-14 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
-        <h2 className="text-xl font-bold font-cairo">جارِ الاتصال بكاونتر {restaurant.name}...</h2>
+        <h2 className="text-xl font-bold font-cairo">جارِ الاتصال بكاونتر {restaurant?.name || slug}...</h2>
         <p className="text-zinc-400 text-xs mt-2">نبحث عن الطلب #{decodedOrderNumber} لتجهيز جرس التنبيه</p>
       </div>
     );
@@ -333,7 +347,7 @@ function TenantCustomerTrackerInner() {
             className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-xs font-semibold"
           >
             <ArrowRight className="w-4 h-4" />
-            <span>العودة لإدخال رقم آخر في {restaurant.name}</span>
+            <span>العودة لإدخال رقم آخر في {restaurant?.name || slug}</span>
           </Link>
         </header>
 
@@ -343,7 +357,7 @@ function TenantCustomerTrackerInner() {
           </div>
           <h2 className="text-2xl font-bold font-cairo">لم يتم العثور على الطلب #{decodedOrderNumber}</h2>
           <p className="text-zinc-400 text-sm mt-2 mb-6">
-            قد يكون الرقم غير مسجل في {restaurant.name} أو تم تسليمه مسبقاً.
+            قد يكون الرقم غير مسجل في {restaurant?.name || slug} أو تم تسليمه مسبقاً.
           </p>
           <div className="flex flex-col gap-3 w-full">
             <button
@@ -356,7 +370,7 @@ function TenantCustomerTrackerInner() {
             <Link
               href={`/${slug}/track`}
               className="w-full py-3 rounded-2xl text-black font-extrabold text-sm transition-all shadow-lg text-center"
-              style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
+              style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
             >
               إدخال رقم الطلب مجدداً
             </Link>
@@ -390,21 +404,21 @@ function TenantCustomerTrackerInner() {
           <Link href={`/${slug}/track`} className="flex items-center gap-2.5 group">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center font-black shadow-md border border-white/10 overflow-hidden"
-              style={{ backgroundColor: `${restaurant.themeColor}25` }}
+              style={{ backgroundColor: `${restaurant?.themeColor || '#10B981'}25` }}
             >
-              {restaurant.logoUrl ? (
+              {restaurant?.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={restaurant.logoUrl}
-                  alt={restaurant.name}
+                  alt={restaurant?.name || slug}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Bell className="w-4 h-4" style={{ color: restaurant.themeColor }} />
+                <Bell className="w-4 h-4" style={{ color: restaurant?.themeColor || '#10B981' }} />
               )}
             </div>
             <span className="font-extrabold text-sm tracking-tight text-white font-cairo">
-              {restaurant.name}
+              {restaurant?.name || slug}
             </span>
           </Link>
 

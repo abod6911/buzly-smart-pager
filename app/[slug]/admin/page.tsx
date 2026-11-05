@@ -6,6 +6,7 @@ import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard } from '@/components/StaffPinGuard';
+import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import {
   Settings,
   Palette,
@@ -37,18 +38,18 @@ export default function TenantAdminBrandingPage() {
   const params = useParams();
   const slug = (params.slug as string) || 'demo-cafe';
 
-  const { getRestaurant, updateRestaurant } = useQueue();
+  const { getRestaurant, updateRestaurant, isRestaurantsLoaded } = useQueue();
   const restaurant = getRestaurant(slug);
 
   const [activeTab, setActiveTab] = useState<'branding' | 'stand'>('branding');
 
   // Form states
-  const [name, setName] = useState<string>(restaurant.name);
-  const [logoUrl, setLogoUrl] = useState<string>(restaurant.logoUrl || '');
-  const [themeColor, setThemeColor] = useState<string>(restaurant.themeColor || '#10B981');
-  const [staffPin, setStaffPin] = useState<string>(restaurant.staffPin || '1234');
+  const [name, setName] = useState<string>(restaurant?.name || '');
+  const [logoUrl, setLogoUrl] = useState<string>(restaurant?.logoUrl || '');
+  const [themeColor, setThemeColor] = useState<string>(restaurant?.themeColor || '#10B981');
+  const [staffPin, setStaffPin] = useState<string>(restaurant?.staffPin || '1234');
   const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(
-    restaurant.whatsappFallbackEnabled ?? true
+    restaurant?.whatsappFallbackEnabled ?? true
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
@@ -56,6 +57,16 @@ export default function TenantAdminBrandingPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [origin, setOrigin] = useState<string>('');
   const [activeBaseUrl, setActiveBaseUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (restaurant) {
+      setName(restaurant.name || '');
+      setLogoUrl(restaurant.logoUrl || '');
+      setThemeColor(restaurant.themeColor || '#10B981');
+      setStaffPin(restaurant.staffPin || '1234');
+      setWhatsappEnabled(restaurant.whatsappFallbackEnabled ?? true);
+    }
+  }, [restaurant]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -82,6 +93,18 @@ export default function TenantAdminBrandingPage() {
         .catch((e) => console.error(e));
     }
   }, [tableStandUrl]);
+
+  if (!restaurant) {
+    if (isRestaurantsLoaded) {
+      return <RestaurantNotFound slug={slug} />;
+    }
+    return (
+      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
+        <div className="w-12 h-12 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+        <p className="text-sm text-zinc-400 font-mono">جارِ التحقق من المتجر...</p>
+      </div>
+    );
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

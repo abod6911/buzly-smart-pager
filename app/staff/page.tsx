@@ -123,14 +123,14 @@ export default function StaffCashierPage() {
               <span className="hidden sm:inline">QR الكاونتر</span>
             </button>
 
-            {/* Reset Demo Orders */}
+            {/* Clear Orders */}
             <button
-              onClick={() => resetToDemoOrders('demo-cafe')}
+              onClick={() => clearQueue('demo-cafe')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
-              title="إعادة تعيين الطلبات التجريبية"
+              title="تفريغ طابور الطلبات"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">إعادة ضبط</span>
+              <span className="hidden md:inline">تفريغ الطابور</span>
             </button>
 
             {/* Customer Tracker Link */}

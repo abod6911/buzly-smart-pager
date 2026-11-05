@@ -7,7 +7,7 @@ import { soundManager } from '@/lib/audio';
 import { Restaurant } from '@/types/queue';
 
 interface StaffPinGuardProps {
-  restaurant: Restaurant;
+  restaurant?: Restaurant;
   onUnlocked: () => void;
   children: React.ReactNode;
 }
@@ -34,7 +34,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
       try {
         const res = await fetch('/api/auth/session', { cache: 'no-store' });
         const data = await res.json();
-        if (data.authenticated && data.slug === restaurant.slug) {
+        if (data.authenticated && data.slug === restaurant?.slug) {
           setIsAuthenticated(true);
           onUnlocked();
         }
@@ -44,7 +44,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
     };
 
     checkActiveSession();
-  }, [restaurant.slug, onUnlocked]);
+  }, [restaurant?.slug, onUnlocked]);
 
   // 2. Lockout Countdown Timer
   useEffect(() => {
@@ -69,7 +69,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         const res = await fetch('/api/auth/verify-pin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug: restaurant.slug, pin: candidatePin }),
+          body: JSON.stringify({ slug: restaurant?.slug || '', pin: candidatePin }),
         });
 
         const data = await res.json();
@@ -106,7 +106,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         setIsVerifying(false);
       }
     },
-    [isVerifying, lockedUntilSeconds, restaurant.slug, onUnlocked]
+    [isVerifying, lockedUntilSeconds, restaurant?.slug, onUnlocked]
   );
 
   const handleDigit = (digit: string) => {
@@ -153,18 +153,18 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         {/* Restaurant Header */}
         <div className="mb-6 flex flex-col items-center">
           <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-3 border border-white/10 overflow-hidden bg-[#18181C]">
-            {restaurant.logoUrl ? (
+            {restaurant?.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={restaurant.logoUrl}
-                alt={restaurant.name}
+                alt={restaurant?.name || ''}
                 className="w-full h-full object-cover"
               />
             ) : (
               <KeyRound className="w-6 h-6 text-emerald-400" />
             )}
           </div>
-          <h2 className="text-lg font-bold text-white">{restaurant.name}</h2>
+          <h2 className="text-lg font-bold text-white">{restaurant?.name || 'الكاشير'}</h2>
           <span className="text-xs text-zinc-400 mt-1 flex items-center gap-1.5 font-normal">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />
             <span>لوحة الكاشير محمية بتشفير الجلسة</span>

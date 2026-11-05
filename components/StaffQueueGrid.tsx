@@ -51,24 +51,35 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
     return Math.max(0, Math.floor(diffMs / 60000));
   };
 
+  const safePreparing = useMemo(
+    () => (Array.isArray(preparingOrders) ? preparingOrders : []),
+    [preparingOrders]
+  );
+
+  const safeReady = useMemo(
+    () => (Array.isArray(readyOrders) ? readyOrders : []),
+    [readyOrders]
+  );
+
   const matchesSearch = (o: Order) => {
+    if (!o) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     return (
-      o.orderNumber.toLowerCase().includes(q) ||
+      (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
       (o.notes && o.notes.toLowerCase().includes(q)) ||
       (o.customerPhone && o.customerPhone.includes(q))
     );
   };
 
   const filteredPreparing = useMemo(
-    () => preparingOrders.filter(matchesSearch),
-    [preparingOrders, searchQuery]
+    () => safePreparing.filter(matchesSearch),
+    [safePreparing, searchQuery]
   );
 
   const filteredReady = useMemo(
-    () => readyOrders.filter(matchesSearch),
-    [readyOrders, searchQuery]
+    () => safeReady.filter(matchesSearch),
+    [safeReady, searchQuery]
   );
 
   return (
@@ -147,13 +158,22 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar max-h-[580px]">
               <AnimatePresence mode="popLayout">
                 {filteredPreparing.length === 0 ? (
-                  <div className="h-56 flex flex-col items-center justify-center text-center text-zinc-500">
-                    <Inbox className="w-8 h-8 mb-2 stroke-[1.2] text-zinc-600" />
-                    <p className="text-xs font-medium text-zinc-400">لا توجد طلبات قيد التحضير</p>
-                    <p className="text-[11px] text-zinc-600 mt-0.5">
+                  <motion.div
+                    key="empty-preparing-placeholder"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={appleSpringQuick}
+                    className="h-56 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/[0.08] rounded-xl bg-white/[0.01]"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2.5 text-amber-300">
+                      <Inbox className="w-5 h-5 stroke-[1.5]" />
+                    </div>
+                    <p className="text-xs font-semibold text-zinc-300">لا توجد طلبات قيد التحضير حالياً</p>
+                    <p className="text-[11px] text-zinc-500 mt-1">
                       {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'أدخل رقم طلب من اللوحة لإضافته'}
                     </p>
-                  </div>
+                  </motion.div>
                 ) : (
                   filteredPreparing.map((order) => {
                     const elapsed = getElapsedMins(order.createdAt);
@@ -262,13 +282,22 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar max-h-[580px]">
               <AnimatePresence mode="popLayout">
                 {filteredReady.length === 0 ? (
-                  <div className="h-56 flex flex-col items-center justify-center text-center text-zinc-500">
-                    <Check className="w-8 h-8 mb-2 stroke-[1.2] text-zinc-600" />
-                    <p className="text-xs font-medium text-zinc-400">لا توجد طلبات بانتظار الاستلام</p>
-                    <p className="text-[11px] text-zinc-600 mt-0.5">
+                  <motion.div
+                    key="empty-ready-placeholder"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={appleSpringQuick}
+                    className="h-56 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-emerald-500/20 rounded-xl bg-emerald-500/[0.02]"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2.5 text-emerald-400">
+                      <Check className="w-5 h-5 stroke-[2]" />
+                    </div>
+                    <p className="text-xs font-semibold text-zinc-300">لا توجد طلبات بانتظار الاستلام حالياً</p>
+                    <p className="text-[11px] text-zinc-500 mt-1">
                       {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'عند نداء أي طلب جاهز سيظهر هنا فوراً'}
                     </p>
-                  </div>
+                  </motion.div>
                 ) : (
                   filteredReady.map((order) => {
                     const readyElapsed = order.readyAt ? getElapsedMins(order.readyAt) : 0;

@@ -1,20 +1,36 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
-import { Bell, ArrowRight, ShieldCheck, UtensilsCrossed, Lock } from 'lucide-react';
+import { RestaurantNotFound } from '@/components/RestaurantNotFound';
+import { Bell, ShieldCheck, UtensilsCrossed, Lock } from 'lucide-react';
 
 export default function TenantTrackEntryPage() {
   const params = useParams();
-  const slug = (params.slug as string) || 'demo-cafe';
+  const slug = (params.slug as string) || '';
 
-  const { getRestaurant, getOrdersForRestaurant } = useQueue();
+  const { getRestaurant, getOrdersForRestaurant, isRestaurantsLoaded } = useQueue();
   const restaurant = getRestaurant(slug);
   const orders = getOrdersForRestaurant(slug);
   const activeOrders = orders.filter((o) => o.status === 'preparing' || o.status === 'ready');
+
+  if (!restaurant) {
+    if (isRestaurantsLoaded) {
+      return <RestaurantNotFound slug={slug} />;
+    }
+    return (
+      <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
+        <div className="w-12 h-12 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+        <p className="text-sm text-zinc-400 font-mono">جارِ التحقق من المتجر...</p>
+      </div>
+    );
+  }
+
+  const themeColor = restaurant?.themeColor || '#10B981';
+  const restaurantName = restaurant?.name || slug;
 
   return (
     <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
@@ -24,21 +40,26 @@ export default function TenantTrackEntryPage() {
           <div className="flex items-center gap-2.5">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center font-black shadow-md overflow-hidden border border-white/10"
-              style={{ backgroundColor: `${restaurant.themeColor}25` }}
+              style={{ backgroundColor: `${themeColor}25` }}
             >
-              {restaurant.logoUrl ? (
+              {restaurant?.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={restaurant.logoUrl}
-                  alt={restaurant.name}
+                  alt={restaurantName}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Bell className="w-5 h-5" style={{ color: restaurant.themeColor }} />
+                <div
+                  className="w-full h-full flex items-center justify-center font-bold text-xs text-white"
+                  style={{ backgroundColor: themeColor }}
+                >
+                  {restaurantName ? restaurantName.charAt(0).toUpperCase() : <Bell className="w-4 h-4 text-white" />}
+                </div>
               )}
             </div>
             <span className="font-black text-base tracking-tight text-white font-cairo">
-              {restaurant.name}
+              {restaurantName}
             </span>
           </div>
 
@@ -57,15 +78,15 @@ export default function TenantTrackEntryPage() {
         <div className="text-center mb-6">
           <div
             className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-xl border border-white/10"
-            style={{ backgroundColor: `${restaurant.themeColor}20` }}
+            style={{ backgroundColor: `${themeColor}20` }}
           >
-            <UtensilsCrossed className="w-8 h-8" style={{ color: restaurant.themeColor }} />
+            <UtensilsCrossed className="w-8 h-8" style={{ color: themeColor }} />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo">
             تتبع واستلام طلبك
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1.5 leading-relaxed">
-            أدخل رقم طلبك من الفاتورة لتحويل هاتفك إلى بيجر ذكي يرن فور جاهزية طلبك في <strong className="text-white">{restaurant.name}</strong>
+            أدخل رقم طلبك من الفاتورة لتحويل هاتفك إلى بيجر ذكي يرن فور جاهزية طلبك في <strong className="text-white">{restaurantName}</strong>
           </p>
         </div>
 

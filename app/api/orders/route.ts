@@ -11,70 +11,16 @@ declare global {
   var __chimer_orders_last_updated: number | undefined;
 }
 
-const INITIAL_DEMO_ORDERS: Order[] = [
-  {
-    id: 'demo-102',
-    orderNumber: '102',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'محمد أحمد',
-    customerPhone: '966501112233',
-    notes: '2x فلات وايت + كرواسون لوز',
-    status: 'preparing',
-    estimatedMinutes: 10,
-    createdAt: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-  {
-    id: 'demo-104',
-    orderNumber: '104',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'سارة خالد',
-    customerPhone: '966554443322',
-    notes: 'سبانش لاتيه بارد إكسترا صوص',
-    status: 'preparing',
-    estimatedMinutes: 15,
-    createdAt: new Date(Date.now() - 7 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-  {
-    id: 'demo-98',
-    orderNumber: '98',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'عبدالله السعد',
-    customerPhone: '966598887766',
-    notes: 'وجبة خفيفة سفري',
-    status: 'ready',
-    estimatedMinutes: 5,
-    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    rePingCount: 1,
-    lastPingAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'demo-99',
-    orderNumber: '99',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'فهد',
-    notes: 'عصير برتقال كولد بريس',
-    status: 'ready',
-    estimatedMinutes: 5,
-    createdAt: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-    lastPingAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-  },
-];
-
 function getStore(): Order[] {
-  if (!globalThis.__chimer_orders_store) {
-    globalThis.__chimer_orders_store = [...INITIAL_DEMO_ORDERS];
+  if (!globalThis.__chimer_orders_store || !Array.isArray(globalThis.__chimer_orders_store)) {
+    globalThis.__chimer_orders_store = [];
     globalThis.__chimer_orders_last_updated = Date.now();
   }
   return globalThis.__chimer_orders_store;
 }
 
 function setStore(orders: Order[]) {
-  globalThis.__chimer_orders_store = orders;
+  globalThis.__chimer_orders_store = Array.isArray(orders) ? orders : [];
   globalThis.__chimer_orders_last_updated = Date.now();
 }
 
@@ -101,18 +47,29 @@ const orderInputSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, 'معرف المطعم غير صالح')
     .optional(),
+  restaurant_slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, 'معرف المطعم غير صالح')
+    .optional(),
+  restaurantId: z.string().optional(),
+  restaurant_id: z.string().optional(),
   estimatedMinutes: z.number().int().min(1).max(180).optional(),
   notes: z.string().max(300).optional(),
   customerPhone: z.string().max(30).optional(),
   customerName: z.string().max(100).optional(),
   status: z.enum(['preparing', 'ready', 'completed', 'cancelled']).optional(),
+  createdAt: z.string().optional(),
+  created_at: z.string().optional(),
 });
 
 // GET: Retrieve active orders or filter by slug / orderNumber
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
-  // Rate limit: 60 reads per minute per IP
-  const rl = checkGeneralRateLimit(`get_orders:${ip}`, 60, 60);
+  // Rate limit: 120 reads per minute per IP
+  const rl = checkGeneralRateLimit(`get_orders:${ip}`, 120, 60);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, error: 'تم تجاوز معدل الطلبات المسموح به' },
@@ -132,9 +89,14 @@ export async function GET(req: NextRequest) {
       : undefined;
 
   let store = getStore();
+  if (!Array.isArray(store)) {
+    store = [];
+  }
 
   if (slug) {
-    store = store.filter((o) => o.restaurantSlug.toLowerCase() === slug);
+    store = store.filter(
+      (o) => (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug
+    );
   }
 
   if (orderNumber) {
@@ -183,8 +145,8 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case 'ADD':
       case 'ORDER_ADDED': {
-        // Strict Rate limit on order creation: 10 per minute per IP
-        const rl = checkGeneralRateLimit(`add_order:${ip}`, 10, 60);
+        // High capacity rate limit for active POS cashier operation: 120 per minute per IP
+        const rl = checkGeneralRateLimit(`add_order:${ip}`, 120, 60);
         if (!rl.allowed) {
           return NextResponse.json(
             { success: false, error: 'تم تجاوز الحد الأقصى لإنشاء الطلبات، يرجى الانتظار دقيقة' },
@@ -205,27 +167,53 @@ export async function POST(req: NextRequest) {
         }
 
         const validated = validation.data;
-        const targetSlug = (validated.restaurantSlug || restaurantSlug || 'demo-cafe').toLowerCase();
+        const targetSlug = (
+          validated.restaurantSlug ||
+          validated.restaurant_slug ||
+          rawData.restaurantSlug ||
+          rawData.restaurant_slug ||
+          restaurantSlug ||
+          'demo-cafe'
+        )
+          .toLowerCase()
+          .trim();
+
+        const targetRestId =
+          validated.restaurantId ||
+          validated.restaurant_id ||
+          rawData.restaurantId ||
+          rawData.restaurant_id ||
+          `res-${targetSlug}`;
+
+        const finalId =
+          rawData.id && !rawData.id.startsWith('temp-')
+            ? rawData.id
+            : `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
         const newOrder: Order = {
-          id: rawData.id || `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          id: finalId,
           orderNumber: validated.orderNumber,
           restaurantSlug: targetSlug,
+          restaurant_slug: targetSlug,
+          restaurantId: targetRestId,
+          restaurant_id: targetRestId,
           customerName: validated.customerName,
           customerPhone: validated.customerPhone,
           notes: validated.notes,
           status: validated.status || 'preparing',
           estimatedMinutes: validated.estimatedMinutes || 10,
           rePingCount: 0,
-          createdAt: rawData.createdAt || nowIso,
+          createdAt: rawData.createdAt || rawData.created_at || nowIso,
+          created_at: rawData.created_at || rawData.createdAt || nowIso,
         };
 
-        // Filter out if duplicate number in same restaurant
+        // Filter out if duplicate number in same restaurant that is still active
         const filtered = store.filter(
           (o) =>
             !(
-              o.restaurantSlug.toLowerCase() === newOrder.restaurantSlug &&
-              o.orderNumber.toLowerCase() === newOrder.orderNumber.toLowerCase()
+              (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === newOrder.restaurantSlug.toLowerCase() &&
+              o.orderNumber.toLowerCase() === newOrder.orderNumber.toLowerCase() &&
+              (o.status === 'preparing' || o.status === 'ready')
             )
         );
         const next = [newOrder, ...filtered];
@@ -332,17 +320,34 @@ export async function POST(req: NextRequest) {
       case 'SYNC_ALL':
       case 'QUEUE_SYNC': {
         if (Array.isArray(orders)) {
-          const orderMap = new Map<string, Order>();
-          store.forEach((o) => orderMap.set(o.id, o));
-          orders.forEach((o: Order) => orderMap.set(o.id, o));
-          setStore(Array.from(orderMap.values()));
+          if (restaurantSlug) {
+            const targetSlug = restaurantSlug.toLowerCase().trim();
+            const otherTenantOrders = store.filter(
+              (o) => (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() !== targetSlug
+            );
+            const next = [...orders, ...otherTenantOrders];
+            setStore(next);
+          } else {
+            const orderMap = new Map<string, Order>();
+            store.forEach((o) => orderMap.set(o.id, o));
+            orders.forEach((o: Order) => orderMap.set(o.id, o));
+            setStore(Array.from(orderMap.values()));
+          }
         }
         break;
       }
 
       case 'RESET_DEMO':
       case 'QUEUE_RESET': {
-        setStore([...INITIAL_DEMO_ORDERS]);
+        if (restaurantSlug) {
+          const targetSlug = restaurantSlug.toLowerCase().trim();
+          const next = store.filter(
+            (o) => (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() !== targetSlug
+          );
+          setStore(next);
+        } else {
+          setStore([]);
+        }
         break;
       }
 
@@ -353,6 +358,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       updatedOrder,
+      order: updatedOrder,
+      tempId: order?.id || orderId,
       orders: getStore(),
       lastUpdated: globalThis.__chimer_orders_last_updated,
     });

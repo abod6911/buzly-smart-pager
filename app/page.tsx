@@ -52,12 +52,12 @@ export default function LandingRoleSwitcherPage() {
               جاهز للاستلام: <strong className="text-emerald-400">{readyOrders.length}</strong>
             </span>
             <span>•</span>
-            <button
-              onClick={() => resetToDemoOrders('demo-cafe')}
+            <Link
+              href="/onboard"
               className="text-emerald-400 hover:underline font-bold"
             >
-              إعادة ضبط البيانات التجريبية
-            </button>
+              تسجيل متجر جديد
+            </Link>
           </div>
         </div>
       </div>

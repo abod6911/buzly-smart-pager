@@ -23,104 +23,14 @@ const STORAGE_ORDERS_KEY = 'buzly_multitenant_orders_v3';
 const STORAGE_RESTAURANTS_KEY = 'buzly_multitenant_restaurants_v3';
 const BROADCAST_CHANNEL_NAME = 'buzly_realtime_queue_v3';
 
-export const DEFAULT_RESTAURANT: Restaurant = {
-  id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-  slug: 'demo-cafe',
-  name: 'ديمو كافيه & لاونج | Demo Cafe',
-  logoUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=120&auto=format&fit=crop&q=80',
-  themeColor: '#10B981',
-  whatsappFallbackEnabled: true,
-  createdAt: new Date().toISOString(),
-};
-
-const INITIAL_DEMO_ORDERS: Order[] = [
-  {
-    id: 'demo-102',
-    orderNumber: '102',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'محمد أحمد',
-    customerPhone: '966501112233',
-    notes: '2x فلات وايت + كرواسون لوز',
-    status: 'preparing',
-    estimatedMinutes: 10,
-    createdAt: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-  {
-    id: 'demo-104',
-    orderNumber: '104',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'سارة خالد',
-    customerPhone: '966554443322',
-    notes: 'سبانش لاتيه بارد إكسترا صوص',
-    status: 'preparing',
-    estimatedMinutes: 15,
-    createdAt: new Date(Date.now() - 7 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-  {
-    id: 'demo-98',
-    orderNumber: '98',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'عبدالله السعد',
-    customerPhone: '966598887766',
-    notes: 'وجبة خفيفة سفري',
-    status: 'ready',
-    estimatedMinutes: 5,
-    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    rePingCount: 1,
-    lastPingAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'demo-99',
-    orderNumber: '99',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'فهد',
-    notes: 'عصير برتقال كولد بريس',
-    status: 'ready',
-    estimatedMinutes: 5,
-    createdAt: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-    lastPingAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'demo-91',
-    orderNumber: '91',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'سلطان',
-    notes: 'قهوة مقطرة V60 إثيوبية',
-    status: 'completed',
-    estimatedMinutes: 8,
-    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 38 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 36 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-  {
-    id: 'demo-92',
-    orderNumber: '92',
-    restaurantSlug: 'demo-cafe',
-    customerName: 'نورة',
-    customerPhone: '966532221100',
-    notes: 'كورتادو + كوكيز شوكولاتة',
-    status: 'completed',
-    estimatedMinutes: 6,
-    createdAt: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
-    readyAt: new Date(Date.now() - 49 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 47 * 60 * 1000).toISOString(),
-    rePingCount: 0,
-  },
-];
-
 interface QueueContextType {
   orders: Order[];
   restaurants: Record<string, Restaurant>;
+  isRestaurantsLoaded: boolean;
   lastEvent: QueueRealtimeEvent | null;
   isSupabaseActive: boolean;
   networkStatus: 'connected' | 'reconnecting' | 'offline';
-  getRestaurant: (slug: string) => Restaurant;
+  getRestaurant: (slug: string) => Restaurant | undefined;
   updateRestaurant: (slug: string, data: Partial<Restaurant>) => Promise<void>;
   createRestaurant: (data: Omit<Restaurant, 'id' | 'createdAt'>) => Promise<Restaurant>;
   addOrder: (
@@ -206,14 +116,21 @@ function safeParseStorage<T>(key: string, fallback: T): T {
 
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [restaurants, setRestaurants] = useState<Record<string, Restaurant>>({
-    'demo-cafe': DEFAULT_RESTAURANT,
-  });
+  const [restaurants, setRestaurants] = useState<Record<string, Restaurant>>({});
+  const [isRestaurantsLoaded, setIsRestaurantsLoaded] = useState<boolean>(false);
   const [lastEvent, setLastEvent] = useState<QueueRealtimeEvent | null>(null);
   const [isSupabaseActive] = useState<boolean>(isSupabaseConfigured());
   const [networkStatus, setNetworkStatus] = useState<'connected' | 'reconnecting' | 'offline'>('connected');
   const channelRef = useRef<BroadcastChannel | null>(null);
   const tabIdRef = useRef<string>('');
+  const ordersRef = useRef<Order[]>([]);
+  const pendingOptimisticOrdersRef = useRef<Map<string, Order>>(new Map());
+  const fetchedSlugsRef = useRef<Set<string>>(new Set());
+
+  // Keep ordersRef synchronized with state
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
 
   // 1. Initialize from localStorage with self-healing recovery
   useEffect(() => {
@@ -222,28 +139,39 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (typeof window !== 'undefined') {
       const storedRest = safeParseStorage<Record<string, Restaurant>>(
         STORAGE_RESTAURANTS_KEY,
-        { 'demo-cafe': DEFAULT_RESTAURANT }
+        {}
       );
-      setRestaurants(storedRest);
+      if (storedRest && typeof storedRest === 'object') {
+        setRestaurants(storedRest);
+      }
 
-      const storedOrders = safeParseStorage<Order[]>(
+      const storedOrders = safeParseStorage<Order[] | null>(
         STORAGE_ORDERS_KEY,
-        INITIAL_DEMO_ORDERS
+        null
       );
-      setOrders(Array.isArray(storedOrders) && storedOrders.length > 0 ? storedOrders : INITIAL_DEMO_ORDERS);
+      if (Array.isArray(storedOrders)) {
+        setOrders(storedOrders);
+      } else {
+        setOrders([]);
+      }
+
+      if (!isSupabaseConfigured()) {
+        setIsRestaurantsLoaded(true);
+      }
     }
   }, []);
 
   const saveAndBroadcast = useCallback(
     (newOrders: Order[], event: QueueRealtimeEvent, newRestaurants?: Record<string, Restaurant>) => {
+      const safeOrders = Array.isArray(newOrders) ? newOrders : [];
       // 0ms Optimistic UI update
-      setOrders(newOrders);
+      setOrders(safeOrders);
       setLastEvent(event);
       if (newRestaurants) setRestaurants(newRestaurants);
 
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(newOrders));
+          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(safeOrders));
           if (newRestaurants) {
             localStorage.setItem(STORAGE_RESTAURANTS_KEY, JSON.stringify(newRestaurants));
           }
@@ -266,8 +194,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               orderId: event.orderId,
               orderNumber: event.orderNumber,
               restaurantSlug: event.restaurantSlug || 'demo-cafe',
+              restaurant_slug: event.restaurantSlug || 'demo-cafe',
               feedback: event.feedback,
-              orders: newOrders,
+              orders: safeOrders,
             }),
           });
           if (!res.ok) throw new Error('Failed to post to /api/orders');
@@ -336,10 +265,12 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isSupabaseConfigured() || !supabase) return;
 
     // Load restaurants (Security: omit raw staff_pin from client bundle)
-    supabase
-      .from('restaurants')
-      .select('id, slug, name, logo_url, theme_color, whatsapp_fallback_enabled, created_at')
-      .then(({ data, error }) => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('id, slug, name, logo_url, theme_color, whatsapp_fallback_enabled, created_at');
+
         if (!error && data && data.length > 0) {
           const restMap: Record<string, Restaurant> = {};
           data.forEach((r) => {
@@ -355,7 +286,12 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
           setRestaurants((prev) => ({ ...prev, ...restMap }));
         }
-      });
+      } catch (err) {
+        console.warn('Supabase restaurants load error:', err);
+      } finally {
+        setIsRestaurantsLoaded(true);
+      }
+    })();
 
     // Load orders_queue
     supabase
@@ -400,6 +336,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: row.id,
               orderNumber: row.order_number,
               restaurantSlug: row.restaurant_slug || 'demo-cafe',
+              restaurant_slug: row.restaurant_slug || 'demo-cafe',
+              restaurantId: row.restaurant_id,
+              restaurant_id: row.restaurant_id,
               customerName: row.customer_name,
               customerPhone: row.customer_phone,
               notes: row.notes,
@@ -408,21 +347,47 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               pushSubscription: row.push_subscription,
               rePingCount: row.ping_count || 0,
               createdAt: row.created_at,
+              created_at: row.created_at,
               readyAt: row.ready_at,
               completedAt: row.completed_at,
               lastPingAt: row.last_ping_at,
             };
+
             setOrders((prev) => {
-              if (prev.some((o) => o.id === newOrder.id)) return prev;
-              const next = [newOrder, ...prev];
-              localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(next));
+              const safe = Array.isArray(prev) ? prev : [];
+              // Check if matching optimistic order exists
+              const optimisticIndex = safe.findIndex(
+                (o) =>
+                  (o.id.startsWith('temp-') || o.id.startsWith('ord_')) &&
+                  o.orderNumber === newOrder.orderNumber &&
+                  (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === (newOrder.restaurantSlug || newOrder.restaurant_slug || '').toLowerCase()
+              );
+
+              let next: Order[];
+              if (optimisticIndex !== -1) {
+                pendingOptimisticOrdersRef.current.delete(safe[optimisticIndex].id);
+                next = [...safe];
+                next[optimisticIndex] = newOrder;
+              } else if (!safe.some((o) => o.id === newOrder.id)) {
+                next = [newOrder, ...safe];
+              } else {
+                next = safe;
+              }
+
+              try {
+                localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(next));
+              } catch {}
               return next;
             });
           } else if (payload.eventType === 'UPDATE') {
             const row = payload.new;
             setOrders((prev) => {
-              const next = prev.map((o) => {
-                if (o.id === row.id || (o.orderNumber === row.order_number && o.restaurantSlug === row.restaurant_slug)) {
+              const safe = Array.isArray(prev) ? prev : [];
+              const next = safe.map((o) => {
+                const matchSlug =
+                  (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() ===
+                  (row.restaurant_slug || 'demo-cafe').toLowerCase();
+                if (o.id === row.id || (o.orderNumber === row.order_number && matchSlug)) {
                   return {
                     ...o,
                     status: row.status as OrderStatus,
@@ -435,7 +400,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 }
                 return o;
               });
-              localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(next));
+              try {
+                localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(next));
+              } catch {}
               return next;
             });
           }
@@ -465,16 +432,28 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const data = await res.json();
         if (data && Array.isArray(data.orders)) {
           setOrders((prev) => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            const serverOrders: Order[] = data.orders;
+
             // Self-healing: Detect if an order moved to 'ready' or was re-pinged while device was asleep
-            data.orders.forEach((newOrd: Order) => {
-              const prevOrd = prev.find((p) => p.id === newOrd.id || (p.orderNumber === newOrd.orderNumber && p.restaurantSlug === newOrd.restaurantSlug));
+            serverOrders.forEach((newOrd: Order) => {
+              const prevOrd = safePrev.find(
+                (p) =>
+                  p.id === newOrd.id ||
+                  (p.orderNumber === newOrd.orderNumber &&
+                    (p.restaurantSlug || p.restaurant_slug || '').toLowerCase() ===
+                      (newOrd.restaurantSlug || newOrd.restaurant_slug || '').toLowerCase())
+              );
               if (
                 prevOrd &&
                 ((prevOrd.status === 'preparing' && newOrd.status === 'ready') ||
                   (newOrd.rePingCount > (prevOrd.rePingCount || 0)))
               ) {
                 setLastEvent({
-                  type: prevOrd.status === 'preparing' && newOrd.status === 'ready' ? 'ORDER_READY' : 'ORDER_REPING',
+                  type:
+                    prevOrd.status === 'preparing' && newOrd.status === 'ready'
+                      ? 'ORDER_READY'
+                      : 'ORDER_REPING',
                   restaurantSlug: newOrd.restaurantSlug,
                   orderId: newOrd.id,
                   orderNumber: newOrd.orderNumber,
@@ -485,15 +464,49 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             });
 
-            const prevDigest = prev.map((o) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
-            const nextDigest = data.orders.map((o: Order) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
+            // Preserve pending optimistic orders that server hasn't committed yet
+            const pendingList = Array.from(pendingOptimisticOrdersRef.current.values());
+            const stillPending: Order[] = [];
+            for (const p of pendingList) {
+              const pSlug = (p.restaurantSlug || p.restaurant_slug || '').toLowerCase();
+              const existsOnServer = serverOrders.some(
+                (so) =>
+                  so.orderNumber === p.orderNumber &&
+                  (so.restaurantSlug || so.restaurant_slug || '').toLowerCase() === pSlug &&
+                  (so.status === 'preparing' || so.status === 'ready')
+              );
+              if (existsOnServer) {
+                pendingOptimisticOrdersRef.current.delete(p.id);
+              } else {
+                stillPending.push(p);
+              }
+            }
+
+            // Merge server orders with unconfirmed pending optimistic orders
+            let merged = [...serverOrders];
+            for (const p of stillPending) {
+              const pSlug = (p.restaurantSlug || p.restaurant_slug || '').toLowerCase();
+              if (
+                !merged.some(
+                  (m) =>
+                    m.id === p.id ||
+                    (m.orderNumber === p.orderNumber &&
+                      (m.restaurantSlug || m.restaurant_slug || '').toLowerCase() === pSlug)
+                )
+              ) {
+                merged = [p, ...merged];
+              }
+            }
+
+            const prevDigest = safePrev.map((o) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
+            const nextDigest = merged.map((o: Order) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
             if (prevDigest !== nextDigest) {
               try {
-                localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
+                localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(merged));
               } catch {}
-              return data.orders;
+              return merged;
             }
-            return prev;
+            return safePrev;
           });
         }
       } else {
@@ -539,17 +552,24 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // 4. Multi-Tenant Restaurant Helpers
   const getRestaurant = useCallback(
-    (slug: string): Restaurant => {
-      const cleanSlug = slug.toLowerCase();
+    (slug: string): Restaurant | undefined => {
+      if (!slug) return undefined;
+      const cleanSlug = slug.toLowerCase().trim();
       if (restaurants[cleanSlug]) {
         return restaurants[cleanSlug];
       }
-      return {
-        ...DEFAULT_RESTAURANT,
-        id: `res-${cleanSlug}`,
-        slug: cleanSlug,
-        name: cleanSlug.replace(/-/g, ' ').toUpperCase(),
-      };
+      if (typeof window !== 'undefined' && !fetchedSlugsRef.current.has(cleanSlug)) {
+        fetchedSlugsRef.current.add(cleanSlug);
+        fetch(`/api/restaurants/${cleanSlug}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.success && data?.restaurant) {
+              setRestaurants((prev) => ({ ...prev, [cleanSlug]: data.restaurant }));
+            }
+          })
+          .catch(() => {});
+      }
+      return undefined;
     },
     [restaurants]
   );
@@ -558,7 +578,16 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     async (slug: string, data: Partial<Restaurant>) => {
       const cleanSlug = slug.toLowerCase();
       const current = getRestaurant(cleanSlug);
-      const updated: Restaurant = { ...current, ...data };
+      const updated: Restaurant = {
+        id: current?.id || `res_${cleanSlug}`,
+        slug: cleanSlug,
+        name: current?.name || cleanSlug,
+        themeColor: current?.themeColor || '#10B981',
+        whatsappFallbackEnabled: current?.whatsappFallbackEnabled ?? true,
+        createdAt: current?.createdAt || new Date().toISOString(),
+        ...current,
+        ...data,
+      };
 
       const nextRestaurants = {
         ...restaurants,
@@ -639,16 +668,21 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 4.1 Duplicate Prevention Helper: Check if order is active within the last 18 hours
   const getActiveOrder = useCallback(
     (orderNumber: string, restaurantSlug?: string): Order | undefined => {
-      const clean = orderNumber.trim();
-      const slug = (restaurantSlug || 'demo-cafe').toLowerCase();
+      const clean = orderNumber.trim().toLowerCase();
+      const slug = (restaurantSlug || 'demo-cafe').toLowerCase().trim();
       const cutoff = Date.now() - 18 * 60 * 60 * 1000;
-      return orders.find(
-        (o) =>
-          o.orderNumber === clean &&
-          o.restaurantSlug === slug &&
+      const safeOrders = Array.isArray(orders) ? orders : [];
+      return safeOrders.find((o) => {
+        if (!o) return false;
+        const ordSlug = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
+        const createdTime = new Date(o.createdAt || o.created_at || Date.now()).getTime();
+        return (
+          o.orderNumber.toLowerCase() === clean &&
+          ordSlug === slug &&
           (o.status === 'preparing' || o.status === 'ready') &&
-          new Date(o.createdAt).getTime() > cutoff
-      );
+          createdTime > cutoff
+        );
+      });
     },
     [orders]
   );
@@ -664,7 +698,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       options?: { replaceExisting?: boolean }
     ): Promise<Order> => {
       const cleanNum = orderNumber.trim();
-      const slug = restaurantSlug.toLowerCase();
+      const slug = (restaurantSlug || 'demo-cafe').toLowerCase().trim();
+      const rest = getRestaurant(slug);
 
       // Check if duplicate active order exists and caller didn't explicitly replace
       const existingActive = getActiveOrder(cleanNum, slug);
@@ -672,113 +707,203 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return existingActive;
       }
 
-      const newOrder: Order = {
-        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const nowIso = new Date().toISOString();
+
+      const optimisticOrder: Order = {
+        id: tempId,
         orderNumber: cleanNum,
         restaurantSlug: slug,
+        restaurant_slug: slug,
+        restaurantId: rest?.id || `res_${slug}`,
+        restaurant_id: rest?.id || `res_${slug}`,
         customerName: undefined,
         customerPhone: customerPhone ? customerPhone.trim() : undefined,
         notes: notes ? notes.trim() : undefined,
         status: 'preparing',
         estimatedMinutes: estimatedMinutes || 10,
-        createdAt: new Date().toISOString(),
+        createdAt: nowIso,
+        created_at: nowIso,
         rePingCount: 0,
       };
 
-      if (isSupabaseConfigured() && supabase) {
-        retryWithBackoff(async () => {
-          return await supabase!.from('orders_queue').insert({
-            order_number: newOrder.orderNumber,
-            restaurant_slug: slug,
-            customer_phone: newOrder.customerPhone,
-            notes: newOrder.notes,
-            status: 'preparing',
-            estimated_mins: newOrder.estimatedMinutes,
-          });
-        }).catch((err) => console.warn('Supabase insert queued:', err));
+      // 1. Register in pending optimistic map
+      pendingOptimisticOrdersRef.current.set(tempId, optimisticOrder);
+
+      // 2. Compute next state immediately
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      const filtered = currentOrders.filter(
+        (o) =>
+          !(
+            (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug &&
+            o.orderNumber.toLowerCase() === cleanNum.toLowerCase() &&
+            (o.status === 'preparing' || o.status === 'ready')
+          )
+      );
+      const nextOrders = [optimisticOrder, ...filtered];
+
+      // Save to localStorage immediately
+      try {
+        localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(nextOrders));
+      } catch {}
+
+      // 0ms Optimistic UI update
+      setOrders(nextOrders);
+
+      const event: QueueRealtimeEvent = {
+        type: 'ORDER_ADDED',
+        restaurantSlug: slug,
+        orderId: tempId,
+        orderNumber: cleanNum,
+        order: optimisticOrder,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
+      };
+      setLastEvent(event);
+
+      if (channelRef.current) {
+        channelRef.current.postMessage(event);
       }
 
-      setOrders((prev) => {
-        const filtered = prev.filter(
-          (o) => !(o.orderNumber === cleanNum && o.restaurantSlug === slug) || o.status === 'completed'
-        );
-        const next = [newOrder, ...filtered];
-        saveAndBroadcast(next, {
-          type: 'ORDER_ADDED',
-          restaurantSlug: slug,
-          orderId: newOrder.id,
-          orderNumber: newOrder.orderNumber,
-          order: newOrder,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-        return next;
-      });
-
       soundManager.playSuccessTone();
-      return newOrder;
+
+      // 3. Asynchronously sync to API and Supabase
+      (async () => {
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'ORDER_ADDED',
+              order: optimisticOrder,
+              orderId: tempId,
+              orderNumber: cleanNum,
+              restaurantSlug: slug,
+              restaurant_slug: slug,
+              restaurant_id: rest?.id || `res_${slug}`,
+              orders: nextOrders,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const confirmedOrder = data.updatedOrder || data.order;
+            if (confirmedOrder && confirmedOrder.id) {
+              pendingOptimisticOrdersRef.current.delete(tempId);
+              setOrders((prev) => {
+                const safe = Array.isArray(prev) ? prev : [];
+                const updated = safe.map((o) =>
+                  o.id === tempId ? { ...o, id: confirmedOrder.id } : o
+                );
+                try {
+                  localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('API POST order failed, keeping optimistic order:', err);
+        }
+
+        // Supabase insert if active
+        if (isSupabaseConfigured() && supabase) {
+          try {
+            const { data, error } = await supabase
+              .from('orders_queue')
+              .insert({
+                order_number: optimisticOrder.orderNumber,
+                restaurant_slug: slug,
+                restaurant_id: rest?.id,
+                customer_phone: optimisticOrder.customerPhone,
+                notes: optimisticOrder.notes,
+                status: 'preparing',
+                estimated_mins: optimisticOrder.estimatedMinutes,
+              })
+              .select()
+              .single();
+
+            if (!error && data && data.id) {
+              pendingOptimisticOrdersRef.current.delete(tempId);
+              setOrders((prev) => {
+                const safe = Array.isArray(prev) ? prev : [];
+                const updated = safe.map((o) =>
+                  o.id === tempId ? { ...o, id: data.id } : o
+                );
+                try {
+                  localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          } catch (err) {
+            console.warn('Supabase insert queued:', err);
+          }
+        }
+      })();
+
+      return optimisticOrder;
     },
-    [getActiveOrder, saveAndBroadcast]
+    [getActiveOrder, getRestaurant]
   );
 
   // 6. Action: Mark Ready
   const markReady = useCallback(
     async (orderId: string, restaurantSlug?: string) => {
       const nowIso = new Date().toISOString();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let targetOrder: Order | undefined;
 
-      setOrders((prev) => {
-        let targetOrder: Order | undefined;
-        const next = prev.map((ord) => {
-          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
-          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
-            targetOrder = {
-              ...ord,
-              status: 'ready' as OrderStatus,
-              readyAt: nowIso,
-              lastPingAt: nowIso,
-            };
-            return targetOrder;
-          }
-          return ord;
+      const next = currentOrders.map((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          targetOrder = {
+            ...ord,
+            status: 'ready' as OrderStatus,
+            readyAt: nowIso,
+            lastPingAt: nowIso,
+          };
+          return targetOrder;
+        }
+        return ord;
+      });
+
+      if (targetOrder) {
+        const rest = getRestaurant(targetOrder.restaurantSlug);
+
+        saveAndBroadcast(next, {
+          type: 'ORDER_READY',
+          restaurantSlug: targetOrder.restaurantSlug,
+          orderId: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          order: targetOrder,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
         });
 
-        if (targetOrder) {
-          const rest = getRestaurant(targetOrder.restaurantSlug);
-
-          saveAndBroadcast(next, {
-            type: 'ORDER_READY',
-            restaurantSlug: targetOrder.restaurantSlug,
-            orderId: targetOrder.id,
-            orderNumber: targetOrder.orderNumber,
-            order: targetOrder,
-            timestamp: Date.now(),
-            sourceTabId: tabIdRef.current,
-          });
-
-          if (isSupabaseConfigured() && supabase) {
-            supabase
-              .from('orders_queue')
-              .update({
-                status: 'ready',
-                ready_at: nowIso,
-                last_ping_at: nowIso,
-              })
-              .eq('order_number', targetOrder.orderNumber)
-              .eq('restaurant_slug', targetOrder.restaurantSlug)
-              .then();
-          }
-
-          triggerBackendPush({
-            orderNumber: targetOrder.orderNumber,
-            title: `طلبك #${targetOrder.orderNumber} جاهز للاستلام! 🍔 (${rest.name})`,
-            body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
-            url: `/${targetOrder.restaurantSlug}/track/${encodeURIComponent(targetOrder.orderNumber)}`,
-            subscription: targetOrder.pushSubscription,
-          });
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({
+              status: 'ready',
+              ready_at: nowIso,
+              last_ping_at: nowIso,
+            })
+            .eq('order_number', targetOrder.orderNumber)
+            .eq('restaurant_slug', targetOrder.restaurantSlug)
+            .then();
         }
 
-        return next;
-      });
+        triggerBackendPush({
+          orderNumber: targetOrder.orderNumber,
+          title: `طلبك #${targetOrder.orderNumber} جاهز للاستلام! 🍔 (${rest?.name || targetOrder.restaurantSlug})`,
+          body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
+          url: `/${targetOrder.restaurantSlug}/track/${encodeURIComponent(targetOrder.orderNumber)}`,
+          subscription: targetOrder.pushSubscription,
+        });
+      }
     },
     [getRestaurant, saveAndBroadcast]
   );
@@ -787,58 +912,57 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const rePing = useCallback(
     async (orderId: string, restaurantSlug?: string) => {
       const nowIso = new Date().toISOString();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let targetOrder: Order | undefined;
 
-      setOrders((prev) => {
-        let targetOrder: Order | undefined;
-        const next = prev.map((ord) => {
-          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
-          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
-            targetOrder = {
-              ...ord,
-              rePingCount: (ord.rePingCount || 0) + 1,
-              lastPingAt: nowIso,
-            };
-            return targetOrder;
-          }
-          return ord;
+      const next = currentOrders.map((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          targetOrder = {
+            ...ord,
+            rePingCount: (ord.rePingCount || 0) + 1,
+            lastPingAt: nowIso,
+          };
+          return targetOrder;
+        }
+        return ord;
+      });
+
+      if (targetOrder) {
+        const rest = getRestaurant(targetOrder.restaurantSlug);
+
+        saveAndBroadcast(next, {
+          type: 'ORDER_REPING',
+          restaurantSlug: targetOrder.restaurantSlug,
+          orderId: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          order: targetOrder,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
         });
 
-        if (targetOrder) {
-          const rest = getRestaurant(targetOrder.restaurantSlug);
-
-          saveAndBroadcast(next, {
-            type: 'ORDER_REPING',
-            restaurantSlug: targetOrder.restaurantSlug,
-            orderId: targetOrder.id,
-            orderNumber: targetOrder.orderNumber,
-            order: targetOrder,
-            timestamp: Date.now(),
-            sourceTabId: tabIdRef.current,
-          });
-
-          if (isSupabaseConfigured() && supabase) {
-            supabase
-              .from('orders_queue')
-              .update({
-                ping_count: targetOrder.rePingCount,
-                last_ping_at: nowIso,
-              })
-              .eq('order_number', targetOrder.orderNumber)
-              .eq('restaurant_slug', targetOrder.restaurantSlug)
-              .then();
-          }
-
-          triggerBackendPush({
-            orderNumber: targetOrder.orderNumber,
-            title: `تذكير: طلبك #${targetOrder.orderNumber} بانتظارك! 🔔 (${rest.name})`,
-            body: 'يرجى مراجعة الكاونتر لاستلام طلبك.',
-            url: `/${targetOrder.restaurantSlug}/track/${encodeURIComponent(targetOrder.orderNumber)}`,
-            subscription: targetOrder.pushSubscription,
-          });
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({
+              ping_count: targetOrder.rePingCount,
+              last_ping_at: nowIso,
+            })
+            .eq('order_number', targetOrder.orderNumber)
+            .eq('restaurant_slug', targetOrder.restaurantSlug)
+            .then();
         }
 
-        return next;
-      });
+        triggerBackendPush({
+          orderNumber: targetOrder.orderNumber,
+          title: `تذكير: طلبك #${targetOrder.orderNumber} بانتظارك! 🔔 (${rest?.name || targetOrder.restaurantSlug})`,
+          body: 'يرجى مراجعة الكاونتر لاستلام طلبك.',
+          url: `/${targetOrder.restaurantSlug}/track/${encodeURIComponent(targetOrder.orderNumber)}`,
+          subscription: targetOrder.pushSubscription,
+        });
+      }
     },
     [getRestaurant, saveAndBroadcast]
   );
@@ -847,48 +971,47 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const completeOrder = useCallback(
     async (orderId: string, restaurantSlug?: string) => {
       const nowIso = new Date().toISOString();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let targetOrder: Order | undefined;
 
-      setOrders((prev) => {
-        let targetOrder: Order | undefined;
-        const next = prev.map((ord) => {
-          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
-          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
-            targetOrder = {
-              ...ord,
-              status: 'completed' as OrderStatus,
-              completedAt: nowIso,
-            };
-            return targetOrder;
-          }
-          return ord;
+      const next = currentOrders.map((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          targetOrder = {
+            ...ord,
+            status: 'completed' as OrderStatus,
+            completedAt: nowIso,
+          };
+          return targetOrder;
+        }
+        return ord;
+      });
+
+      if (targetOrder) {
+        saveAndBroadcast(next, {
+          type: 'ORDER_COMPLETED',
+          restaurantSlug: targetOrder.restaurantSlug,
+          orderId: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          order: targetOrder,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
         });
 
-        if (targetOrder) {
-          saveAndBroadcast(next, {
-            type: 'ORDER_COMPLETED',
-            restaurantSlug: targetOrder.restaurantSlug,
-            orderId: targetOrder.id,
-            orderNumber: targetOrder.orderNumber,
-            order: targetOrder,
-            timestamp: Date.now(),
-            sourceTabId: tabIdRef.current,
-          });
-
-          if (isSupabaseConfigured() && supabase) {
-            supabase
-              .from('orders_queue')
-              .update({
-                status: 'completed',
-                completed_at: nowIso,
-              })
-              .eq('order_number', targetOrder.orderNumber)
-              .eq('restaurant_slug', targetOrder.restaurantSlug)
-              .then();
-          }
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({
+              status: 'completed',
+              completed_at: nowIso,
+            })
+            .eq('order_number', targetOrder.orderNumber)
+            .eq('restaurant_slug', targetOrder.restaurantSlug)
+            .then();
         }
-
-        return next;
-      });
+      }
 
       soundManager.playSuccessTone();
     },
@@ -898,34 +1021,34 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 8.1 Action: Submit Order Feedback
   const submitOrderFeedback = useCallback(
     async (orderId: string, feedback: import('@/types/queue').OrderFeedback, restaurantSlug?: string) => {
-      setOrders((prev) => {
-        let targetOrder: Order | undefined;
-        const next = prev.map((ord) => {
-          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
-          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
-            targetOrder = {
-              ...ord,
-              feedback,
-            };
-            return targetOrder;
-          }
-          return ord;
-        });
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let targetOrder: Order | undefined;
 
-        if (targetOrder) {
-          saveAndBroadcast(next, {
-            type: 'ORDER_FEEDBACK',
-            restaurantSlug: targetOrder.restaurantSlug,
-            orderId: targetOrder.id,
-            orderNumber: targetOrder.orderNumber,
+      const next = currentOrders.map((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          targetOrder = {
+            ...ord,
             feedback,
-            timestamp: Date.now(),
-            sourceTabId: tabIdRef.current,
-          });
+          };
+          return targetOrder;
         }
-
-        return next;
+        return ord;
       });
+
+      if (targetOrder) {
+        saveAndBroadcast(next, {
+          type: 'ORDER_FEEDBACK',
+          restaurantSlug: targetOrder.restaurantSlug,
+          orderId: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          feedback,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
+        });
+      }
 
       soundManager.playSuccessTone();
     },
@@ -935,18 +1058,21 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 9. Action: Auto-Archive Completed Orders
   const archiveCompletedOrders = useCallback(
     async (restaurantSlug: string) => {
-      const slug = restaurantSlug.toLowerCase();
-      setOrders((prev) => {
-        const next = prev.filter(
-          (ord) => !(ord.restaurantSlug === slug && ord.status === 'completed')
-        );
-        saveAndBroadcast(next, {
-          type: 'QUEUE_SYNC',
-          restaurantSlug: slug,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-        return next;
+      const slug = restaurantSlug.toLowerCase().trim();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      const next = currentOrders.filter(
+        (ord) =>
+          !(
+            (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === slug &&
+            ord.status === 'completed'
+          )
+      );
+
+      saveAndBroadcast(next, {
+        type: 'QUEUE_SYNC',
+        restaurantSlug: slug,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
       });
 
       if (isSupabaseConfigured() && supabase) {
@@ -963,41 +1089,40 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-
   // 10. Action: Cancel Order
   const cancelOrder = useCallback(
     async (orderId: string, restaurantSlug?: string) => {
-      setOrders((prev) => {
-        let deletedNum: string | undefined;
-        let deletedSlug: string | undefined;
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      let deletedNum: string | undefined;
+      let deletedSlug: string | undefined;
 
-        const next = prev.filter((ord) => {
-          const matchSlug = restaurantSlug ? ord.restaurantSlug === restaurantSlug : true;
-          if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
-            deletedNum = ord.orderNumber;
-            deletedSlug = ord.restaurantSlug;
-            return false;
-          }
-          return true;
-        });
-
-        if (deletedNum && deletedSlug && isSupabaseConfigured() && supabase) {
-          supabase
-            .from('orders_queue')
-            .delete()
-            .eq('order_number', deletedNum)
-            .eq('restaurant_slug', deletedSlug)
-            .then();
+      const next = currentOrders.filter((ord) => {
+        const matchSlug = restaurantSlug
+          ? (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === restaurantSlug.toLowerCase()
+          : true;
+        if ((ord.id === orderId || ord.orderNumber === orderId) && matchSlug) {
+          deletedNum = ord.orderNumber;
+          deletedSlug = ord.restaurantSlug;
+          return false;
         }
+        return true;
+      });
 
-        saveAndBroadcast(next, {
-          type: 'ORDER_CANCELLED',
-          restaurantSlug: deletedSlug,
-          orderId,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-        return next;
+      if (deletedNum && deletedSlug && isSupabaseConfigured() && supabase) {
+        supabase
+          .from('orders_queue')
+          .delete()
+          .eq('order_number', deletedNum)
+          .eq('restaurant_slug', deletedSlug)
+          .then();
+      }
+
+      saveAndBroadcast(next, {
+        type: 'ORDER_CANCELLED',
+        restaurantSlug: deletedSlug,
+        orderId,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
       });
     },
     [saveAndBroadcast]
@@ -1007,28 +1132,26 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const registerPushSubscription = useCallback(
     async (orderNumber: string, sub: PushSubscriptionData, restaurantSlug?: string) => {
       const cleanNum = orderNumber.trim();
-      const slug = (restaurantSlug || 'demo-cafe').toLowerCase();
+      const slug = (restaurantSlug || 'demo-cafe').toLowerCase().trim();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
 
-      setOrders((prev) => {
-        const next = prev.map((ord) => {
-          if (ord.orderNumber === cleanNum && ord.restaurantSlug === slug) {
-            return {
-              ...ord,
-              pushSubscription: sub,
-            };
-          }
-          return ord;
-        });
+      const next = currentOrders.map((ord) => {
+        const ordSlug = (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase();
+        if (ord.orderNumber === cleanNum && ordSlug === slug) {
+          return {
+            ...ord,
+            pushSubscription: sub,
+          };
+        }
+        return ord;
+      });
 
-        saveAndBroadcast(next, {
-          type: 'PUSH_REGISTERED',
-          restaurantSlug: slug,
-          orderNumber: cleanNum,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-
-        return next;
+      saveAndBroadcast(next, {
+        type: 'PUSH_REGISTERED',
+        restaurantSlug: slug,
+        orderNumber: cleanNum,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
       });
 
       if (isSupabaseConfigured() && supabase) {
@@ -1046,11 +1169,15 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Filter active orders to exclude stale/unclosed orders older than 18 hours
   const getOrdersForRestaurant = useCallback(
     (slug: string): Order[] => {
-      const cleanSlug = slug.toLowerCase();
+      const cleanSlug = (slug || 'demo-cafe').toLowerCase().trim();
       const cutoff = Date.now() - 18 * 60 * 60 * 1000;
-      return orders.filter((o) => {
-        if (o.restaurantSlug !== cleanSlug) return false;
-        if ((o.status === 'preparing' || o.status === 'ready') && new Date(o.createdAt).getTime() <= cutoff) {
+      const safeOrders = Array.isArray(orders) ? orders : [];
+      return safeOrders.filter((o) => {
+        if (!o) return false;
+        const ordSlug = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
+        if (ordSlug !== cleanSlug) return false;
+        const createdTime = new Date(o.createdAt || o.created_at || Date.now()).getTime();
+        if ((o.status === 'preparing' || o.status === 'ready') && createdTime <= cutoff) {
           return false;
         }
         return true;
@@ -1061,53 +1188,43 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getOrder = useCallback(
     (orderNumber: string, restaurantSlug?: string): Order | undefined => {
-      const clean = orderNumber.trim();
+      const clean = orderNumber.trim().toLowerCase();
+      const safeOrders = Array.isArray(orders) ? orders : [];
       if (restaurantSlug) {
-        const slug = restaurantSlug.toLowerCase();
-        return orders.find((o) => o.orderNumber === clean && o.restaurantSlug === slug);
+        const slug = restaurantSlug.toLowerCase().trim();
+        return safeOrders.find((o) => {
+          if (!o) return false;
+          const ordSlug = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
+          return o.orderNumber.toLowerCase() === clean && ordSlug === slug;
+        });
       }
-      return orders.find((o) => o.orderNumber === clean);
+      return safeOrders.find((o) => o && o.orderNumber.toLowerCase() === clean);
     },
     [orders]
   );
 
-  const resetToDemoOrders = useCallback(
+  const clearQueue = useCallback(
     (slug: string = 'demo-cafe') => {
-      const cleanSlug = slug.toLowerCase();
-      setOrders((prev) => {
-        const otherOrders = prev.filter((o) => o.restaurantSlug !== cleanSlug);
-        const demoOrdersWithSlug = INITIAL_DEMO_ORDERS.map((o) => ({
-          ...o,
-          restaurantSlug: cleanSlug,
-        }));
-        const next = [...demoOrdersWithSlug, ...otherOrders];
-        saveAndBroadcast(next, {
-          type: 'QUEUE_RESET',
-          restaurantSlug: cleanSlug,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-        return next;
+      const cleanSlug = slug.toLowerCase().trim();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      const next = currentOrders.filter(
+        (o) => (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() !== cleanSlug
+      );
+      saveAndBroadcast(next, {
+        type: 'QUEUE_RESET',
+        restaurantSlug: cleanSlug,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
       });
     },
     [saveAndBroadcast]
   );
 
-  const clearQueue = useCallback(
+  const resetToDemoOrders = useCallback(
     (slug: string = 'demo-cafe') => {
-      const cleanSlug = slug.toLowerCase();
-      setOrders((prev) => {
-        const next = prev.filter((o) => o.restaurantSlug !== cleanSlug);
-        saveAndBroadcast(next, {
-          type: 'QUEUE_RESET',
-          restaurantSlug: cleanSlug,
-          timestamp: Date.now(),
-          sourceTabId: tabIdRef.current,
-        });
-        return next;
-      });
+      clearQueue(slug);
     },
-    [saveAndBroadcast]
+    [clearQueue]
   );
 
   // Backward compatibility filters with 18-hour cutoff
@@ -1129,6 +1246,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const value = {
     orders,
     restaurants,
+    isRestaurantsLoaded,
     lastEvent,
     isSupabaseActive,
     networkStatus,
@@ -1164,3 +1282,5 @@ export const useQueue = (): QueueContextType => {
   }
   return context;
 };
+
+export const useQueueStore = useQueue;

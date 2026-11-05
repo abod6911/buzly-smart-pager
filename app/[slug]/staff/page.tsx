@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard } from '@/components/StaffPinGuard';
 import { StaffNumpad } from '@/components/StaffNumpad';
 import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { soundManager } from '@/lib/audio';
 import {
   Bell,
@@ -31,11 +32,13 @@ import {
 
 export default function TenantStaffCashierPage() {
   const params = useParams();
-  const slug = (params.slug as string) || 'demo-cafe';
+  const rawSlug = (params.slug as string) || 'demo-cafe';
+  const slug = rawSlug.toLowerCase().trim();
 
   const {
     getRestaurant,
     getOrdersForRestaurant,
+    isRestaurantsLoaded,
     addOrder,
     getActiveOrder,
     markReady,
@@ -43,21 +46,34 @@ export default function TenantStaffCashierPage() {
     completeOrder,
     cancelOrder,
     archiveCompletedOrders,
-    resetToDemoOrders,
     networkStatus,
   } = useQueue();
 
   const restaurant = getRestaurant(slug);
-  const tenantOrders = getOrdersForRestaurant(slug);
+  const tenantOrders = getOrdersForRestaurant(slug) || [];
 
-  const preparingOrders = tenantOrders.filter((o) => o.status === 'preparing');
-  const readyOrders = tenantOrders.filter((o) => o.status === 'ready');
-  const completedOrders = tenantOrders.filter((o) => o.status === 'completed');
+  const preparingOrders = (tenantOrders || []).filter((o) => o && o.status === 'preparing');
+  const readyOrders = (tenantOrders || []).filter((o) => o && o.status === 'ready');
+  const completedOrders = (tenantOrders || []).filter((o) => o && o.status === 'completed');
 
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | undefined>(undefined);
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  if (!restaurant) {
+    if (isRestaurantsLoaded) {
+      return <RestaurantNotFound slug={slug} />;
+    }
+    return (
+      <div className="min-h-screen bg-[#09090B] text-white flex flex-col items-center justify-center font-sans p-4">
+        <div className="w-12 h-12 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+        <p className="text-sm text-zinc-400 font-mono">جارِ التحقق من المتجر...</p>
+      </div>
+    );
+  }
 
   const handleOpenQr = (orderNumber?: string) => {
     setSelectedOrderNumber(orderNumber);
@@ -70,9 +86,25 @@ export default function TenantStaffCashierPage() {
     notes?: string,
     options?: { replaceExisting?: boolean }
   ) => {
-    await addOrder(orderNumber, estimatedMinutes, notes, customerPhone, slug, options);
-    setCustomerPhone('');
-    setShowPhoneInput(false);
+    setIsSubmittingOrder(true);
+    try {
+      await addOrder(
+        orderNumber,
+        estimatedMinutes,
+        notes,
+        customerPhone || undefined,
+        slug,
+        options
+      );
+      setCustomerPhone('');
+      setShowPhoneInput(false);
+      setFeedbackToast(`تمت إضافة الطلب #${orderNumber}`);
+      setTimeout(() => setFeedbackToast(null), 2500);
+    } catch (err) {
+      console.error('Failed to add order:', err);
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   return (
@@ -88,7 +120,7 @@ export default function TenantStaffCashierPage() {
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border border-white/10 overflow-hidden bg-[#18181C]"
                 >
-                  {restaurant.logoUrl ? (
+                  {restaurant?.logoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={restaurant.logoUrl}
@@ -96,13 +128,18 @@ export default function TenantStaffCashierPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Bell className="w-4 h-4 text-emerald-400" />
+                    <div
+                      className="w-full h-full flex items-center justify-center font-bold text-xs text-white"
+                      style={{ backgroundColor: restaurant?.themeColor || '#10B981' }}
+                    >
+                      {restaurant?.name ? restaurant.name.charAt(0).toUpperCase() : <Bell className="w-4 h-4 text-white" />}
+                    </div>
                   )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-white">
-                      {restaurant.name}
+                      {restaurant?.name || slug}
                     </span>
                     {networkStatus === 'connected' ? (
                       <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
@@ -117,7 +154,7 @@ export default function TenantStaffCashierPage() {
                     )}
                   </div>
                   <span className="text-[11px] text-zinc-500 font-mono">
-                    /{restaurant.slug}
+                    /{restaurant?.slug || slug}
                   </span>
                 </div>
               </Link>
@@ -187,6 +224,24 @@ export default function TenantStaffCashierPage() {
 
         {/* Main Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
+          {/* Subtle Live Toast / Feedback Banner */}
+          <AnimatePresence>
+            {feedbackToast && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="mb-3 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="font-semibold">{feedbackToast}</span>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400/80">قيد التحضير فوراً</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Linear-Style KPI Summary Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-3 flex items-center justify-between">
@@ -242,12 +297,7 @@ export default function TenantStaffCashierPage() {
                   <span>أرشفة</span>
                 </button>
               ) : (
-                <button
-                  onClick={() => resetToDemoOrders(slug)}
-                  className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-                >
-                  إعادة ضبط
-                </button>
+                <span className="text-xs text-zinc-600 font-mono">—</span>
               )}
             </div>
           </div>
@@ -259,10 +309,11 @@ export default function TenantStaffCashierPage() {
                 onAddOrder={handleAddOrderWithTenant}
                 onMarkReady={(id) => markReady(id, slug)}
                 getActiveOrder={(num) => getActiveOrder(num, slug)}
+                isSubmitting={isSubmittingOrder}
               />
 
               {/* Optional WhatsApp Customer Phone Input */}
-              {restaurant.whatsappFallbackEnabled && (
+              {restaurant?.whatsappFallbackEnabled && (
                 <div className="bg-[#121215] border border-white/[0.08] rounded-2xl p-3 text-xs">
                   {!showPhoneInput ? (
                     <button
