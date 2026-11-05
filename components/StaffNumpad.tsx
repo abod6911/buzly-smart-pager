@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, RotateCcw, Clock, Check, X, FileText } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 
@@ -140,21 +141,23 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
             {PRESET_MINUTES.map((mins) => {
               const isSelected = estimatedMinutes === mins;
               return (
-                <button
+                <motion.button
                   key={mins}
                   type="button"
+                  whileTap={{ scale: 0.94 }}
+                  whileHover={{ scale: 1.02 }}
                   onClick={() => {
                     soundManager.playKeyClick();
                     setEstimatedMinutes(mins);
                   }}
-                  className={`py-1.5 rounded-lg text-xs font-mono font-medium tabular-nums transition-all ${
+                  className={`py-1.5 rounded-lg text-xs font-mono font-medium tabular-nums transition-colors ${
                     isSelected
                       ? 'bg-zinc-800 text-white shadow-sm border border-white/10'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
                   {mins} د
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -199,59 +202,69 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({ onAddOrder, isSubmitti
       <div className="space-y-2">
         <div className="grid grid-cols-3 gap-1.5">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-            <button
+            <motion.button
               key={digit}
               type="button"
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.01 }}
               onClick={() => handleDigit(digit)}
-              className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none shadow-sm"
+              className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
             >
               {digit}
-            </button>
+            </motion.button>
           ))}
 
           {/* Clear Key */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={handleClear}
-            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-rose-950/30 text-rose-400 text-sm font-semibold border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-rose-950/30 text-rose-400 text-sm font-semibold border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
           >
             مسح
-          </button>
+          </motion.button>
 
           {/* Zero Key */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={() => handleDigit('0')}
-            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none shadow-sm"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
           >
             0
-          </button>
+          </motion.button>
 
           {/* Backspace Key */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={handleBackspace}
-            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 text-sm border border-white/[0.06] active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 text-sm border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
             title="تراجع"
           >
             <RotateCcw className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Primary CTA Submit Button */}
-        <button
+        <motion.button
           type="button"
+          whileTap={orderNumber.trim() && !isSubmitting ? { scale: 0.96 } : undefined}
+          whileHover={orderNumber.trim() && !isSubmitting ? { scale: 1.01 } : undefined}
           disabled={!orderNumber.trim() || isSubmitting}
           onClick={handleSubmit}
-          className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all select-none ${
+          className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors select-none ${
             orderNumber.trim() && !isSubmitting
-              ? 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-[#052E16] shadow-sm cursor-pointer font-bold'
+              ? 'bg-emerald-500 hover:bg-emerald-400 text-[#052E16] shadow-sm cursor-pointer font-bold'
               : 'bg-zinc-900 text-zinc-600 border border-white/[0.04] cursor-not-allowed'
           }`}
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>إضافة للانتظار</span>
-        </button>
+        </motion.button>
       </div>
     </div>
   );

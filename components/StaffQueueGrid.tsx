@@ -162,11 +162,16 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, y: 6 }}
+                        layoutId={`order-card-${order.id}`}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
-                        className="bg-[#18181C] border border-white/[0.06] hover:border-white/[0.12] rounded-xl p-3.5 transition-all group"
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                        className="bg-[#18181C] border border-white/[0.08] hover:border-white/[0.14] rounded-xl p-3.5 transition-colors group shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
@@ -199,34 +204,40 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
 
                           {/* Quick Actions */}
                           <div className="flex items-center gap-1">
-                            <button
+                            <motion.button
+                              whileTap={{ scale: 0.92 }}
+                              whileHover={{ scale: 1.05 }}
                               onClick={() => onOpenQr(order.orderNumber)}
                               className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
                               title="عرض الباركود للعميل"
                             >
                               <QrCode className="w-4 h-4" />
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.92 }}
+                              whileHover={{ scale: 1.05 }}
                               onClick={() => onCancel(order.id)}
                               className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-950/20 transition-colors"
                               title="إلغاء الطلب"
                             >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </motion.button>
                           </div>
                         </div>
 
                         {/* CALL ACTION BUTTON */}
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.01 }}
                           onClick={() => {
                             soundManager.unlock();
                             onMarkReady(order.id);
                           }}
-                          className="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          className="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                         >
-                          <BellRing className="w-3.5 h-3.5" />
+                          <BellRing className="w-3.5 h-3.5" strokeWidth={1.75} />
                           <span>نداء الاستلام</span>
-                        </button>
+                        </motion.button>
                       </motion.div>
                     );
                   })
@@ -269,21 +280,26 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, y: 6 }}
+                        layoutId={`order-card-${order.id}`}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
-                        className="bg-[#18181C] border border-emerald-500/30 rounded-xl p-3.5 relative overflow-hidden transition-all"
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                        className="bg-[#18181C] border border-emerald-500/30 rounded-xl p-3.5 relative overflow-hidden transition-colors shadow-[inset_0_1px_0_0_rgba(16,185,129,0.12)]"
                       >
                         <div className="flex items-start justify-between mb-3 relative z-10">
                           <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-lg bg-emerald-500 text-[#052E16] font-mono font-bold text-xl flex items-center justify-center tabular-nums">
+                            <div className="w-11 h-11 rounded-lg bg-emerald-500 text-[#052E16] font-mono font-bold text-xl flex items-center justify-center tabular-nums shadow-sm">
                               #{order.orderNumber}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] text-emerald-400 font-mono tabular-nums flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                   <span>جاهز {readyElapsed === 0 ? 'الآن' : `منذ ${readyElapsed} د`}</span>
                                 </span>
                                 {order.rePingCount > 0 && (
@@ -302,38 +318,44 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                           </div>
 
                           {/* QR modal trigger */}
-                          <button
+                          <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            whileHover={{ scale: 1.05 }}
                             onClick={() => onOpenQr(order.orderNumber)}
                             className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
                             title="عرض الباركود للعميل"
                           >
                             <QrCode className="w-4 h-4 text-emerald-400" />
-                          </button>
+                          </motion.button>
                         </div>
 
                         {/* TWO ACTION BUTTONS: RE-PING & COMPLETED */}
                         <div className="grid grid-cols-2 gap-2 relative z-10">
-                          <button
+                          <motion.button
+                            whileTap={{ scale: 0.94 }}
+                            whileHover={{ scale: 1.01 }}
                             onClick={() => {
                               soundManager.unlock();
                               onRePing(order.id);
                             }}
-                            className="py-2 px-3 rounded-lg bg-[#202026] hover:bg-[#282830] active:scale-[0.98] text-amber-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-all border border-amber-500/20"
+                            className="py-2 px-3 rounded-lg bg-[#202026] hover:bg-[#282830] text-amber-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-all border border-amber-500/20"
                           >
-                            <RefreshCw className="w-3.5 h-3.5" />
+                            <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
                             <span>إعادة النداء</span>
-                          </button>
+                          </motion.button>
 
-                          <button
+                          <motion.button
+                            whileTap={{ scale: 0.94 }}
+                            whileHover={{ scale: 1.01 }}
                             onClick={() => {
                               soundManager.unlock();
                               onComplete(order.id);
                             }}
-                            className="py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            className="py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                           >
-                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" strokeWidth={1.75} />
                             <span>تم التسليم</span>
-                          </button>
+                          </motion.button>
                         </div>
                       </motion.div>
                     );

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Delete, ArrowLeft, Search, Sparkles } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
@@ -59,56 +60,66 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
         {/* Numpad 1-9, C, 0, Backspace */}
         <div className="grid grid-cols-3 gap-2.5 mb-4">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-            <button
+            <motion.button
               key={digit}
               type="button"
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.01 }}
               onClick={() => handleDigit(digit)}
-              className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
+              className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border transition-colors shadow-sm flex items-center justify-center select-none"
             >
               {digit}
-            </button>
+            </motion.button>
           ))}
 
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={handleClear}
-            className="h-16 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-base border border-rose-500/20 active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-16 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-base border border-rose-500/20 transition-colors flex items-center justify-center select-none"
           >
             مسح
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={() => handleDigit('0')}
-            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border active:scale-95 transition-all shadow-sm flex items-center justify-center select-none"
+            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border transition-colors shadow-sm flex items-center justify-center select-none"
           >
             0
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.01 }}
             onClick={handleBackspace}
-            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border active:scale-95 transition-all flex items-center justify-center select-none"
+            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border transition-colors flex items-center justify-center select-none"
             title="تراجع"
           >
             <Delete className="w-6 h-6" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Submit Tracking Button */}
-        <button
+        <motion.button
           type="button"
+          whileTap={orderNumber.trim() ? { scale: 0.96 } : undefined}
+          whileHover={orderNumber.trim() ? { scale: 1.01 } : undefined}
           disabled={!orderNumber.trim()}
           onClick={handleTrack}
           className={`w-full py-4 px-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all shadow-xl ${
             orderNumber.trim()
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/25 active:scale-[0.98] cursor-pointer'
+              ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/25 cursor-pointer'
               : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
           }`}
         >
           <span>تتبع طلبي الآن</span>
           <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Quick Select from Active Orders (if any) */}

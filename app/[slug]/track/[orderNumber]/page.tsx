@@ -12,6 +12,7 @@ import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
 import {
   Bell,
+  BellRing,
   CheckCircle2,
   Clock,
   VolumeX,
@@ -24,6 +25,8 @@ import {
   Star,
   Send,
   Sparkles,
+  Utensils,
+  Receipt,
 } from 'lucide-react';
 
 function TenantCustomerTrackerInner() {
@@ -116,14 +119,29 @@ function TenantCustomerTrackerInner() {
     return () => clearInterval(interval);
   }, [order]);
 
-  // Handle Ready state & Re-ping
+  // 4-Channel Synchronous Alert Trigger for Ready State
   useEffect(() => {
     if (!order) return;
 
     if (order.status === 'ready' && !hasUserSilenced) {
       setAlarmActive(true);
-      soundManager.startReadyAlarmLoop();
 
+      // Channel 1: High-Decibel Looping Web Audio Chime (DynamicsCompressorNode boosted)
+      soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+
+      // Channel 2: Intense Haptic Vibration Pattern
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate([600, 150, 600, 150, 1000]);
+        } catch {}
+      }
+
+      // Channel 3: System Web Push / Service Worker Notification
+      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام (${restaurant.name})`, {
+        body: 'تفضل إلى الكاونتر لاستلام طلبك وهو طازج.',
+      });
+
+      // Confetti splash
       if (!confettiFiredRef.current) {
         confettiFiredRef.current = true;
         try {
@@ -135,15 +153,52 @@ function TenantCustomerTrackerInner() {
           });
         } catch {}
       }
-
-      pwaHelper.showSystemNotification(`طلبك #${order.orderNumber} جاهز للاستلام (${restaurant.name})`, {
-        body: 'تفضل إلى الكاونتر لاستلام طلبك وهو طازج.',
-      });
     } else if (order.status === 'completed') {
       soundManager.stopReadyAlarm();
       setAlarmActive(false);
     }
-  }, [order?.status, hasUserSilenced, order?.orderNumber, restaurant.themeColor, restaurant.name]);
+  }, [order?.status, hasUserSilenced, order?.orderNumber, restaurant.themeColor, restaurant.name, restaurant.chimeTheme]);
+
+  // Channel 4: Dynamic Browser Tab Title Flashing while Ready
+  useEffect(() => {
+    if (!order || order.status !== 'ready' || hasUserSilenced) return;
+
+    let flip = false;
+    const originalTitle = document.title;
+    const interval = setInterval(() => {
+      document.title = flip
+        ? `طلبك رقم #${order.orderNumber} جاهز!`
+        : `توجه للكاونتر الآن`;
+      flip = !flip;
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      document.title = originalTitle;
+    };
+  }, [order?.status, order?.orderNumber, hasUserSilenced]);
+
+  // Repeating Intense Vibration loop while Ready
+  useEffect(() => {
+    if (!order || order.status !== 'ready' || hasUserSilenced) return;
+
+    const vibeInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate([600, 150, 600, 150, 1000]);
+        } catch {}
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(vibeInterval);
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(0);
+        } catch {}
+      }
+    };
+  }, [order?.status, hasUserSilenced]);
 
   useEffect(() => {
     if (!lastEvent || !order) return;
@@ -154,19 +209,30 @@ function TenantCustomerTrackerInner() {
     ) {
       setHasUserSilenced(false);
       setAlarmActive(true);
-      soundManager.startReadyAlarmLoop();
+      soundManager.startReadyAlarmLoop(restaurant.chimeTheme || 'hospitality');
+
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate([600, 150, 600, 150, 1000]);
+        } catch {}
+      }
 
       pwaHelper.showSystemNotification(`تذكير: طلبك #${order.orderNumber} جاهز للاستلام`, {
         body: `يرجى مراجعة كاونتر ${restaurant.name} لاستلام طلبك.`,
       });
     }
-  }, [lastEvent, order, slug, restaurant.name]);
+  }, [lastEvent, order, slug, restaurant.name, restaurant.chimeTheme]);
 
   useEffect(() => {
     return () => {
       soundManager.stopReadyAlarm();
     };
   }, []);
+
+  const handleTestVolume = async () => {
+    await soundManager.unlock();
+    soundManager.playThemedChime(restaurant.chimeTheme || 'hospitality');
+  };
 
   const handleIReceivedOrder = async () => {
     soundManager.stopReadyAlarm();
@@ -280,6 +346,16 @@ function TenantCustomerTrackerInner() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={handleTestVolume}
+              className="text-[11px] text-zinc-300 hover:text-white bg-obsidian-card px-2.5 py-1 rounded-lg border border-obsidian-border flex items-center gap-1.5 transition-colors shadow-sm"
+              title="تجربة مستوى الصوت"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">تجربة الصوت</span>
+            </motion.button>
             <span className="text-xs text-zinc-400 font-mono tabular-nums">طلب #{order.orderNumber}</span>
             <Link
               href={`/${slug}/track`}
@@ -305,8 +381,13 @@ function TenantCustomerTrackerInner() {
         {/* 1. PREPARING STATE */}
         {isPreparing && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            <div className="relative mb-6">
-              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-obsidian-border flex items-center justify-center relative">
+            {/* Breathing Radial Ring */}
+            <motion.div
+              animate={{ scale: [1, 1.025, 1] }}
+              transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+              className="relative mb-6"
+            >
+              <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-full border-4 border-obsidian-border flex items-center justify-center relative shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -314,7 +395,7 @@ function TenantCustomerTrackerInner() {
                     r="44"
                     fill="transparent"
                     stroke="#1E1E24"
-                    strokeWidth="7"
+                    strokeWidth="6"
                   />
                   <circle
                     cx="50"
@@ -322,7 +403,7 @@ function TenantCustomerTrackerInner() {
                     r="44"
                     fill="transparent"
                     stroke={restaurant.themeColor || '#10B981'}
-                    strokeWidth="7"
+                    strokeWidth="6"
                     strokeDasharray={276}
                     strokeDashoffset={276 - (276 * progressPercent) / 100}
                     strokeLinecap="round"
@@ -331,25 +412,59 @@ function TenantCustomerTrackerInner() {
                 </svg>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xs text-zinc-400 font-semibold mb-0.5">الوقت المتبقي التقديري</span>
+                  <span className="text-[11px] text-zinc-400 font-semibold mb-0.5">الوقت المتبقي التقديري</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-mono tabular-nums text-4xl sm:text-5xl font-black text-white">
+                    <span className="font-mono tabular-nums text-5xl sm:text-6xl font-black text-white">
                       {remainingMinutes}
                     </span>
                     <span className="text-xs text-zinc-400 font-bold">دقيقة</span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono tabular-nums mt-1">
+                  <span className="text-[11px] text-zinc-500 font-mono tabular-nums mt-1">
                     #{order.orderNumber}
                   </span>
                 </div>
               </div>
+            </motion.div>
+
+            {/* 3-Step Live Order Pipeline Indicators */}
+            <div className="w-full bg-[#121216] border border-white/[0.08] rounded-2xl p-4 mb-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+              <div className="flex items-center justify-between relative">
+                {/* Connecting lines */}
+                <div className="absolute top-4 inset-x-8 h-0.5 bg-zinc-800 -z-0">
+                  <div className="w-1/2 h-full bg-emerald-500 transition-all duration-500" />
+                </div>
+
+                {/* Step 1: Received */}
+                <div className="flex flex-col items-center relative z-10 gap-1.5 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center shadow-sm">
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-zinc-300">تم استلام الطلب</span>
+                </div>
+
+                {/* Step 2: Preparing in kitchen */}
+                <div className="flex flex-col items-center relative z-10 gap-1.5 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center shadow-sm animate-pulse">
+                    <Utensils className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-300">يُحضّر في المطبخ</span>
+                </div>
+
+                {/* Step 3: Ready */}
+                <div className="flex flex-col items-center relative z-10 gap-1.5 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-zinc-900 border-2 border-zinc-700 text-zinc-500 flex items-center justify-center shadow-sm">
+                    <BellRing className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-zinc-500">جاهز للاستلام</span>
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white font-cairo mb-2 flex items-center justify-center gap-2">
-              <span>طلبك قيد التحضير في المطبخ</span>
+            <h1 className="text-xl sm:text-2xl font-black text-white font-cairo mb-2 flex items-center justify-center gap-2">
+              <span>طلبك قيد التحضير بعناية</span>
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400 max-w-xs mx-auto mb-4 leading-relaxed">
-              يرجى إبقاء هذه الصفحة مفتوحة أو تفعيل جرس التنبيه. سيقوم هاتفك بالرنين فور جهوزية الوجبة.
+              يرجى إبقاء هذه الصفحة مفتوحة. سيرن هاتفك ويهتز بأعلى صوت فور جاهزية الوجبة!
             </p>
 
             {order.notes && (
@@ -361,18 +476,18 @@ function TenantCustomerTrackerInner() {
           </div>
         )}
 
-        {/* 2. READY FOR PICKUP STATE */}
+        {/* 2. READY FOR PICKUP STATE: Full-Screen Morph with Animated Ringing Bell */}
         {isReady && (
           <motion.div
-            initial={{ scale: 0.94, opacity: 0 }}
+            initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 20 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
             className="flex-1 flex flex-col items-center justify-center text-center py-4"
           >
             {alarmActive && (
-              <div className="mb-4 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>جرس التنبيه يعمل الآن</span>
+              <div className="mb-4 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold animate-pulse">
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>جرس التنبيه يرن الآن...</span>
                 <button
                   onClick={handleSilenceAlarm}
                   className="mr-2 underline hover:text-white text-[11px] cursor-pointer"
@@ -384,35 +499,46 @@ function TenantCustomerTrackerInner() {
 
             <div className="relative mb-6">
               <div
-                className="w-40 h-40 sm:w-48 sm:h-48 rounded-full text-black flex flex-col items-center justify-center shadow-2xl border-2 border-white/20"
+                className="w-44 h-44 sm:w-52 sm:h-52 rounded-3xl text-black flex flex-col items-center justify-center shadow-2xl border-2 border-white/20 relative overflow-hidden"
                 style={{ backgroundColor: restaurant.themeColor || '#10B981' }}
               >
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black/75">
+                {/* Animated Ringing Bell Vector Icon */}
+                <motion.div
+                  animate={{ rotate: [-14, 14, -10, 10, -5, 5, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+                  className="w-14 h-14 rounded-2xl bg-black/15 flex items-center justify-center mb-1"
+                >
+                  <BellRing className="w-8 h-8 text-black" strokeWidth={2.2} />
+                </motion.div>
+
+                <span className="text-xs font-bold uppercase tracking-wider text-black/75">
                   طلب رقم
                 </span>
                 <span className="font-mono tabular-nums text-5xl sm:text-6xl font-black tracking-tight text-black">
                   #{order.orderNumber}
                 </span>
-                <span className="text-[11px] font-bold mt-1.5 bg-black/15 px-3 py-0.5 rounded-full text-black">
+                <span className="text-[11px] font-bold mt-1 bg-black/15 px-3 py-0.5 rounded-full text-black">
                   جاهز للاستلام
                 </span>
               </div>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black text-emerald-400 font-cairo tracking-tight mb-2">
-              طلبك جاهز للاستلام
+              طلبك جاهز للاستلام الآن
             </h1>
             <p className="text-sm sm:text-base text-zinc-300 max-w-xs mx-auto mb-6 leading-relaxed">
-              تفضل بالتوجه إلى كاونتر <strong className="text-white">{restaurant.name}</strong> لاستلام وجبتك.
+              تفضل بالتوجه إلى كاونتر <strong className="text-white">{restaurant.name}</strong> واستلم وجبتك ساخنة وطازجة.
             </p>
 
-            <button
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.01 }}
               onClick={handleIReceivedOrder}
-              className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 transition-all cursor-pointer"
+              className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 transition-all cursor-pointer"
             >
               <Check className="w-6 h-6 stroke-[3]" />
               <span>استلمت طلبي بنجاح</span>
-            </button>
+            </motion.button>
           </motion.div>
         )}
 

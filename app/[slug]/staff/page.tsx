@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard } from '@/components/StaffPinGuard';
 import { StaffNumpad } from '@/components/StaffNumpad';
@@ -149,19 +150,21 @@ export default function TenantStaffCashierPage() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                whileHover={{ scale: 1.02 }}
                 onClick={() => handleOpenQr(undefined)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] text-xs font-medium transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] text-xs font-medium transition-colors shadow-sm"
                 title="عرض رمز الباركود للطاولات"
               >
                 <QrCode className="w-3.5 h-3.5 text-emerald-400" />
                 <span>باركود الطاولات</span>
-              </button>
+              </motion.button>
 
               <Link
                 href={`/${slug}/track`}
                 target="_blank"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 border border-white/[0.08] text-xs font-medium transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 border border-white/[0.08] text-xs font-medium transition-colors shadow-sm"
               >
                 <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
                 <span>شاشة العميل</span>

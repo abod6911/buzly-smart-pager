@@ -73,7 +73,13 @@ export default function KitchenTvBoardPage() {
     }
     setTimeout(() => {
       setHighlightOrderNumber(null);
-    }, 4500);
+    }, 3500);
+  };
+
+  const handleTestVolume = async () => {
+    await soundManager.unlock();
+    setAudioEnabled(true);
+    soundManager.playHospitalityChime();
   };
 
   useEffect(() => {
@@ -157,31 +163,47 @@ export default function KitchenTvBoardPage() {
         {/* Status & Controls */}
         <div className="flex items-center gap-3">
           {/* Digital Clock */}
-          <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2">
+          <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
             <Clock className="w-4 h-4 text-zinc-400" />
             <span className="font-mono text-xl lg:text-2xl font-bold text-white tabular-nums tracking-wider">
               {currentTime || '--:--:--'}
             </span>
           </div>
 
+          {/* Test Volume Button */}
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={handleTestVolume}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-[#121215] hover:bg-[#18181E] text-zinc-300 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+            title="تجربة مستوى الصوت والرنين الفندقي"
+          >
+            <Volume2 className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">تجربة مستوى الصوت</span>
+          </motion.button>
+
           {/* Sound Toggle */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.02 }}
             onClick={toggleAudio}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ${
               audioEnabled
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                 : 'bg-[#121215] hover:bg-[#18181C] text-zinc-400 border-white/[0.08]'
             }`}
             title="تفعيل رنين الشاشة"
           >
             {audioEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4" />}
             <span className="hidden sm:inline">{audioEnabled ? 'جرس التنبيه مفعل' : 'تفعيل الرنين'}</span>
-          </button>
+          </motion.button>
 
           {/* Voice Toggle */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.02 }}
             onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ${
               voiceEnabled
                 ? 'bg-white/[0.06] text-zinc-200 border-white/[0.12]'
                 : 'bg-[#121215] text-zinc-500 border-white/[0.08]'
@@ -190,48 +212,84 @@ export default function KitchenTvBoardPage() {
           >
             {voiceEnabled ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
             <span className="hidden md:inline">{voiceEnabled ? 'النداء الصوتي مفعل' : 'النداء الصوتي معطل'}</span>
-          </button>
+          </motion.button>
 
           {/* Fullscreen */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.05 }}
             onClick={toggleFullscreen}
-            className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors"
+            className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
             title="ملء الشاشة"
           >
             <Maximize2 className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
       </header>
 
       {/* ========================================================================= */}
-      {/* 2. SCALE-UP HIGHLIGHT BANNER (When order is called) */}
+      {/* 2. DRAMATIC CENTER SPOTLIGHT CALLOUT OVERLAY (3.5s with ripple wave) */}
       {/* ========================================================================= */}
       <AnimatePresence>
         {highlightOrderNumber && (
           <motion.div
-            initial={{ opacity: 0, y: -40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="absolute top-20 inset-x-0 z-30 flex justify-center px-4 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md pointer-events-none"
           >
-            <div className="bg-[#09090B] border-2 border-emerald-500/80 rounded-2xl p-5 shadow-2xl flex items-center gap-6 max-w-xl w-full">
-              <div className="w-16 h-16 rounded-xl bg-emerald-500 text-[#052E16] flex items-center justify-center font-mono font-bold text-3xl tabular-nums shrink-0">
+            {/* Subtle Outward Ripple Waves */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0.8 }}
+              animate={{ scale: 2.2, opacity: 0 }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeOut' }}
+              className="absolute w-72 h-72 rounded-full border-2 border-emerald-400/50 pointer-events-none"
+            />
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0.7 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              transition={{ repeat: Infinity, duration: 1.8, delay: 0.5, ease: 'easeOut' }}
+              className="absolute w-72 h-72 rounded-full border border-emerald-400/40 pointer-events-none"
+            />
+
+            {/* Spotlight Card */}
+            <motion.div
+              initial={{ scale: 0.5, y: 40, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{
+                scale: 0.35,
+                x: '-40%',
+                y: '10%',
+                opacity: 0,
+                transition: { duration: 0.45, ease: [0.32, 0.72, 0, 1] },
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 350,
+                damping: 24,
+              }}
+              className="relative bg-[#121216] border-2 border-emerald-500 rounded-3xl p-8 sm:p-12 text-center max-w-xl w-full shadow-2xl shadow-emerald-500/20"
+            >
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>نداء جديد</span>
+              </div>
+
+              {/* Order Number */}
+              <div className="font-mono text-7xl sm:text-9xl font-black text-white tracking-tight tabular-nums my-2 drop-shadow-lg">
                 #{highlightOrderNumber}
               </div>
-              <div className="flex-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>نداء استلام طلب</span>
-                </span>
-                <h3 className="text-xl font-bold text-white mt-0.5">
-                  الطلب رقم #{highlightOrderNumber} جاهز للاستلام
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  تفضل بمراجعة الكاونتر لاستلام وجبتك
-                </p>
-              </div>
-            </div>
+
+              {/* Action Message */}
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-4 tracking-tight">
+                جاهز للاستلام الآن
+              </h2>
+              <p className="text-sm sm:text-base text-zinc-300 mt-2 font-medium">
+                تفضل بالتوجه إلى كاونتر الاستلام
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
