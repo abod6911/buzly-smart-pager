@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Order } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
+import { appleSpringQuick } from '@/lib/motion';
 
 interface StaffQueueGridProps {
   preparingOrders: Order[];
@@ -166,11 +167,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 380,
-                          damping: 30,
-                        }}
+                        transition={appleSpringQuick}
                         className="bg-[#18181C] border border-white/[0.08] hover:border-white/[0.14] rounded-xl p-3.5 transition-colors group shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
                       >
                         <div className="flex items-start justify-between mb-3">
@@ -284,11 +281,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 380,
-                          damping: 30,
-                        }}
+                        transition={appleSpringQuick}
                         className="bg-[#18181C] border border-emerald-500/30 rounded-xl p-3.5 relative overflow-hidden transition-colors shadow-[inset_0_1px_0_0_rgba(16,185,129,0.12)]"
                       >
                         <div className="flex items-start justify-between mb-3 relative z-10">

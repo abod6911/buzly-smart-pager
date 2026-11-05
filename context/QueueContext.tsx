@@ -29,7 +29,6 @@ export const DEFAULT_RESTAURANT: Restaurant = {
   name: 'ديمو كافيه & لاونج | Demo Cafe',
   logoUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=120&auto=format&fit=crop&q=80',
   themeColor: '#10B981',
-  staffPin: '1234',
   whatsappFallbackEnabled: true,
   createdAt: new Date().toISOString(),
 };
@@ -336,10 +335,10 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
 
-    // Load restaurants
+    // Load restaurants (Security: omit raw staff_pin from client bundle)
     supabase
       .from('restaurants')
-      .select('*')
+      .select('id, slug, name, logo_url, theme_color, whatsapp_fallback_enabled, created_at')
       .then(({ data, error }) => {
         if (!error && data && data.length > 0) {
           const restMap: Record<string, Restaurant> = {};
@@ -350,7 +349,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               name: r.name,
               logoUrl: r.logo_url,
               themeColor: r.theme_color || '#10B981',
-              staffPin: r.staff_pin || '1234',
               whatsappFallbackEnabled: r.whatsapp_fallback_enabled ?? true,
               createdAt: r.created_at,
             };

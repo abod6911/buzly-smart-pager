@@ -552,7 +552,7 @@ export default function TenantAdminBrandingPage() {
                 </div>
 
                 <div className="text-[10px] text-zinc-400 mt-4">
-                  Buzly Smart Restaurant Pager
+                  Chimer Smart Restaurant Pager
                 </div>
               </div>
             </div>

@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Buzly | بيجر واستدعاء المطاعم الذكي',
-    short_name: 'Buzly',
+    name: 'Chimer | بيجر واستدعاء المطاعم الذكي',
+    short_name: 'Chimer',
     description: 'نظام بيجر ونداء واستدعاء الزبائن الذكي في المطاعم والكافيهات مباشرة عبر متصفح الجوال',
     start_url: '/',
     display: 'standalone',

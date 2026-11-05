@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, RotateCcw, Clock, Check, X, FileText, AlertCircle, BellRing } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
+import { OdometerNumber } from '@/components/OdometerNumber';
+import { appleTapDialpad } from '@/lib/motion';
 
 interface StaffNumpadProps {
   onAddOrder: (
@@ -184,13 +186,13 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
         <div className="relative bg-[#09090B] border border-white/[0.08] rounded-xl px-4 py-3.5 min-h-[76px] flex items-center justify-between mb-3.5">
           <div className="flex items-baseline gap-2">
             <span className="text-zinc-500 font-mono text-xl font-bold">#</span>
-            <span
+            <div
               className={`font-mono text-4xl sm:text-5xl font-bold tracking-widest tabular-nums transition-colors ${
                 orderNumber ? 'text-white' : 'text-zinc-700'
               }`}
             >
-              {orderNumber || '000'}
-            </span>
+              <OdometerNumber value={orderNumber || '000'} />
+            </div>
           </div>
 
           {orderNumber && (
@@ -291,7 +293,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
             <motion.button
               key={digit}
               type="button"
-              whileTap={{ scale: 0.94 }}
+              whileTap={appleTapDialpad}
               whileHover={{ scale: 1.01 }}
               onClick={() => handleDigit(digit)}
               className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
@@ -303,7 +305,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           {/* Clear Key */}
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
+            whileTap={appleTapDialpad}
             whileHover={{ scale: 1.01 }}
             onClick={handleClear}
             className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-rose-950/30 text-rose-400 text-sm font-semibold border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
@@ -314,7 +316,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           {/* Zero Key */}
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
+            whileTap={appleTapDialpad}
             whileHover={{ scale: 1.01 }}
             onClick={() => handleDigit('0')}
             className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-white text-xl font-mono font-semibold tabular-nums border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
@@ -325,7 +327,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           {/* Backspace Key */}
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
+            whileTap={appleTapDialpad}
             whileHover={{ scale: 1.01 }}
             onClick={handleBackspace}
             className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 text-sm border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"

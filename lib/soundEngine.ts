@@ -409,6 +409,29 @@ class HighDecibelSoundEngine {
     osc2.stop(now + 0.4);
   }
 
+  public playErrorTone(): void {
+    const ctx = this.initAudioChain();
+    if (!ctx || !this.compressor) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(146.83, now + 0.25);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(this.compressor);
+
+    osc.start(now);
+    osc.stop(now + 0.28);
+  }
+
   public announceOrderArabic(orderNumber: string, restaurantName?: string): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 

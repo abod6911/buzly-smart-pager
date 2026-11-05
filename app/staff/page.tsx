@@ -73,7 +73,7 @@ export default function StaffCashierPage() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-lg tracking-tight text-white font-mono">
-                    BUZLY
+                    CHIMER
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     كاشير POS

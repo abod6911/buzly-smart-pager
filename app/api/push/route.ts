@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
+import { z } from 'zod';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkGeneralRateLimit } from '@/lib/security';
 
-// Default VAPID keys fallback for immediate testing
 const VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
   'BPEhFElgcbeGL_YQ4svRzW5n174EW1MZL2rrTGD6IrrfuEB4qlp-gnHt2LA821tuRbU6Mlrd1JHvYAo2isHrl10';
@@ -10,7 +11,7 @@ const VAPID_PUBLIC_KEY =
 const VAPID_PRIVATE_KEY =
   process.env.VAPID_PRIVATE_KEY || '6hQOZdoNFuJdWmOo5ITNiNywR1WIJ43l1MdDUGK9Iro';
 
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@buzly.app';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@chimer.app';
 
 try {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -18,16 +19,68 @@ try {
   console.warn('VAPID setup warning:', err);
 }
 
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+  return '127.0.0.1';
+}
+
+const pushPayloadSchema = z.object({
+  subscription: z
+    .object({
+      endpoint: z.string().url('رابط إشعار غير صالح'),
+      keys: z.object({
+        p256dh: z.string().min(1),
+        auth: z.string().min(1),
+      }),
+    })
+    .optional(),
+  orderNumber: z
+    .string()
+    .trim()
+    .min(1)
+    .max(8)
+    .regex(/^[0-9A-Za-z-]+$/)
+    .optional(),
+  title: z.string().max(100).optional(),
+  body: z.string().max(300).optional(),
+  url: z.string().max(200).optional(),
+});
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const ip = getClientIp(req);
+    // Rate limit: 20 push requests per minute per IP
+    const rl = checkGeneralRateLimit(`push_req:${ip}`, 20, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'تم تجاوز معدل إرسال الإشعارات المسموح' },
+        { status: 429, headers: { 'Retry-After': String(rl.resetSeconds) } }
+      );
+    }
+
+    const rawBody = await req.json();
+    const parseResult = pushPayloadSchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: parseResult.error.issues[0]?.message || 'بيانات الإشعار غير صالحة',
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       subscription: directSubscription,
       orderNumber,
       title = 'طلبك جاهز للاستلام',
       body: messageBody = 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
       url,
-    } = body;
+    } = parseResult.data;
 
     let targetSubscription = directSubscription;
 
@@ -37,10 +90,10 @@ export async function POST(req: NextRequest) {
         .from('orders_queue')
         .select('push_subscription')
         .eq('order_number', String(orderNumber).trim())
-        .single();
+        .maybeSingle();
 
       if (!error && data?.push_subscription) {
-        targetSubscription = data.push_subscription;
+        targetSubscription = data.push_subscription as typeof directSubscription;
       }
     }
 
@@ -50,7 +103,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: 'No push subscription found for this order. Customer might be using in-tab notifications.',
         },
-        { status: 200 } // Graceful 200 so UI doesn't break
+        { status: 200 }
       );
     }
 
@@ -78,7 +131,6 @@ export async function POST(req: NextRequest) {
     const error = err as { statusCode?: number; message?: string };
     console.error('Web Push delivery error:', error);
 
-    // If subscription has expired or unsubscribed (410 Gone / 404)
     return NextResponse.json(
       {
         success: false,

@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { KeepAwakeEngine } from '@/components/KeepAwakeEngine';
 import { AudioUnlockOverlay } from '@/components/AudioUnlockOverlay';
+import { DynamicIslandTracker } from '@/components/DynamicIslandTracker';
+import { OdometerNumber } from '@/components/OdometerNumber';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
@@ -430,6 +432,16 @@ function TenantCustomerTrackerInner() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 sm:p-6 flex flex-col justify-between space-y-4">
+        {/* Apple Dynamic Island Live Indicator */}
+        <DynamicIslandTracker
+          orderNumber={order.orderNumber}
+          status={order.status}
+          estimatedMinutes={order.estimatedMinutes}
+          elapsedMinutes={elapsedMinutes}
+          restaurantName={restaurant.name}
+          onTestSound={handleTestVolume}
+        />
+
         {/* Triple Keep Awake & Notification activator */}
         <KeepAwakeEngine
           orderNumber={order.orderNumber}
@@ -476,7 +488,7 @@ function TenantCustomerTrackerInner() {
                   <span className="text-[11px] text-zinc-400 font-semibold mb-0.5">الوقت المتبقي التقديري</span>
                   <div className="flex items-baseline gap-1">
                     <span className="font-mono tabular-nums text-5xl sm:text-6xl font-black text-white">
-                      {remainingMinutes}
+                      <OdometerNumber value={remainingMinutes} />
                     </span>
                     <span className="text-xs text-zinc-400 font-bold">دقيقة</span>
                   </div>
@@ -707,7 +719,7 @@ function TenantCustomerTrackerInner() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             المزامنة الفورية نشطة ({restaurant.slug})
           </span>
-          <span className="font-mono">Buzly v3.1</span>
+          <span className="font-mono">Chimer v3.2</span>
         </div>
       </main>
 

@@ -20,7 +20,7 @@ export default function TrackEntryPage() {
               <Bell className="w-4 h-4 text-black" />
             </div>
             <span className="font-extrabold text-base tracking-tight text-white font-mono">
-              BUZLY
+              CHIMER
             </span>
           </Link>
 

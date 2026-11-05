@@ -1,4 +1,4 @@
-// Service Worker for Buzly Smart Restaurant Pager
+// Service Worker for Chimer Smart Restaurant Pager
 // Handles Background Web Push Notifications & Screen Wake Actions
 
 self.addEventListener('install', (event) => {
@@ -17,13 +17,13 @@ self.addEventListener('push', (event) => {
       data = event.data.json();
     } catch {
       data = {
-        title: 'Buzly | طلبك جاهز!',
+        title: 'Chimer | طلبك جاهز!',
         body: event.data.text(),
       };
     }
   }
 
-  const title = data.title || 'طلبك جاهز للاستلام! 🍔';
+  const title = data.title || 'طلبك جاهز للاستلام';
   const orderNumber = data.orderNumber || '';
   const targetUrl = data.url || (orderNumber ? `/track/${encodeURIComponent(orderNumber)}` : '/track');
 
@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
     body: data.body || 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    tag: `buzly-order-${orderNumber || 'ready'}`,
+    tag: `chimer-order-${orderNumber || 'ready'}`,
     renotify: true,
     requireInteraction: true,
     vibrate: [500, 200, 500, 200, 800, 300, 800],
@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
       timestamp: Date.now(),
     },
     actions: [
-      { action: 'open', title: 'عرض الطلب 🔔' },
+      { action: 'open', title: 'عرض الطلب' },
       { action: 'dismiss', title: 'إغلاق' },
     ],
   };

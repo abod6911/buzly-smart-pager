@@ -480,7 +480,7 @@ export default function KitchenTvBoardPage() {
           <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
           <span>تظهر الأرقام تلقائياً فور جاهزية الطلب بالمطبخ</span>
         </span>
-        <span className="font-mono text-[11px] text-zinc-600">Buzly Display System</span>
+        <span className="font-mono text-[11px] text-zinc-600">Chimer Display System</span>
       </footer>
     </div>
     </ErrorBoundary>

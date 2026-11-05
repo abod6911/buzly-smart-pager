@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import QRCode from 'qrcode';
 import {
-  X,
   Copy,
   Check,
   QrCode as QrIcon,
@@ -13,11 +12,10 @@ import {
   Cloud,
   AlertTriangle,
   SlidersHorizontal,
-  Bell,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AppleBottomSheet } from '@/components/AppleBottomSheet';
 
-const STORAGE_OVERRIDE_KEY = 'buzly_base_url_override';
+const STORAGE_OVERRIDE_KEY = 'chimer_base_url_override';
 const KNOWN_WIFI_IP = 'http://192.168.100.12:3000';
 const KNOWN_VERCEL_URL = 'https://buzly-smart-pager.vercel.app';
 
@@ -50,7 +48,9 @@ export const QrModal: React.FC<QrModalProps> = ({
     if (typeof window !== 'undefined') {
       const origin = window.location.origin;
       setCurrentOrigin(origin);
-      const savedOverride = localStorage.getItem(STORAGE_OVERRIDE_KEY);
+      const savedOverride =
+        localStorage.getItem(STORAGE_OVERRIDE_KEY) ||
+        localStorage.getItem('buzly_base_url_override');
       const initial = savedOverride?.trim() || origin;
       setActiveBaseUrl(initial);
       setCustomInputUrl(initial);
@@ -78,6 +78,7 @@ export const QrModal: React.FC<QrModalProps> = ({
         created: new Date().toISOString(),
       });
       if (orderNotes) params.set('notes', orderNotes);
+
       return `${base}/${cleanSlug}/track/${encodeURIComponent(orderNumber)}?${params.toString()}`;
     }
 
@@ -85,61 +86,62 @@ export const QrModal: React.FC<QrModalProps> = ({
   }, [activeBaseUrl, currentOrigin, restaurantSlug, orderNumber, estimatedMinutes, orderNotes]);
 
   useEffect(() => {
-    if (isOpen && targetUrl) {
-      QRCode.toDataURL(targetUrl, {
-        width: 360,
-        margin: 2,
-        color: {
-          dark: '#09090B',
-          light: '#FFFFFF',
-        },
-      })
-        .then((url) => setQrDataUrl(url))
-        .catch((err) => console.error('QR generation failed', err));
-    }
-  }, [isOpen, targetUrl]);
+    if (!isOpen || !targetUrl) return;
 
-  const handleApplyBaseUrl = (newUrl: string) => {
-    const clean = newUrl.trim().replace(/\/+$/, '');
-    if (!clean) return;
-    setActiveBaseUrl(clean);
-    setCustomInputUrl(clean);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_OVERRIDE_KEY, clean);
-      setSaveConfirmation(true);
-      setTimeout(() => setSaveConfirmation(false), 2000);
+    QRCode.toDataURL(targetUrl, {
+      width: 480,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+      errorCorrectionLevel: 'H',
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error('Failed to generate QR code', err));
+  }, [targetUrl, isOpen]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(targetUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
     }
+  };
+
+  const handleSaveOverride = (newUrl: string) => {
+    const trimmed = newUrl.trim().replace(/\/+$/, '');
+    setActiveBaseUrl(trimmed);
+    setCustomInputUrl(trimmed);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_OVERRIDE_KEY, trimmed);
+    }
+    setSaveConfirmation(true);
+    setTimeout(() => setSaveConfirmation(false), 2500);
   };
 
   const handleResetToOrigin = () => {
+    setActiveBaseUrl(currentOrigin);
+    setCustomInputUrl(currentOrigin);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_OVERRIDE_KEY);
-      setActiveBaseUrl(currentOrigin);
-      setCustomInputUrl(currentOrigin);
     }
-  };
-
-  const handleCopy = () => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(targetUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    setSaveConfirmation(true);
+    setTimeout(() => setSaveConfirmation(false), 2000);
   };
 
   const handleDownload = () => {
     if (!qrDataUrl) return;
     const a = document.createElement('a');
     a.href = qrDataUrl;
-    a.download = orderNumber
-      ? `buzly-${restaurantSlug}-order-${orderNumber}.png`
-      : `buzly-${restaurantSlug}-table.png`;
+    a.download = `chimer-qr-${orderNumber || 'counter'}.png`;
     a.click();
   };
 
   const handlePrint = () => {
-    if (typeof window === 'undefined') return;
-
+    if (!qrDataUrl) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -147,7 +149,7 @@ export const QrModal: React.FC<QrModalProps> = ({
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
         <head>
-          <title>Buzly - ${orderNumber ? `طلب #${orderNumber}` : 'كود الكاونتر'}</title>
+          <title>Chimer - ${orderNumber ? `طلب #${orderNumber}` : 'كود الكاونتر'}</title>
           <style>
             body {
               font-family: system-ui, -apple-system, sans-serif;
@@ -172,8 +174,8 @@ export const QrModal: React.FC<QrModalProps> = ({
         </head>
         <body>
           <div class="card">
-            <h1>BUZLY PAGER</h1>
-            <div class="subtitle">بيجر ذكي لمتابعة الطلب</div>
+            <h1>CHIMER PAGER</h1>
+            <div class="subtitle">بيجر ذكي لمتابعة جاهزية الطلب</div>
             ${orderNumber ? `<div class="order-num">#${orderNumber}</div>` : '<div>امسح لمتابعة طلبك</div>'}
             <img src="${qrDataUrl}" alt="QR Code" />
             <p>امسح الكود بكاميرا جوالك لتفعيل جرس التنبيه الفوري عند جاهزية الطلب.</p>
@@ -188,164 +190,164 @@ export const QrModal: React.FC<QrModalProps> = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            className="w-full max-w-md bg-[#121215] border border-white/[0.08] rounded-2xl p-5 sm:p-6 text-white shadow-2xl relative my-auto font-sans"
+    <AppleBottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title={orderNumber ? `باركود تتبع الطلب #${orderNumber}` : 'رمز الكاونتر الموحد'}
+      subtitle="امسح الباركود بكاميرا الجوال لمتابعة جاهزية الطلب"
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-4 text-center">
+        {/* Localhost Warning Notice */}
+        {isLocalhost && (
+          <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3 text-right">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-bold text-amber-300">
+                  تنبيه: الرابط يعتمد على localhost
+                </p>
+                <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                  كاميرا الجوال لن تستطيع فتح هذا الرابط لأنه محلي على لابتوبك فقط. اضغط على خيارات الشبكة بالأسفل واختر رابط الواي فاي أو رابط فيرسيل.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowOverrideSettings(true)}
+                  className="mt-2 text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline flex items-center gap-1"
+                >
+                  <SlidersHorizontal className="w-3 h-3" />
+                  <span>تعديل رابط الباركود ليعمل على الجوال</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Network & Base URL Settings Drawer */}
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={() => setShowOverrideSettings(!showOverrideSettings)}
+            className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 transition-colors mx-auto"
           >
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 left-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors"
-              aria-label="إغلاق"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <SlidersHorizontal className="w-3 h-3 text-emerald-400" />
+            <span>
+              {showOverrideSettings ? 'إخفاء إعدادات الشبكة' : 'تغيير رابط الباركود (IP الشبكة / Vercel)'}
+            </span>
+          </button>
 
-            {/* Apple Wallet Style Header */}
-            <div className="text-center mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#18181C] border border-white/10 text-emerald-400 flex items-center justify-center mx-auto mb-2">
-                <Bell className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-bold text-white">
-                {orderNumber ? `رمز الاستجابة للطلب #${orderNumber}` : 'رمز تتبع الطلبات للطاولات'}
-              </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                امسح الكود بكاميرا الجوال ليتحول الهاتف إلى جهاز نداء ذكي
-              </p>
-            </div>
+          {showOverrideSettings && (
+            <div className="mt-3 bg-[#18181C] border border-white/[0.08] rounded-2xl p-3.5 space-y-3">
+              <label className="block text-xs font-semibold text-zinc-300">
+                رابط الخادم المعتمد للباركود (Base URL):
+              </label>
 
-            {/* Localhost Warning */}
-            {isLocalhost && (
-              <div className="mb-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-right flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <p className="font-semibold text-amber-300">
-                    تنبيه: أنت تتصفح عبر localhost
-                  </p>
-                  <p className="text-zinc-300 text-[11px] mt-0.5">
-                    كاميرا الجوال تتطلب رابط شبكة أو رابط Vercel. اختر الرابط المناسب أدناه لتحديث الباركود:
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Segmented Network Selector */}
-            <div className="mb-3.5 bg-[#18181C] p-1 rounded-xl border border-white/[0.06]">
-              <div className="grid grid-cols-2 gap-1 text-xs">
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleApplyBaseUrl(KNOWN_VERCEL_URL)}
-                  className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    activeBaseUrl === KNOWN_VERCEL_URL
-                      ? 'bg-zinc-800 text-white font-medium shadow-sm border border-white/10'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
+                  onClick={() => handleSaveOverride(KNOWN_WIFI_IP)}
+                  className="text-[10px] font-mono flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.06] transition-colors"
                 >
-                  <Cloud className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>الرابط السحابي</span>
+                  <Wifi className="w-3 h-3 text-emerald-400" />
+                  <span>شبكة Wi-Fi ({KNOWN_WIFI_IP.replace('http://', '')})</span>
                 </button>
-
                 <button
                   type="button"
-                  onClick={() => handleApplyBaseUrl(KNOWN_WIFI_IP)}
-                  className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    activeBaseUrl === KNOWN_WIFI_IP
-                      ? 'bg-zinc-800 text-white font-medium shadow-sm border border-white/10'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
+                  onClick={() => handleSaveOverride(KNOWN_VERCEL_URL)}
+                  className="text-[10px] font-mono flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.06] transition-colors"
                 >
-                  <Wifi className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>الشبكة المحلية</span>
+                  <Cloud className="w-3 h-3 text-sky-400" />
+                  <span>سحابة Vercel</span>
                 </button>
-              </div>
-
-              {/* Advanced toggle */}
-              <div className="mt-1.5 pt-1.5 border-t border-white/[0.04] px-1 flex items-center justify-between">
                 <button
-                  onClick={() => setShowOverrideSettings(!showOverrideSettings)}
-                  className="text-[10px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+                  type="button"
+                  onClick={handleResetToOrigin}
+                  className="text-[10px] font-mono px-2 py-1.5 rounded-lg bg-transparent hover:bg-white/[0.05] text-zinc-400 transition-colors"
                 >
-                  <SlidersHorizontal className="w-2.5 h-2.5" />
-                  <span>تعديل الرابط يدوياً</span>
+                  استعادة الافتراضي
                 </button>
-                <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px] dir-ltr">
-                  {activeBaseUrl}
-                </span>
               </div>
 
-              {showOverrideSettings && (
-                <div className="p-2 space-y-1.5">
-                  <input
-                    type="text"
-                    value={customInputUrl}
-                    onChange={(e) => setCustomInputUrl(e.target.value)}
-                    placeholder="http://192.168.X.X:3000"
-                    className="w-full bg-[#121215] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none dir-ltr"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleApplyBaseUrl(customInputUrl)}
-                    className="w-full py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-semibold text-xs"
-                  >
-                    حفظ الرابط
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Apple Wallet Pass Container */}
-            <div className="bg-white p-3.5 rounded-2xl flex items-center justify-center mx-auto shadow-sm w-56 h-56 border border-zinc-200 relative">
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qrDataUrl}
-                  alt="QR Code"
-                  className="w-full h-full object-contain rounded-xl"
+              {/* Manual Input */}
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={customInputUrl}
+                  onChange={(e) => setCustomInputUrl(e.target.value)}
+                  placeholder="http://192.168.1.X:3000"
+                  className="flex-1 bg-[#121215] border border-white/[0.1] rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
                 />
-              ) : (
-                <div className="text-zinc-400 text-xs">جارِ إنشاء الرمز...</div>
+                <button
+                  type="button"
+                  onClick={() => handleSaveOverride(customInputUrl)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs transition-colors shrink-0"
+                >
+                  تطبيق
+                </button>
+              </div>
+
+              {saveConfirmation && (
+                <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  <span>تم حفظ وتحديث رابط الباركود بنجاح</span>
+                </p>
               )}
             </div>
-
-            {/* Target URL Preview */}
-            <div className="mt-3.5 bg-[#18181C] border border-white/[0.06] rounded-xl p-2.5 flex items-center justify-between text-xs">
-              <span className="truncate max-w-[240px] font-mono dir-ltr text-[11px] text-zinc-400">
-                {targetUrl}
-              </span>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 font-medium transition-colors text-xs"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
-                <span>{copied ? 'تم النسخ' : 'نسخ'}</span>
-              </button>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-3.5 grid grid-cols-2 gap-2">
-              <button
-                onClick={handlePrint}
-                className="py-2.5 px-3 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/[0.08] text-zinc-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5 text-zinc-400" />
-                <span>طباعة ستاند A6</span>
-              </button>
-              <button
-                onClick={handleDownload}
-                className="py-2.5 px-3 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/[0.08] text-zinc-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-zinc-400" />
-                <span>تحميل كصورة PNG</span>
-              </button>
-            </div>
-          </motion.div>
+          )}
         </div>
-      )}
-    </AnimatePresence>
+
+        {/* Apple HIG Pass QR Container */}
+        <div className="bg-white p-4 rounded-3xl flex items-center justify-center mx-auto shadow-xl w-60 h-60 border border-zinc-200">
+          {qrDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={qrDataUrl}
+              alt="QR Code"
+              className="w-full h-full object-contain rounded-2xl"
+            />
+          ) : (
+            <div className="text-zinc-400 text-xs">جارِ إنشاء الرمز...</div>
+          )}
+        </div>
+
+        {/* Target URL Preview */}
+        <div className="bg-[#18181C] border border-white/[0.06] rounded-2xl p-2.5 flex items-center justify-between text-xs">
+          <span className="truncate max-w-[260px] font-mono dir-ltr text-[11px] text-zinc-400">
+            {targetUrl}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 font-medium transition-colors text-xs"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-zinc-400" />
+            )}
+            <span>{copied ? 'تم النسخ' : 'نسخ'}</span>
+          </button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            onClick={handlePrint}
+            className="py-3 px-3 rounded-2xl bg-[#18181C] hover:bg-[#202026] border border-white/[0.08] text-zinc-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5 text-emerald-400" />
+            <span>طباعة ستاند A6</span>
+          </button>
+          <button
+            onClick={handleDownload}
+            className="py-3 px-3 rounded-2xl bg-[#18181C] hover:bg-[#202026] border border-white/[0.08] text-zinc-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span>تحميل كصورة PNG</span>
+          </button>
+        </div>
+      </div>
+    </AppleBottomSheet>
   );
 };

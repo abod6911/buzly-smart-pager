@@ -117,9 +117,14 @@ export default function RestaurantOnboardingPage() {
       } catch {}
 
       // Automatically authenticate session for this new restaurant
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`buzly_pin_auth_${targetSlug}`, 'true');
-      }
+      // Auto authenticate new staff session via HttpOnly cookie
+      try {
+        await fetch('/api/auth/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: targetSlug, pin: staffPin.trim() }),
+        });
+      } catch {}
 
       setTimeout(() => {
         router.push(`/${targetSlug}/admin`);
@@ -185,7 +190,7 @@ export default function RestaurantOnboardingPage() {
               المعرف الإنجليزي للرابط <span className="text-rose-400">*</span>
             </label>
             <div className="flex items-center bg-obsidian-card border border-obsidian-border rounded-2xl px-3 py-2 text-sm dir-ltr">
-              <span className="text-zinc-500 font-mono text-xs select-none">buzly.app/</span>
+              <span className="text-zinc-500 font-mono text-xs select-none">chimer.app/</span>
               <input
                 type="text"
                 required

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Order, OrderStatus, OrderFeedback } from '@/types/queue';
+import { checkGeneralRateLimit } from '@/lib/security';
 
 // Global in-memory store shared across all devices hitting this Next.js server instance
 declare global {
   // eslint-disable-next-line no-var
-  var __buzly_orders_store: Order[] | undefined;
+  var __chimer_orders_store: Order[] | undefined;
   // eslint-disable-next-line no-var
-  var __buzly_orders_last_updated: number | undefined;
+  var __chimer_orders_last_updated: number | undefined;
 }
 
 const INITIAL_DEMO_ORDERS: Order[] = [
@@ -64,23 +66,70 @@ const INITIAL_DEMO_ORDERS: Order[] = [
 ];
 
 function getStore(): Order[] {
-  if (!globalThis.__buzly_orders_store) {
-    globalThis.__buzly_orders_store = [...INITIAL_DEMO_ORDERS];
-    globalThis.__buzly_orders_last_updated = Date.now();
+  if (!globalThis.__chimer_orders_store) {
+    globalThis.__chimer_orders_store = [...INITIAL_DEMO_ORDERS];
+    globalThis.__chimer_orders_last_updated = Date.now();
   }
-  return globalThis.__buzly_orders_store;
+  return globalThis.__chimer_orders_store;
 }
 
 function setStore(orders: Order[]) {
-  globalThis.__buzly_orders_store = orders;
-  globalThis.__buzly_orders_last_updated = Date.now();
+  globalThis.__chimer_orders_store = orders;
+  globalThis.__chimer_orders_last_updated = Date.now();
 }
 
-// GET: Retrieve all active orders or filter by slug / orderNumber
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+  return '127.0.0.1';
+}
+
+// Zod Input Schemas for Anti-Abuse
+const orderInputSchema = z.object({
+  orderNumber: z
+    .string()
+    .trim()
+    .min(1)
+    .max(8)
+    .regex(/^[0-9A-Za-z-]+$/, 'رقم الطلب يجب أن يتكون من أحرف وأرقام فقط بحد أقصى 8 خانات'),
+  restaurantSlug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, 'معرف المطعم غير صالح')
+    .optional(),
+  estimatedMinutes: z.number().int().min(1).max(180).optional(),
+  notes: z.string().max(300).optional(),
+  customerPhone: z.string().max(30).optional(),
+  customerName: z.string().max(100).optional(),
+  status: z.enum(['preparing', 'ready', 'completed', 'cancelled']).optional(),
+});
+
+// GET: Retrieve active orders or filter by slug / orderNumber
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  // Rate limit: 60 reads per minute per IP
+  const rl = checkGeneralRateLimit(`get_orders:${ip}`, 60, 60);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'تم تجاوز معدل الطلبات المسموح به' },
+      { status: 429, headers: { 'Retry-After': String(rl.resetSeconds) } }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
-  const slug = searchParams.get('slug')?.toLowerCase();
-  const orderNumber = searchParams.get('orderNumber')?.trim();
+  const rawSlug = searchParams.get('slug')?.toLowerCase();
+  const rawOrderNumber = searchParams.get('orderNumber')?.trim();
+
+  // Sanitize query params
+  const slug = rawSlug && /^[a-z0-9-]+$/.test(rawSlug) ? rawSlug : undefined;
+  const orderNumber =
+    rawOrderNumber && /^[0-9A-Za-z-]+$/.test(rawOrderNumber) && rawOrderNumber.length <= 8
+      ? rawOrderNumber
+      : undefined;
 
   let store = getStore();
 
@@ -106,7 +155,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       order: single,
-      lastUpdated: globalThis.__buzly_orders_last_updated || Date.now(),
+      lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
       serverTime: new Date().toISOString(),
     });
   }
@@ -115,14 +164,15 @@ export async function GET(req: NextRequest) {
     success: true,
     orders: store,
     count: store.length,
-    lastUpdated: globalThis.__buzly_orders_last_updated || Date.now(),
+    lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
     serverTime: new Date().toISOString(),
   });
 }
 
-// POST: Add, update status, reping, complete, or sync orders
+// POST: Add, update status, reping, complete, or sync orders with Anti-Abuse
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
     const body = await req.json();
     const { action, order, orderId, orderNumber, restaurantSlug, feedback, orders } = body;
     const store = getStore();
@@ -133,17 +183,41 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case 'ADD':
       case 'ORDER_ADDED': {
-        const orderData = order || body;
-        if (!orderData || !orderData.orderNumber) {
-          return NextResponse.json({ success: false, error: 'Missing order details' }, { status: 400 });
+        // Strict Rate limit on order creation: 10 per minute per IP
+        const rl = checkGeneralRateLimit(`add_order:${ip}`, 10, 60);
+        if (!rl.allowed) {
+          return NextResponse.json(
+            { success: false, error: 'تم تجاوز الحد الأقصى لإنشاء الطلبات، يرجى الانتظار دقيقة' },
+            { status: 429, headers: { 'Retry-After': String(rl.resetSeconds) } }
+          );
         }
+
+        const rawData = order || body;
+        const validation = orderInputSchema.safeParse(rawData);
+        if (!validation.success) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: validation.error.issues[0]?.message || 'بيانات الطلب غير صالحة',
+            },
+            { status: 400 }
+          );
+        }
+
+        const validated = validation.data;
+        const targetSlug = (validated.restaurantSlug || restaurantSlug || 'demo-cafe').toLowerCase();
+
         const newOrder: Order = {
-          ...orderData,
-          id: orderData.id || `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          restaurantSlug: (orderData.restaurantSlug || restaurantSlug || 'demo-cafe').toLowerCase(),
-          status: orderData.status || 'preparing',
-          rePingCount: orderData.rePingCount || 0,
-          createdAt: orderData.createdAt || nowIso,
+          id: rawData.id || `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          orderNumber: validated.orderNumber,
+          restaurantSlug: targetSlug,
+          customerName: validated.customerName,
+          customerPhone: validated.customerPhone,
+          notes: validated.notes,
+          status: validated.status || 'preparing',
+          estimatedMinutes: validated.estimatedMinutes || 10,
+          rePingCount: 0,
+          createdAt: rawData.createdAt || nowIso,
         };
 
         // Filter out if duplicate number in same restaurant
@@ -258,7 +332,6 @@ export async function POST(req: NextRequest) {
       case 'SYNC_ALL':
       case 'QUEUE_SYNC': {
         if (Array.isArray(orders)) {
-          // Merge client orders with server orders by ID
           const orderMap = new Map<string, Order>();
           store.forEach((o) => orderMap.set(o.id, o));
           orders.forEach((o: Order) => orderMap.set(o.id, o));
@@ -281,7 +354,7 @@ export async function POST(req: NextRequest) {
       success: true,
       updatedOrder,
       orders: getStore(),
-      lastUpdated: globalThis.__buzly_orders_last_updated,
+      lastUpdated: globalThis.__chimer_orders_last_updated,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

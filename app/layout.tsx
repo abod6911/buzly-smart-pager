@@ -18,9 +18,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Buzly | بيجر المطاعم الذكي',
+  title: 'Chimer | بيجر واستدعاء المطاعم الذكي',
   description: 'نظام بيجر ونداء واستدعاء الزبائن الذكي في المطاعم والكافيهات مباشرة عبر متصفح الجوال',
-  applicationName: 'Buzly Pager',
+  applicationName: 'Chimer Pager',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: '/icon.svg',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Buzly Pager',
+    title: 'Chimer Pager',
   },
   formatDetection: {
     telephone: false,

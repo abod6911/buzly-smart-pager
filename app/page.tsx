@@ -71,7 +71,7 @@ export default function LandingRoleSwitcherPage() {
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight text-white font-mono">
-                BUZLY
+                CHIMER
               </span>
               <span className="text-[10px] block text-emerald-400 font-semibold -mt-1">
                 البيجر الذكي للمطاعم والكافيهات
@@ -303,7 +303,7 @@ export default function LandingRoleSwitcherPage() {
 
       {/* Footer */}
       <footer className="border-t border-obsidian-border/80 px-4 py-6 text-center text-xs text-zinc-500 mt-auto">
-        <p>Buzly Smart Restaurant Pager © 2026 - نظام الاستدعاء والبيجر الذكي للمطاعم</p>
+        <p>Chimer Smart Restaurant Pager © 2026 - نظام الاستدعاء والبيجر الذكي للمطاعم</p>
       </footer>
     </div>
   );

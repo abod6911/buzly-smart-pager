@@ -23,7 +23,7 @@ export interface Restaurant {
   name: string;
   logoUrl?: string;
   themeColor: string;
-  staffPin: string;
+  staffPin?: string;
   whatsappFallbackEnabled: boolean;
   chimeTheme?: ChimeSoundTheme;
   voiceAnnounceEnabled?: boolean;
