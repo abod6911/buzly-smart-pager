@@ -20,40 +20,45 @@ class HighDecibelSoundEngine {
   private initAudioChain(): AudioContext | null {
     if (typeof window === 'undefined') return null;
 
-    if (!this.ctx) {
-      const AudioCtxClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtxClass) {
-        this.ctx = new AudioCtxClass();
+    try {
+      if (!this.ctx) {
+        const AudioCtxClass =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioCtxClass) {
+          this.ctx = new AudioCtxClass();
+        }
       }
+
+      if (!this.ctx) return null;
+
+      if (!this.compressor || !this.masterGain) {
+        // Dynamics Compressor for high-volume broadcast punch without digital distortion
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+        this.compressor.knee.setValueAtTime(8, this.ctx.currentTime);
+        this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+        this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+        this.compressor.release.setValueAtTime(0.22, this.ctx.currentTime);
+
+        // Master Gain boosted for maximum restaurant/cafe audibility
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(1.15, this.ctx.currentTime);
+
+        // Chain: Node -> Compressor -> MasterGain -> Destination
+        this.compressor.connect(this.masterGain);
+        this.masterGain.connect(this.ctx.destination);
+      }
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+
+      return this.ctx;
+    } catch (err) {
+      console.warn('AudioContext init warning (iOS Safari fallback):', err);
+      return null;
     }
-
-    if (!this.ctx) return null;
-
-    if (!this.compressor || !this.masterGain) {
-      // Dynamics Compressor for high-volume broadcast punch without digital distortion
-      this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
-      this.compressor.knee.setValueAtTime(8, this.ctx.currentTime);
-      this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
-      this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-      this.compressor.release.setValueAtTime(0.22, this.ctx.currentTime);
-
-      // Master Gain boosted for maximum restaurant/cafe audibility
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(1.15, this.ctx.currentTime);
-
-      // Chain: Node -> Compressor -> MasterGain -> Destination
-      this.compressor.connect(this.masterGain);
-      this.masterGain.connect(this.ctx.destination);
-    }
-
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
-    }
-
-    return this.ctx;
   }
 
   public setTheme(theme: ChimeSoundTheme) {
@@ -69,21 +74,49 @@ class HighDecibelSoundEngine {
   }
 
   public async unlock(): Promise<boolean> {
-    const ctx = this.initAudioChain();
-    if (!ctx) return false;
+    try {
+      const ctx = this.initAudioChain();
+      if (!ctx) return false;
 
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
+      if (ctx.state === 'suspended') {
+        await ctx.resume().catch(() => {});
+      }
+
+      // Play a tiny silent buffer to warm up the audio bus
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+
+      return ctx.state === 'running';
+    } catch (err) {
+      console.warn('Audio unlock warning:', err);
+      return false;
     }
+  }
 
-    // Play a tiny silent buffer to warm up the audio bus
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+  /**
+   * Safe Haptic Vibration Guard (Never throws on iOS Safari)
+   */
+  public triggerHaptic(pattern: number[] = [600, 150, 600, 150, 1000]): void {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+    try {
+      if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(pattern);
+      }
+    } catch {
+      // iOS Safari silently ignored
+    }
+  }
 
-    return ctx.state === 'running';
+  public stopHaptic(): void {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+    try {
+      if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(0);
+      }
+    } catch {}
   }
 
   public startSilentKeepAlive(): void {

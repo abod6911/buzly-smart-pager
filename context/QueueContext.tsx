@@ -126,6 +126,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const ordersRef = useRef<Order[]>([]);
   const pendingOptimisticOrdersRef = useRef<Map<string, Order>>(new Map());
   const fetchedSlugsRef = useRef<Set<string>>(new Set());
+  const tombstoneIdsRef = useRef<Set<string>>(new Set());
 
   // Keep ordersRef synchronized with state
   useEffect(() => {
@@ -408,6 +409,42 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       )
+      .on('broadcast', { event: 'order_update' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setOrders((prev) => {
+            const safe = Array.isArray(prev) ? prev : [];
+            const updated = safe.map((o) => {
+              const matchSlug =
+                (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() ===
+                (payload.restaurantSlug || payload.restaurant_slug || '').toLowerCase();
+              if (o.id === payload.id || (o.orderNumber === payload.orderNumber && matchSlug)) {
+                return {
+                  ...o,
+                  ...payload,
+                };
+              }
+              return o;
+            });
+            if (!updated.some((o) => o.id === payload.id)) {
+              updated.unshift(payload);
+            }
+            try {
+              localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+
+          setLastEvent({
+            type: payload.status === 'ready' ? 'ORDER_READY' : 'ORDER_UPDATED',
+            order: payload,
+            orderId: payload.id,
+            orderNumber: payload.orderNumber,
+            restaurantSlug: payload.restaurantSlug,
+            timestamp: Date.now(),
+            sourceTabId: 'supabase-broadcast',
+          });
+        }
+      })
       .subscribe();
 
     return () => {
@@ -466,7 +503,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // Preserve pending optimistic orders that server hasn't committed yet
             const pendingList = Array.from(pendingOptimisticOrdersRef.current.values());
-            const stillPending: Order[] = [];
             for (const p of pendingList) {
               const pSlug = (p.restaurantSlug || p.restaurant_slug || '').toLowerCase();
               const existsOnServer = serverOrders.some(
@@ -477,26 +513,76 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               );
               if (existsOnServer) {
                 pendingOptimisticOrdersRef.current.delete(p.id);
-              } else {
-                stillPending.push(p);
               }
             }
 
-            // Merge server orders with unconfirmed pending optimistic orders
-            let merged = [...serverOrders];
-            for (const p of stillPending) {
-              const pSlug = (p.restaurantSlug || p.restaurant_slug || '').toLowerCase();
-              if (
-                !merged.some(
-                  (m) =>
-                    m.id === p.id ||
-                    (m.orderNumber === p.orderNumber &&
-                      (m.restaurantSlug || m.restaurant_slug || '').toLowerCase() === pSlug)
-                )
-              ) {
-                merged = [p, ...merged];
+            // Smart CRDT-like State Merger: Never delete active orders when polling cold serverless lambdas
+            const map = new Map<string, Order>();
+            const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+
+            // 1. Seed with active local orders so empty/partial serverless polling responses never wipe them out
+            for (const local of safePrev) {
+              if (!local || tombstoneIdsRef.current.has(local.id)) continue;
+              const createdTime = new Date(local.createdAt || local.created_at || Date.now()).getTime();
+              if (local.status === 'preparing' || local.status === 'ready' || createdTime > sixHoursAgo) {
+                map.set(local.id, local);
               }
             }
+
+            // 2. Keep unconfirmed optimistic additions
+            for (const p of Array.from(pendingOptimisticOrdersRef.current.values())) {
+              if (p && !tombstoneIdsRef.current.has(p.id)) {
+                map.set(p.id, p);
+              }
+            }
+
+            // 3. Overlay server orders
+            for (const incoming of serverOrders) {
+              if (!incoming || tombstoneIdsRef.current.has(incoming.id)) continue;
+
+              let matchingKey: string | null = null;
+              if (map.has(incoming.id)) {
+                matchingKey = incoming.id;
+              } else {
+                const incSlug = (incoming.restaurantSlug || incoming.restaurant_slug || '').toLowerCase();
+                for (const [key, val] of map.entries()) {
+                  const valSlug = (val.restaurantSlug || val.restaurant_slug || '').toLowerCase();
+                  if (val.orderNumber === incoming.orderNumber && valSlug === incSlug) {
+                    matchingKey = key;
+                    break;
+                  }
+                }
+              }
+
+              if (matchingKey) {
+                const prev = map.get(matchingKey)!;
+                if (matchingKey !== incoming.id) {
+                  map.delete(matchingKey);
+                }
+                // Status resolution: if local was already marked 'ready' or 'completed', do not downgrade
+                let resolvedStatus = incoming.status;
+                if (prev.status === 'ready' && incoming.status === 'preparing') {
+                  resolvedStatus = 'ready';
+                } else if (prev.status === 'completed' && incoming.status !== 'completed') {
+                  resolvedStatus = 'completed';
+                }
+
+                map.set(incoming.id, {
+                  ...prev,
+                  ...incoming,
+                  status: resolvedStatus,
+                  rePingCount: Math.max(prev.rePingCount || 0, incoming.rePingCount || 0),
+                });
+              } else {
+                map.set(incoming.id, incoming);
+              }
+            }
+
+            const merged = Array.from(map.values()).sort((a, b) => {
+              const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+              const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+              return timeB - timeA;
+            });
 
             const prevDigest = safePrev.map((o) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
             const nextDigest = merged.map((o: Order) => `${o.id}-${o.status}-${o.rePingCount}`).join('|');
@@ -1060,6 +1146,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     async (restaurantSlug: string) => {
       const slug = restaurantSlug.toLowerCase().trim();
       const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      const completedList = currentOrders.filter(
+        (ord) =>
+          (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === slug &&
+          ord.status === 'completed'
+      );
+      completedList.forEach((o) => tombstoneIdsRef.current.add(o.id));
+
       const next = currentOrders.filter(
         (ord) =>
           !(
@@ -1092,6 +1185,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 10. Action: Cancel Order
   const cancelOrder = useCallback(
     async (orderId: string, restaurantSlug?: string) => {
+      tombstoneIdsRef.current.add(orderId);
       const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
       let deletedNum: string | undefined;
       let deletedSlug: string | undefined;

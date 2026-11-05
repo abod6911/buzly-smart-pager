@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Order, OrderStatus, OrderFeedback } from '@/types/queue';
 import { checkGeneralRateLimit } from '@/lib/security';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-// Global in-memory store shared across all devices hitting this Next.js server instance
+// Global in-memory store fallback across all devices hitting this Next.js server instance
 declare global {
   // eslint-disable-next-line no-var
   var __chimer_orders_store: Order[] | undefined;
@@ -30,6 +31,29 @@ function getClientIp(req: NextRequest): string {
   const realIp = req.headers.get('x-real-ip');
   if (realIp) return realIp.trim();
   return '127.0.0.1';
+}
+
+function mapDbRowToOrder(row: any): Order {
+  return {
+    id: row.id,
+    orderNumber: row.order_number,
+    restaurantSlug: row.restaurant_slug || 'demo-cafe',
+    restaurant_slug: row.restaurant_slug || 'demo-cafe',
+    restaurantId: row.restaurant_id,
+    restaurant_id: row.restaurant_id,
+    customerName: row.customer_name,
+    customerPhone: row.customer_phone,
+    notes: row.notes,
+    status: row.status as OrderStatus,
+    estimatedMinutes: row.estimated_mins || 10,
+    pushSubscription: row.push_subscription,
+    rePingCount: row.ping_count || 0,
+    createdAt: row.created_at || new Date().toISOString(),
+    created_at: row.created_at || new Date().toISOString(),
+    readyAt: row.ready_at,
+    completedAt: row.completed_at,
+    lastPingAt: row.last_ping_at,
+  };
 }
 
 // Zod Input Schemas for Anti-Abuse
@@ -65,11 +89,11 @@ const orderInputSchema = z.object({
   created_at: z.string().optional(),
 });
 
-// GET: Retrieve active orders or filter by slug / orderNumber
+// GET: High-Scale Targeted Orders Retrieval
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
-  // Rate limit: 120 reads per minute per IP
-  const rl = checkGeneralRateLimit(`get_orders:${ip}`, 120, 60);
+  // High-capacity rate limit: 1,200 reads per minute per IP for busy restaurants
+  const rl = checkGeneralRateLimit(`get_orders:${ip}`, 1200, 60);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, error: 'تم تجاوز معدل الطلبات المسموح به' },
@@ -88,6 +112,56 @@ export async function GET(req: NextRequest) {
       ? rawOrderNumber
       : undefined;
 
+  // 1. Supabase Fast DB Query (Targeted O(1) or Active Window O(N<=100))
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      if (slug && orderNumber) {
+        // Targeted single customer order lookup
+        const { data: dbRow, error } = await supabase
+          .from('orders_queue')
+          .select('*')
+          .eq('restaurant_slug', slug)
+          .eq('order_number', orderNumber)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && dbRow) {
+          const mappedOrder = mapDbRowToOrder(dbRow);
+          return NextResponse.json({
+            success: true,
+            order: mappedOrder,
+            lastUpdated: Date.now(),
+            serverTime: new Date().toISOString(),
+          });
+        }
+      } else if (slug) {
+        // Active orders only: preparing and ready (plus recently completed within active window)
+        const { data: dbRows, error } = await supabase
+          .from('orders_queue')
+          .select('*')
+          .eq('restaurant_slug', slug)
+          .in('status', ['preparing', 'ready', 'completed'])
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (!error && dbRows && dbRows.length > 0) {
+          const mappedOrders = dbRows.map(mapDbRowToOrder);
+          return NextResponse.json({
+            success: true,
+            orders: mappedOrders,
+            count: mappedOrders.length,
+            lastUpdated: Date.now(),
+            serverTime: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Supabase orders fetch warning, falling back to memory store:', dbErr);
+    }
+  }
+
+  // 2. In-Memory Store Fallback
   let store = getStore();
   if (!Array.isArray(store)) {
     store = [];
@@ -145,11 +219,11 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case 'ADD':
       case 'ORDER_ADDED': {
-        // High capacity rate limit for active POS cashier operation: 120 per minute per IP
-        const rl = checkGeneralRateLimit(`add_order:${ip}`, 120, 60);
+        // High capacity rate limit: 1,200 per minute per IP for high-speed POS cashier operations
+        const rl = checkGeneralRateLimit(`add_order:${ip}`, 1200, 60);
         if (!rl.allowed) {
           return NextResponse.json(
-            { success: false, error: 'تم تجاوز الحد الأقصى لإنشاء الطلبات، يرجى الانتظار دقيقة' },
+            { success: false, error: 'تم تجاوز الحد الأقصى لإنشاء الطلبات' },
             { status: 429, headers: { 'Retry-After': String(rl.resetSeconds) } }
           );
         }
@@ -219,13 +293,42 @@ export async function POST(req: NextRequest) {
         const next = [newOrder, ...filtered];
         setStore(next);
         updatedOrder = newOrder;
+
+        // Persist to Supabase if active
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .upsert({
+              order_number: newOrder.orderNumber,
+              restaurant_slug: targetSlug,
+              customer_name: newOrder.customerName,
+              customer_phone: newOrder.customerPhone,
+              notes: newOrder.notes,
+              status: newOrder.status,
+              estimated_mins: newOrder.estimatedMinutes,
+              ping_count: 0,
+              created_at: newOrder.createdAt,
+            })
+            .then();
+
+          // Instant Realtime Broadcast to room
+          try {
+            const roomChannel = supabase.channel(`room_${targetSlug}`);
+            roomChannel.send({
+              type: 'broadcast',
+              event: 'order_update',
+              payload: newOrder,
+            });
+          } catch {}
+        }
         break;
       }
 
       case 'READY':
       case 'ORDER_READY': {
+        const targetSlug = (restaurantSlug || '').toLowerCase();
         const next = store.map((o) => {
-          const matchSlug = restaurantSlug ? o.restaurantSlug.toLowerCase() === restaurantSlug.toLowerCase() : true;
+          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
           const matchId = o.id === orderId || o.orderNumber === orderNumber;
           if (matchId && matchSlug) {
             updatedOrder = {
@@ -238,13 +341,36 @@ export async function POST(req: NextRequest) {
           return o;
         });
         setStore(next);
+
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({ status: 'ready', ready_at: nowIso })
+            .match({
+              order_number: orderNumber || updatedOrder?.orderNumber,
+              ...(targetSlug ? { restaurant_slug: targetSlug } : {}),
+            })
+            .then();
+
+          if (targetSlug && updatedOrder) {
+            try {
+              const roomChannel = supabase.channel(`room_${targetSlug}`);
+              roomChannel.send({
+                type: 'broadcast',
+                event: 'order_update',
+                payload: updatedOrder,
+              });
+            } catch {}
+          }
+        }
         break;
       }
 
       case 'REPING':
       case 'ORDER_REPING': {
+        const targetSlug = (restaurantSlug || '').toLowerCase();
         const next = store.map((o) => {
-          const matchSlug = restaurantSlug ? o.restaurantSlug.toLowerCase() === restaurantSlug.toLowerCase() : true;
+          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
           const matchId = o.id === orderId || o.orderNumber === orderNumber;
           if (matchId && matchSlug) {
             updatedOrder = {
@@ -257,13 +383,36 @@ export async function POST(req: NextRequest) {
           return o;
         });
         setStore(next);
+
+        if (isSupabaseConfigured() && supabase && updatedOrder) {
+          supabase
+            .from('orders_queue')
+            .update({ ping_count: updatedOrder.rePingCount, last_ping_at: nowIso })
+            .match({
+              order_number: orderNumber || updatedOrder.orderNumber,
+              ...(targetSlug ? { restaurant_slug: targetSlug } : {}),
+            })
+            .then();
+
+          if (targetSlug) {
+            try {
+              const roomChannel = supabase.channel(`room_${targetSlug}`);
+              roomChannel.send({
+                type: 'broadcast',
+                event: 'order_update',
+                payload: updatedOrder,
+              });
+            } catch {}
+          }
+        }
         break;
       }
 
       case 'COMPLETE':
       case 'ORDER_COMPLETED': {
+        const targetSlug = (restaurantSlug || '').toLowerCase();
         const next = store.map((o) => {
-          const matchSlug = restaurantSlug ? o.restaurantSlug.toLowerCase() === restaurantSlug.toLowerCase() : true;
+          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
           const matchId = o.id === orderId || o.orderNumber === orderNumber;
           if (matchId && matchSlug) {
             updatedOrder = {
@@ -276,24 +425,59 @@ export async function POST(req: NextRequest) {
           return o;
         });
         setStore(next);
+
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({ status: 'completed', completed_at: nowIso })
+            .match({
+              order_number: orderNumber || updatedOrder?.orderNumber,
+              ...(targetSlug ? { restaurant_slug: targetSlug } : {}),
+            })
+            .then();
+
+          if (targetSlug && updatedOrder) {
+            try {
+              const roomChannel = supabase.channel(`room_${targetSlug}`);
+              roomChannel.send({
+                type: 'broadcast',
+                event: 'order_update',
+                payload: updatedOrder,
+              });
+            } catch {}
+          }
+        }
         break;
       }
 
       case 'CANCEL':
       case 'ORDER_CANCELLED': {
+        const targetSlug = (restaurantSlug || '').toLowerCase();
         const next = store.filter((o) => {
-          const matchSlug = restaurantSlug ? o.restaurantSlug.toLowerCase() === restaurantSlug.toLowerCase() : true;
+          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
           const matchId = o.id === orderId || o.orderNumber === orderNumber;
           return !(matchId && matchSlug);
         });
         setStore(next);
+
+        if (isSupabaseConfigured() && supabase) {
+          supabase
+            .from('orders_queue')
+            .update({ status: 'cancelled' })
+            .match({
+              order_number: orderNumber,
+              ...(targetSlug ? { restaurant_slug: targetSlug } : {}),
+            })
+            .then();
+        }
         break;
       }
 
       case 'FEEDBACK':
       case 'ORDER_FEEDBACK': {
+        const targetSlug = (restaurantSlug || '').toLowerCase();
         const next = store.map((o) => {
-          const matchSlug = restaurantSlug ? o.restaurantSlug.toLowerCase() === restaurantSlug.toLowerCase() : true;
+          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
           const matchId = o.id === orderId || o.orderNumber === orderNumber;
           if (matchId && matchSlug) {
             updatedOrder = {
