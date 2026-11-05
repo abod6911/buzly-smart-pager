@@ -210,9 +210,6 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                                   <Clock className="w-3 h-3 text-zinc-400" />
                                   <span>{elapsed === 0 ? 'الآن' : `${elapsed} د`}</span>
                                 </span>
-                                <span className="text-[10px] text-zinc-400 font-mono tabular-nums">
-                                  ETA {order.estimatedMinutes}د
-                                </span>
                               </div>
                               {order.notes && (
                                 <p className="text-xs text-zinc-300 mt-1 line-clamp-1 font-normal">
@@ -325,7 +322,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] text-emerald-400 font-mono tabular-nums flex items-center gap-1">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                  <span>جاهز {readyElapsed === 0 ? 'الآن' : `منذ ${readyElapsed} د`}</span>
+                                  <span>{readyElapsed === 0 ? 'الآن' : `${readyElapsed} د`}</span>
                                 </span>
                                 {order.rePingCount > 0 && (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono tabular-nums flex items-center gap-0.5 border border-amber-500/20">

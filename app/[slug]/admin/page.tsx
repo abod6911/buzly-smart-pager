@@ -424,12 +424,9 @@ export default function TenantAdminBrandingPage() {
 
                   {/* 4-digit PIN */}
                   <div className="pt-2 border-t border-obsidian-border">
-                    <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    <label className="block text-xs font-semibold text-zinc-300 mb-2">
                       رمز الدخول السري للكاشير
                     </label>
-                    <p className="text-[11px] text-zinc-500 mb-2">
-                      يمنع فتح لوحة التحكم وأخذ الإجراءات لغير الموظفين المصرح لهم
-                    </p>
                     <input
                       type="text"
                       maxLength={4}
@@ -444,9 +441,6 @@ export default function TenantAdminBrandingPage() {
                     <div>
                       <span className="text-xs font-semibold text-zinc-200 block">
                         تفعيل خيار التنبيه عبر واتساب
-                      </span>
-                      <span className="text-[11px] text-zinc-500">
-                        إظهار زر مراسلة فورية للكاشير في حال تعذر إشعارات الويب لدى العميل
                       </span>
                     </div>
                     <input
@@ -464,8 +458,7 @@ export default function TenantAdminBrandingPage() {
                     <div className="flex items-center gap-2">
                       <Volume2 className="w-5 h-5 text-emerald-400" />
                       <div>
-                        <h3 className="text-base font-bold text-white">إعدادات شاشة التلفزيون والصوت (TV & Audio)</h3>
-                        <p className="text-xs text-zinc-400">التحكم في نغمات الرنين، النداء الصوتي، وتجربة الصوت للشاشة العامة</p>
+                        <h3 className="text-base font-bold text-white">إعدادات شاشة التلفزيون والصوت</h3>
                       </div>
                     </div>
                     <Link
@@ -481,7 +474,7 @@ export default function TenantAdminBrandingPage() {
                   {/* Chime Sound Theme Picker */}
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                      نغمة رنين الاستدعاء (Chime Theme)
+                      نغمة رنين الاستدعاء
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {CHIME_THEMES.map((theme) => {
@@ -505,7 +498,6 @@ export default function TenantAdminBrandingPage() {
                                 <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
                                 <span className="text-xs font-bold text-zinc-200">{theme.name}</span>
                               </div>
-                              <p className="text-[11px] text-zinc-500 mt-1 mr-4">{theme.desc}</p>
                             </div>
                             {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
                           </button>
@@ -518,10 +510,7 @@ export default function TenantAdminBrandingPage() {
                   <div className="pt-2 border-t border-obsidian-border flex items-center justify-between">
                     <div>
                       <span className="text-xs font-semibold text-zinc-200 block">
-                        النداء الصوتي الآلي باللغة العربية (Arabic Voice)
-                      </span>
-                      <span className="text-[11px] text-zinc-500">
-                        نطق رقم الطلب صوتياً باللغة العربية فور جاهزيته (&quot;طلب رقم 10 جاهز للاستلام&quot;)
+                        النداء الصوتي الآلي
                       </span>
                     </div>
                     <input

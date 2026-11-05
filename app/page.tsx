@@ -1,308 +1,181 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useQueue } from '@/context/QueueContext';
-import { soundManager } from '@/lib/audio';
+import { motion } from 'framer-motion';
 import { BrandLogo } from '@/components/BrandLogo';
 import {
-  Bell,
   Smartphone,
   Store,
-  Volume2,
+  Layers,
   Sparkles,
   ArrowLeft,
-  Radio,
-  CheckCircle2,
-  Clock,
-  Layers,
-  Zap,
   ExternalLink,
-  ShieldCheck,
-  Activity,
 } from 'lucide-react';
 
 export default function LandingRoleSwitcherPage() {
-  const { preparingOrders, readyOrders, resetToDemoOrders } = useQueue();
-  const [isPlayingTestSound, setIsPlayingTestSound] = useState<boolean>(false);
-
-  const handleTestChime = async () => {
-    setIsPlayingTestSound(true);
-    await soundManager.unlock();
-    soundManager.playHospitalityChime();
-    setTimeout(() => setIsPlayingTestSound(false), 2200);
-  };
-
   return (
-    <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
-      {/* Interactive Top Live Sync Demo Bar */}
-      <div className="bg-gradient-to-r from-emerald-950 via-obsidian-surface to-emerald-950 border-b border-emerald-500/20 px-4 py-2 text-xs">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span className="font-semibold text-emerald-400">
-              المزامنة المباشرة نشطة تلقائياً بين التبويبات (BroadcastChannel + LocalStorage)
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-zinc-400">
-            <span>
-              قيد التحضير: <strong className="text-buzly-amber">{preparingOrders.length}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              جاهز للاستلام: <strong className="text-emerald-400">{readyOrders.length}</strong>
-            </span>
-            <span>•</span>
-            <Link
-              href="/onboard"
-              className="text-emerald-400 hover:underline font-bold"
-            >
-              تسجيل متجر جديد
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black relative">
+      {/* Subtle Luxury Radial Spotlight */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[480px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/20 via-zinc-950/0 to-transparent pointer-events-none z-0" />
 
       {/* Main Navbar */}
-      <header className="border-b border-obsidian-border/80 px-4 sm:px-6 py-4 bg-obsidian-surface/60 backdrop-blur-md sticky top-0 z-30">
+      <header className="border-b border-white/[0.07] px-4 sm:px-6 py-3.5 bg-[#09090B]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <BrandLogo size="md" />
-            <div>
-              <span className="font-extrabold text-xl tracking-tight text-white font-mono">
-                CHIMER
-              </span>
-              <span className="text-[10px] block text-emerald-400 font-semibold -mt-1">
-                البيجر الذكي للمطاعم والكافيهات
-              </span>
-            </div>
-          </div>
+            <span className="font-extrabold text-xl tracking-tight text-white font-mono">
+              CHIMER
+            </span>
+          </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-3">
             <Link
-              href="/debug"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
-              title="فحص وصحة النظام والجوال"
+              href="/demo-cafe/staff"
+              className="text-xs text-zinc-300 hover:text-white px-3 py-1.5 font-medium transition-colors"
             >
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">فحص النظام والجوال</span>
+              دخول الكاشير
             </Link>
-
-            <button
-              onClick={handleTestChime}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                isPlayingTestSound
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-lg shadow-emerald-500/20'
-                  : 'bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border-obsidian-border'
-              }`}
-            >
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">{isPlayingTestSound ? 'جارِ الرنين' : 'تجربة صوت الجرس'}</span>
-            </button>
 
             <Link
               href="/onboard"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors shadow-sm"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>سجل مطعمك مجاناً</span>
+              سجّل مطعمك
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
-        <div className="text-center max-w-3xl mx-auto pt-4 pb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-bold mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>وداعاً للأجهزة البلاستيكية الضائعة والمكلفة</span>
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center relative z-10">
+        <div className="text-center max-w-3xl mx-auto pt-8 pb-10">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-emerald-400 text-xs font-medium mb-5">
+            <span>نظام استدعاء سحابي</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white font-cairo tracking-tight leading-tight sm:leading-tight">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight sm:leading-tight">
             نظام بيجر المطاعم الذكي
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
+            <span className="text-zinc-400">
               في متصفح جوال الزبون مباشرة
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-zinc-400 mt-4 leading-relaxed max-w-2xl mx-auto">
-            امسح الكود واستلم طلبك فور جاهزيته. رنين صوتي فاخر واهتزاز مستمر ينبه العميل حتى لو كان هاتفه في جيبه أو شاشته مغلقة.
+          <p className="text-sm sm:text-base text-zinc-400 mt-4 leading-relaxed max-w-xl mx-auto">
+            امسح الكود واستلم إشعارك فور جاهزية طلبك.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/onboard"
-              className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm shadow-xl shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all shadow-sm"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>أنشئ بيجر مطعمك الآن (30 ثانية)</span>
+              ابدأ الآن مجاناً
             </Link>
 
             <Link
               href="/demo-cafe/staff"
-              className="px-5 py-3.5 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-bold text-sm transition-all flex items-center gap-2"
+              className="px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-200 font-medium text-sm transition-all"
             >
-              <span>معاينة كاشير Demo Cafe</span>
-              <ArrowLeft className="w-4 h-4" />
+              معاينة مباشرة
             </Link>
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* MULTI-TENANT HERO ACTION TILES */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto w-full mb-12">
+        {/* 4 Feature Cards (Bento Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto w-full my-6">
           {/* Card 1: Staff Cashier Pad */}
-          <Link
-            href="/demo-cafe/staff"
-            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-emerald-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Store className="w-6 h-6" />
+          <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 350, damping: 25 }}>
+            <Link
+              href="/demo-cafe/staff"
+              className="h-full bg-[#111114] hover:bg-[#151519] border border-white/[0.07] hover:border-emerald-500/30 rounded-2xl p-5 transition-all flex flex-col justify-between block group"
+            >
+              <div>
+                <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <Store className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-bold text-white mb-6">
+                  شاشة الكاشير POS
+                </h2>
               </div>
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">
-                الكاشير (محمي برقم سري: 1234)
-              </span>
-              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-emerald-400 transition-colors">
-                شاشة الكاشير POS
-              </h2>
-              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                لوحة إدخال بالأرقام في ثانيتين، نداء فوري، تنبيه واتساب، وتوليد كود QR للطلب.
-              </p>
-            </div>
-            <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
-              <span>فتح الكاشير</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </div>
-          </Link>
+              <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-emerald-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                <span>فتح الكاشير</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          </motion.div>
 
           {/* Card 2: Kitchen TV Screen */}
-          <Link
-            href="/demo-cafe/tv"
-            target="_blank"
-            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-buzly-amber/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-buzly-amber/10 border border-buzly-amber/30 text-buzly-amber flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Layers className="w-6 h-6" />
+          <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 350, damping: 25 }}>
+            <Link
+              href="/demo-cafe/tv"
+              target="_blank"
+              className="h-full bg-[#111114] hover:bg-[#151519] border border-white/[0.07] hover:border-amber-500/30 rounded-2xl p-5 transition-all flex flex-col justify-between block group"
+            >
+              <div>
+                <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-amber-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-bold text-white mb-6">
+                  شاشة التلفاز التفاعلية
+                </h2>
               </div>
-              <span className="text-[10px] font-bold text-buzly-amber uppercase tracking-wider block mb-1">
-                شاشة الصالة والمطبخ
-              </span>
-              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-buzly-amber transition-colors">
-                شاشة التلفاز التفاعلية
-              </h2>
-              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                شاشة عريضة 16:9 بجودة فائقة تعرض أرقام التحضير وجاهزية الطلبات مع صوت جرس فندقي.
-              </p>
-            </div>
-            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-buzly-amber font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
-              <span>عرض شاشة التلفاز</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </div>
-          </Link>
+              <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-amber-400 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                <span>عرض شاشة التلفاز</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          </motion.div>
 
           {/* Card 3: Customer Tracker */}
-          <Link
-            href="/demo-cafe/track"
-            target="_blank"
-            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-teal-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Smartphone className="w-6 h-6" />
+          <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 350, damping: 25 }}>
+            <Link
+              href="/demo-cafe/track"
+              target="_blank"
+              className="h-full bg-[#111114] hover:bg-[#151519] border border-white/[0.07] hover:border-emerald-500/30 rounded-2xl p-5 transition-all flex flex-col justify-between block group"
+            >
+              <div>
+                <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-teal-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-bold text-white mb-6">
+                  شاشة بيجر العميل
+                </h2>
               </div>
-              <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider block mb-1">
-                جوال العميل والزبون
-              </span>
-              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-teal-400 transition-colors">
-                شاشة بيجر العميل
-              </h2>
-              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                تتبع العداد التنازلي، تحول الشاشة للأخضر مع رنين واهتزاز مستمر وإشعارات شاشة مقفلة.
-              </p>
-            </div>
-            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
-              <span>تجربة شاشة العميل</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </div>
-          </Link>
+              <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-emerald-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                <span>تجربة شاشة العميل</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          </motion.div>
 
           {/* Card 4: Settings & Analytics */}
-          <Link
-            href="/demo-cafe/admin"
-            className="group bg-obsidian-surface hover:bg-obsidian-surface/90 border-2 border-obsidian-border hover:border-purple-500/50 rounded-3xl p-6 transition-all shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-6 h-6" />
+          <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 350, damping: 25 }}>
+            <Link
+              href="/demo-cafe/admin"
+              className="h-full bg-[#111114] hover:bg-[#151519] border border-white/[0.07] hover:border-purple-500/30 rounded-2xl p-5 transition-all flex flex-col justify-between block group"
+            >
+              <div>
+                <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-purple-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-bold text-white mb-6">
+                  إدارة المتجر والطباعة
+                </h2>
               </div>
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block mb-1">
-                الهوية والطباعة والتحليلات
-              </span>
-              <h2 className="text-xl font-black text-white font-cairo mb-2 group-hover:text-purple-400 transition-colors">
-                إدارة المتجر والطباعة
-              </h2>
-              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                تخصيص الألوان والشعار، طباعة ستاند الطاولات A5، ومؤشرات أداء وسرعة تحضير المطبخ.
-              </p>
-            </div>
-            <div className="w-full py-2.5 px-4 rounded-xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-purple-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all">
-              <span>إعدادات المتجر والطباعة</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </div>
-          </Link>
-        </div>
-
-        {/* Interactive Testing Walkthrough */}
-        <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-6 sm:p-8 max-w-4xl mx-auto w-full shadow-xl">
-          <div className="flex items-center gap-2.5 mb-4">
-            <Zap className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-bold text-lg text-white font-cairo">
-              كيف تختبر المزامنة الفورية الآن خلال 10 ثوانٍ؟
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="bg-obsidian-card border border-obsidian-border rounded-2xl p-4">
-              <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold flex items-center justify-center mb-2">
-                1
-              </span>
-              <h4 className="font-bold text-white mb-1">افتح شاشة الكاشير</h4>
-              <p className="text-zinc-400">
-                افتح <Link href="/staff" target="_blank" className="text-emerald-400 underline">شاشة الكاشير في تبويب منفصل</Link>.
-              </p>
-            </div>
-
-            <div className="bg-obsidian-card border border-obsidian-border rounded-2xl p-4">
-              <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold flex items-center justify-center mb-2">
-                2
-              </span>
-              <h4 className="font-bold text-white mb-1">افتح شاشة تتبع الطلب #104</h4>
-              <p className="text-zinc-400">
-                افتح <Link href="/track/104" target="_blank" className="text-emerald-400 underline">شاشة تتبع الطلب #104</Link> واضغط "تفعيل جرس التنبيه".
-              </p>
-            </div>
-
-            <div className="bg-obsidian-card border border-obsidian-border rounded-2xl p-4">
-              <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold flex items-center justify-center mb-2">
-                3
-              </span>
-              <h4 className="font-bold text-white mb-1">اضغط "نداء العميل"</h4>
-              <p className="text-zinc-400">
-                من شاشة الكاشير اضغط <strong>نداء العميل</strong> وراقب شاشة الزبون ترن وتهتز فوراً!
-              </p>
-            </div>
-          </div>
+              <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-purple-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                <span>إعدادات المتجر والطباعة</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          </motion.div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-obsidian-border/80 px-4 py-6 text-center text-xs text-zinc-500 mt-auto">
-        <p>Chimer Smart Restaurant Pager © 2026 - نظام الاستدعاء والبيجر الذكي للمطاعم</p>
+      {/* Minimal Luxury Footer */}
+      <footer className="border-t border-white/[0.07] px-4 py-6 text-center text-xs text-zinc-500 mt-auto">
+        <p>Chimer Smart Restaurant Pager © 2026</p>
       </footer>
     </div>
   );

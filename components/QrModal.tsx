@@ -194,30 +194,21 @@ export const QrModal: React.FC<QrModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={orderNumber ? `باركود تتبع الطلب #${orderNumber}` : 'رمز الكاونتر الموحد'}
-      subtitle="امسح الباركود بكاميرا الجوال لمتابعة جاهزية الطلب"
       maxWidth="max-w-md"
     >
       <div className="space-y-4 text-center">
         {/* Localhost Warning Notice */}
         {isLocalhost && (
-          <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3 text-right">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-right">
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-amber-300">
-                  تنبيه: الرابط يعتمد على localhost
+                  تنبيه: الرابط محلي
                 </p>
-                <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
-                  كاميرا الجوال لن تستطيع فتح هذا الرابط لأنه محلي على لابتوبك فقط. اضغط على خيارات الشبكة بالأسفل واختر رابط الواي فاي أو رابط فيرسيل.
+                <p className="text-[11px] text-zinc-300 mt-0.5 leading-relaxed">
+                  اختر &quot;الرابط السحابي&quot; أو &quot;الشبكة المحلية&quot; لفتح الباركود من الجوال.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowOverrideSettings(true)}
-                  className="mt-2 text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline flex items-center gap-1"
-                >
-                  <SlidersHorizontal className="w-3 h-3" />
-                  <span>تعديل رابط الباركود ليعمل على الجوال</span>
-                </button>
               </div>
             </div>
           </div>
@@ -232,7 +223,7 @@ export const QrModal: React.FC<QrModalProps> = ({
           >
             <SlidersHorizontal className="w-3 h-3 text-emerald-400" />
             <span>
-              {showOverrideSettings ? 'إخفاء إعدادات الشبكة' : 'تغيير رابط الباركود (IP الشبكة / Vercel)'}
+              {showOverrideSettings ? 'إخفاء الإعدادات' : 'إعدادات الشبكة'}
             </span>
           </button>
 
@@ -250,7 +241,7 @@ export const QrModal: React.FC<QrModalProps> = ({
                   className="text-[10px] font-mono flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.06] transition-colors"
                 >
                   <Wifi className="w-3 h-3 text-emerald-400" />
-                  <span>شبكة Wi-Fi ({KNOWN_WIFI_IP.replace('http://', '')})</span>
+                  <span>الشبكة المحلية</span>
                 </button>
                 <button
                   type="button"
@@ -258,14 +249,14 @@ export const QrModal: React.FC<QrModalProps> = ({
                   className="text-[10px] font-mono flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.06] transition-colors"
                 >
                   <Cloud className="w-3 h-3 text-sky-400" />
-                  <span>سحابة Vercel</span>
+                  <span>الرابط السحابي</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleResetToOrigin}
                   className="text-[10px] font-mono px-2 py-1.5 rounded-lg bg-transparent hover:bg-white/[0.05] text-zinc-400 transition-colors"
                 >
-                  استعادة الافتراضي
+                  الافتراضي
                 </button>
               </div>
 

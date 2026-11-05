@@ -195,9 +195,6 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           <span className="text-xs font-semibold text-zinc-300">
             إدخال رقم الطلب
           </span>
-          <span className="text-[11px] font-mono text-zinc-500 bg-white/[0.03] px-2 py-0.5 rounded border border-white/[0.06]">
-            لوحة سريعة
-          </span>
         </div>
 
         {/* Subtle Success Toast / Badge */}

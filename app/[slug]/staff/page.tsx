@@ -185,9 +185,6 @@ export default function TenantStaffCashierPage() {
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-zinc-500 font-mono">
-                    /{restaurant?.slug || slug}
-                  </span>
                 </div>
               </Link>
             </div>
@@ -354,13 +351,13 @@ export default function TenantStaffCashierPage() {
                       className="text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 transition-colors font-medium text-xs"
                     >
                       <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>إضافة رقم جوال الزبون لتنبيه الواتساب (اختياري)</span>
+                      <span>إضافة رقم جوال لتنبيه واتساب</span>
                     </button>
                   ) : (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-zinc-300 font-medium">
-                          رقم جوال العميل (واتساب):
+                          رقم جوال العميل:
                         </span>
                         <button
                           type="button"

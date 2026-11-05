@@ -241,7 +241,6 @@ export default function KitchenAnalyticsPage() {
                       <TrendingUp className="w-3 h-3" /> نشط
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-1.5">تشمل النشطة والمكتملة</p>
                 </div>
 
                 {/* KPI 2 */}
@@ -258,7 +257,6 @@ export default function KitchenAnalyticsPage() {
                     </span>
                     <Clock className="w-4 h-4 text-zinc-500" />
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-1.5">من تسجيل الطلب إلى الجاهزية</p>
                 </div>
 
                 {/* KPI 3 */}
@@ -275,7 +273,6 @@ export default function KitchenAnalyticsPage() {
                     </span>
                     <Zap className="w-4 h-4 text-emerald-400/80" />
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-1.5">من نداء الجرس إلى استلام الوجبة</p>
                 </div>
 
                 {/* KPI 4 */}
@@ -289,9 +286,6 @@ export default function KitchenAnalyticsPage() {
                     </span>
                     <Layers className="w-4 h-4 text-zinc-500" />
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-1.5 font-mono tabular-nums">
-                    {analytics.preparingCount} تحضير • {analytics.readyCount} جاهز
-                  </p>
                 </div>
               </div>
 
@@ -301,7 +295,7 @@ export default function KitchenAnalyticsPage() {
                   <div>
                     <h3 className="font-semibold text-sm text-white flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-emerald-400" />
-                      <span>توزيع أوقات الذروة حسب ساعات اليوم (0 - 23)</span>
+                      <span>توزيع أوقات الذروة حسب ساعات اليوم</span>
                     </h3>
                     <p className="text-xs text-zinc-400 mt-0.5">
                       {analytics.peakHour !== null ? (
