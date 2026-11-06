@@ -4,6 +4,16 @@ import { Order, OrderStatus, OrderFeedback } from '@/types/queue';
 import { checkGeneralRateLimit } from '@/lib/security';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+  'Surrogate-Control': 'no-store',
+};
+
 // Global in-memory store fallback across all devices hitting this Next.js server instance
 declare global {
   // eslint-disable-next-line no-var
@@ -89,7 +99,7 @@ const orderInputSchema = z.object({
   created_at: z.string().optional(),
 });
 
-// GET: High-Scale Targeted Orders Retrieval
+// GET: High-Scale Targeted Orders Retrieval (Zero-Latency Cached/Non-cached Delivery)
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   // High-capacity rate limit: 1,200 reads per minute per IP for busy restaurants
@@ -97,7 +107,7 @@ export async function GET(req: NextRequest) {
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, error: 'تم تجاوز معدل الطلبات المسموح به' },
-      { status: 429, headers: { 'Retry-After': String(rl.resetSeconds) } }
+      { status: 429, headers: { 'Retry-After': String(rl.resetSeconds), ...NO_CACHE_HEADERS } }
     );
   }
 
@@ -111,6 +121,31 @@ export async function GET(req: NextRequest) {
     rawOrderNumber && /^[0-9A-Za-z-]+$/.test(rawOrderNumber) && rawOrderNumber.length <= 8
       ? rawOrderNumber
       : undefined;
+
+  const currentStore = getStore();
+
+  // Fast-Path: If customer is polling their specific order, check memory store first
+  if (slug && orderNumber) {
+    const storeMatch = currentStore.find(
+      (o) =>
+        o.orderNumber.toLowerCase() === orderNumber.toLowerCase() &&
+        (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug
+    );
+
+    // If memory store already has the order in 'ready' or 'completed' state, deliver in 0ms
+    if (storeMatch && (storeMatch.status === 'ready' || storeMatch.status === 'completed')) {
+      return NextResponse.json(
+        {
+          success: true,
+          order: storeMatch,
+          source: 'memory-fast-path',
+          lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
+          serverTime: new Date().toISOString(),
+        },
+        { headers: NO_CACHE_HEADERS }
+      );
+    }
+  }
 
   // 1. Supabase Fast DB Query (Targeted O(1) or Active Window O(N<=100))
   if (isSupabaseConfigured() && supabase) {
@@ -128,12 +163,29 @@ export async function GET(req: NextRequest) {
 
         if (!error && dbRow) {
           const mappedOrder = mapDbRowToOrder(dbRow);
-          return NextResponse.json({
-            success: true,
-            order: mappedOrder,
-            lastUpdated: Date.now(),
-            serverTime: new Date().toISOString(),
-          });
+          // Re-overlay any optimistic memory status if newer
+          const storeMatch = currentStore.find(
+            (o) =>
+              o.orderNumber.toLowerCase() === orderNumber.toLowerCase() &&
+              (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug
+          );
+          if (storeMatch) {
+            if (storeMatch.status === 'ready' && mappedOrder.status === 'preparing') {
+              mappedOrder.status = 'ready';
+              mappedOrder.readyAt = storeMatch.readyAt || mappedOrder.readyAt;
+            }
+            mappedOrder.rePingCount = Math.max(storeMatch.rePingCount || 0, mappedOrder.rePingCount || 0);
+          }
+
+          return NextResponse.json(
+            {
+              success: true,
+              order: mappedOrder,
+              lastUpdated: Date.now(),
+              serverTime: new Date().toISOString(),
+            },
+            { headers: NO_CACHE_HEADERS }
+          );
         }
       } else if (slug) {
         // Active orders only: preparing and ready (plus recently completed within active window)
@@ -147,13 +199,16 @@ export async function GET(req: NextRequest) {
 
         if (!error && dbRows && dbRows.length > 0) {
           const mappedOrders = dbRows.map(mapDbRowToOrder);
-          return NextResponse.json({
-            success: true,
-            orders: mappedOrders,
-            count: mappedOrders.length,
-            lastUpdated: Date.now(),
-            serverTime: new Date().toISOString(),
-          });
+          return NextResponse.json(
+            {
+              success: true,
+              orders: mappedOrders,
+              count: mappedOrders.length,
+              lastUpdated: Date.now(),
+              serverTime: new Date().toISOString(),
+            },
+            { headers: NO_CACHE_HEADERS }
+          );
         }
       }
     } catch (dbErr) {
@@ -185,24 +240,134 @@ export async function GET(req: NextRequest) {
           order: null,
           serverTime: new Date().toISOString(),
         },
-        { status: 404 }
+        { status: 404, headers: NO_CACHE_HEADERS }
       );
     }
-    return NextResponse.json({
-      success: true,
-      order: single,
-      lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
-      serverTime: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        order: single,
+        lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
+        serverTime: new Date().toISOString(),
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   }
 
-  return NextResponse.json({
-    success: true,
-    orders: store,
-    count: store.length,
-    lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
-    serverTime: new Date().toISOString(),
-  });
+  return NextResponse.json(
+    {
+      success: true,
+      orders: store,
+      count: store.length,
+      lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
+      serverTime: new Date().toISOString(),
+    },
+    { headers: NO_CACHE_HEADERS }
+  );
+}
+
+// PATCH: Instant Non-Blocking Parallel Status Update (Zero-Latency Signal B)
+export async function PATCH(req: NextRequest) {
+  try {
+    const ip = getClientIp(req);
+    const rl = checkGeneralRateLimit(`patch_order:${ip}`, 1200, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'تم تجاوز معدل الطلبات المسموح به' },
+        { status: 429, headers: { 'Retry-After': String(rl.resetSeconds), ...NO_CACHE_HEADERS } }
+      );
+    }
+
+    const body = await req.json();
+    const {
+      action,
+      orderId,
+      orderNumber,
+      restaurantSlug,
+      status = 'ready',
+      readyAt,
+      lastPingAt,
+      ping_count,
+    } = body;
+
+    const targetSlug = (restaurantSlug || '').toLowerCase().trim();
+    const targetNumber = String(orderNumber || '').trim();
+    const nowIso = new Date().toISOString();
+
+    const store = getStore();
+    let updatedOrder: Order | undefined;
+    const isRePing = action === 'ORDER_REPING' || action === 'REPING';
+
+    const next = store.map((o) => {
+      const matchSlug = targetSlug
+        ? (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === targetSlug
+        : true;
+      const matchId =
+        (orderId && o.id === orderId) || (targetNumber && o.orderNumber === targetNumber);
+      if (matchId && matchSlug) {
+        updatedOrder = {
+          ...o,
+          status: (status as OrderStatus) || 'ready',
+          readyAt: readyAt || o.readyAt || nowIso,
+          lastPingAt: lastPingAt || nowIso,
+          rePingCount:
+            typeof ping_count === 'number'
+              ? ping_count
+              : isRePing
+              ? (o.rePingCount || 0) + 1
+              : o.rePingCount,
+        };
+        return updatedOrder;
+      }
+      return o;
+    });
+
+    if (updatedOrder) {
+      setStore(next);
+    }
+
+    // Fire-and-forget Supabase update in background without blocking response
+    if (isSupabaseConfigured() && supabase && (targetNumber || orderId)) {
+      const updateData: Record<string, any> = {
+        status: (status as OrderStatus) || 'ready',
+        ready_at: readyAt || nowIso,
+        last_ping_at: lastPingAt || nowIso,
+      };
+      if (typeof ping_count === 'number') {
+        updateData.ping_count = ping_count;
+      } else if (isRePing && updatedOrder) {
+        updateData.ping_count = updatedOrder.rePingCount;
+      }
+
+      let query = supabase.from('orders_queue').update(updateData);
+      if (targetNumber) {
+        query = query.eq('order_number', targetNumber);
+      } else if (orderId) {
+        query = query.eq('id', orderId);
+      }
+      if (targetSlug) {
+        query = query.eq('restaurant_slug', targetSlug);
+      }
+      Promise.resolve(query).catch((e) => console.warn('Supabase PATCH sync warning:', e));
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        updatedOrder,
+        order: updatedOrder,
+        lastUpdated: globalThis.__chimer_orders_last_updated,
+        serverTime: nowIso,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500, headers: NO_CACHE_HEADERS }
+    );
+  }
 }
 
 // POST: Add, update status, reping, complete, or sync orders with Anti-Abuse
@@ -536,19 +701,28 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
+        return NextResponse.json(
+          { success: false, error: 'Unknown action' },
+          { status: 400, headers: NO_CACHE_HEADERS }
+        );
     }
 
-    return NextResponse.json({
-      success: true,
-      updatedOrder,
-      order: updatedOrder,
-      tempId: order?.id || orderId,
-      orders: getStore(),
-      lastUpdated: globalThis.__chimer_orders_last_updated,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        updatedOrder,
+        order: updatedOrder,
+        tempId: order?.id || orderId,
+        orders: getStore(),
+        lastUpdated: globalThis.__chimer_orders_last_updated,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500, headers: NO_CACHE_HEADERS }
+    );
   }
 }

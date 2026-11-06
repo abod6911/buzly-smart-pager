@@ -51,7 +51,15 @@ export default function TenantStaffCashierPage() {
     restoreOrder,
     archiveCompletedOrders,
     networkStatus,
+    warmupLiveChannel,
   } = useQueue();
+
+  // Persistent Pre-Warming of Supabase Realtime Broadcast Channel on Cashier mount
+  useEffect(() => {
+    if (slug && warmupLiveChannel) {
+      warmupLiveChannel(slug);
+    }
+  }, [slug, warmupLiveChannel]);
 
   const restaurant = getRestaurant(slug);
   const tenantOrders = getOrdersForRestaurant(slug) || [];

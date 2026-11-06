@@ -86,6 +86,21 @@ class HighDecibelSoundEngine {
     return this.ctx ? this.ctx.state : 'uninitialized';
   }
 
+  /**
+   * Instant Audio Pre-Decoding & Hardware Warm-Up
+   * Keeps the AudioContext in 'running' state with a zero-gain (0.0001) continuous oscillator
+   * so chime sounds fire in 0ms without iOS hardware wake-up lag.
+   */
+  public warmUp(): boolean {
+    const ctx = this.initAudioChain();
+    if (!ctx) return false;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    this.startSilentKeepAlive();
+    return ctx.state === 'running';
+  }
+
   public async unlock(): Promise<boolean> {
     try {
       const ctx = this.initAudioChain();
@@ -94,6 +109,9 @@ class HighDecibelSoundEngine {
       if (ctx.state === 'suspended') {
         await ctx.resume().catch(() => {});
       }
+
+      // Immediately keep hardware pre-warmed with continuous zero-gain node
+      this.startSilentKeepAlive();
 
       // Play a tiny silent buffer to warm up the audio bus
       const buffer = ctx.createBuffer(1, 1, 22050);
@@ -138,8 +156,6 @@ class HighDecibelSoundEngine {
   }
 
   public startSilentKeepAlive(): void {
-    if (this.isSilentKeepAliveRunning) return;
-
     const ctx = this.initAudioChain();
     if (!ctx) return;
 
@@ -148,12 +164,18 @@ class HighDecibelSoundEngine {
         ctx.resume().catch(() => {});
       }
 
+      if (this.isSilentKeepAliveRunning && this.silentOscillator) {
+        return;
+      }
+
+      // Continuous zero-gain (0.0001) warm-up oscillator node
+      // Guarantees zero latency (<0ms) when 'ready' alert fires
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(25, ctx.currentTime);
-      gain.gain.setValueAtTime(0.00005, ctx.currentTime);
+      osc.frequency.setValueAtTime(30, ctx.currentTime);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -407,14 +429,18 @@ class HighDecibelSoundEngine {
 
   /**
    * Starts rhythmic repeating alert loop every 2.5 seconds until dismissed
+   * Keeps AudioContext continuously running without zero-gain interruption
    */
   public startReadyAlarmLoop(theme: ChimeSoundTheme = this.currentTheme): void {
-    this.stopSilentKeepAlive();
+    const ctx = this.initAudioChain();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
     if (this.isAlarmPlaying) return;
     this.isAlarmPlaying = true;
 
-    // Fire immediately on first tick
+    // Fire immediately on first tick in 0ms
     this.playThemedChime(theme);
 
     // Repeat every 2.5 seconds

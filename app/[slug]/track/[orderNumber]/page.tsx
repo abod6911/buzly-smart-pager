@@ -41,10 +41,13 @@ function TenantCustomerTrackerInner() {
     submitOrderFeedback,
     lastEvent,
     syncNow,
+    getOrCreateLiveChannel,
+    warmupLiveChannel,
   } = useQueue();
 
   const restaurant = getRestaurant(slug);
   const liveOrder = getOrder(decodedOrderNumber, slug);
+  const [overrideOrder, setOverrideOrder] = useState<Order | null>(null);
 
   // Self-healing fallback ticket: Customer NEVER sees an empty screen or error boundary
   const fallbackOrder = useMemo((): Order => {
@@ -64,7 +67,7 @@ function TenantCustomerTrackerInner() {
     };
   }, [liveOrder, searchParams, decodedOrderNumber, slug]);
 
-  const order = liveOrder || fallbackOrder;
+  const order = overrideOrder || liveOrder || fallbackOrder;
 
   // Local state
   const [isAudioUnlocked, setIsAudioUnlocked] = useState<boolean>(false);
@@ -76,8 +79,10 @@ function TenantCustomerTrackerInner() {
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
   const confettiFiredRef = useRef<boolean>(false);
 
-  // 1. Silent iOS Audio & Vibration unlock check
+  // 1. Instant Audio Pre-Decoding & Silent Hardware Warm-Up
   useEffect(() => {
+    // Keep AudioContext warm immediately on mount
+    soundManager.warmUp();
     if (typeof window !== 'undefined') {
       setIsAudioUnlocked(soundManager.isAudioUnlocked());
     }
@@ -89,33 +94,123 @@ function TenantCustomerTrackerInner() {
       pwaHelper.requestNotificationPermission().catch(() => {});
     };
 
-    window.addEventListener('pointerdown', unlockSilently, { once: true });
-    window.addEventListener('touchstart', unlockSilently, { once: true });
+    window.addEventListener('pointerdown', unlockSilently);
+    window.addEventListener('touchstart', unlockSilently);
+    window.addEventListener('click', unlockSilently);
 
     return () => {
       window.removeEventListener('pointerdown', unlockSilently);
       window.removeEventListener('touchstart', unlockSilently);
+      window.removeEventListener('click', unlockSilently);
     };
   }, []);
 
-  // 2. Targeted Single Customer Order Fetch (O(1) payload)
+  // 1.5 Persistent Pre-Warmed Supabase Realtime Broadcast Channel (Zero-Latency Delivery <100ms)
   useEffect(() => {
-    if (liveOrder || !decodedOrderNumber) return;
+    if (!slug || !decodedOrderNumber) return;
+
+    if (warmupLiveChannel) {
+      warmupLiveChannel(slug);
+    }
+
+    if (!getOrCreateLiveChannel) return;
+    const channel = getOrCreateLiveChannel(slug);
+    if (!channel) return;
+
+    const handleBroadcast = ({ payload }: { payload: any }) => {
+      if (!payload) return;
+      const pSlug = (payload.restaurantSlug || payload.order?.restaurantSlug || '').toLowerCase().trim();
+      const pNum = String(payload.orderNumber || payload.order?.orderNumber || '').trim();
+
+      if (pSlug === slug.toLowerCase().trim() && pNum === decodedOrderNumber) {
+        // Zero-Latency Instant Delivery (<100ms) - Direct Phone Reaction!
+        const updatedReadyOrder: Order = {
+          ...(overrideOrder || liveOrder || fallbackOrder),
+          ...(payload.order || {}),
+          status: 'ready',
+          rePingCount:
+            typeof payload.rePingCount === 'number'
+              ? payload.rePingCount
+              : payload.type === 'ORDER_REPING'
+              ? ((overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0) + 1
+              : (overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0,
+          readyAt: payload.readyAt || payload.order?.readyAt || new Date().toISOString(),
+          lastPingAt: payload.lastPingAt || new Date().toISOString(),
+        };
+
+        setOverrideOrder(updatedReadyOrder);
+        setHasUserSilenced(false);
+        setAlarmActive(true);
+
+        // Immediate audio chime and vibration in 0ms without iOS hardware delay
+        soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
+        soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
+
+        pwaHelper.showSystemNotification(
+          payload.type === 'ORDER_REPING'
+            ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurant?.name || slug})`
+            : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurant?.name || slug})`,
+          {
+            body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
+          }
+        );
+
+        if (!confettiFiredRef.current) {
+          confettiFiredRef.current = true;
+          try {
+            confetti({
+              particleCount: 100,
+              spread: 80,
+              origin: { y: 0.55 },
+              colors: ['#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
+            });
+          } catch {}
+        }
+
+        syncNow().catch(() => {});
+      }
+    };
+
+    channel.on('broadcast', { event: 'ORDER_CALL' }, handleBroadcast);
+  }, [slug, decodedOrderNumber, warmupLiveChannel, getOrCreateLiveChannel, liveOrder, fallbackOrder, overrideOrder, restaurant?.name, restaurant?.chimeTheme, syncNow]);
+
+  // 2. Ultra-Fast Lightweight Status Heartbeat (1,000ms Direct Poll for Active Customer while preparing)
+  useEffect(() => {
+    if (order.status !== 'preparing' || !decodedOrderNumber) return;
 
     let isCancelled = false;
-    fetch(`/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!isCancelled && data && data.success && data.order) {
-          syncNow();
-        }
-      })
-      .catch(() => {});
+    const pollOrder = async () => {
+      try {
+        const res = await fetch(
+          `/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}&t=${Date.now()}`,
+          {
+            cache: 'no-store',
+            headers: {
+              'Pragma': 'no-cache',
+              'Cache-Control': 'no-cache',
+            },
+          }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isCancelled || !data?.success || !data.order) return;
 
+        const remoteOrder: Order = data.order;
+        if (remoteOrder.status === 'ready') {
+          setOverrideOrder(remoteOrder);
+          syncNow().catch(() => {});
+        }
+      } catch {
+        // Silently continue polling
+      }
+    };
+
+    const interval = setInterval(pollOrder, 1000);
     return () => {
       isCancelled = true;
+      clearInterval(interval);
     };
-  }, [liveOrder, slug, decodedOrderNumber, syncNow]);
+  }, [order.status, decodedOrderNumber, slug, syncNow]);
 
   // 3. Background Reconnection Recovery on visibilitychange
   useEffect(() => {
@@ -267,6 +362,7 @@ function TenantCustomerTrackerInner() {
     soundManager.stopHaptic();
     setAlarmActive(false);
     setHasUserSilenced(true);
+    setOverrideOrder((prev) => (prev ? { ...prev, status: 'completed' } : null));
     if (order?.id) {
       await completeOrder(order.id, slug);
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { StaffNumpad } from '@/components/StaffNumpad';
@@ -33,7 +33,15 @@ export default function StaffCashierPage() {
     clearQueue,
     isSupabaseActive,
     getActiveOrder,
+    warmupLiveChannel,
   } = useQueue();
+
+  // Persistent Pre-Warming of Supabase Realtime Broadcast Channel on Cashier mount
+  useEffect(() => {
+    if (warmupLiveChannel) {
+      warmupLiveChannel('demo-cafe');
+    }
+  }, [warmupLiveChannel]);
 
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | undefined>(undefined);
