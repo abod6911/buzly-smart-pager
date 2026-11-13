@@ -142,6 +142,10 @@ class PwaHelper {
     }
   }
 
+  public async requestWakeLock(): Promise<boolean> {
+    return this.acquireWakeLock();
+  }
+
   public releaseWakeLock(): void {
     if (this.wakeLockSentinel) {
       this.wakeLockSentinel.release().catch(() => {});

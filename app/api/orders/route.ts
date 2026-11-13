@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Order, OrderStatus, OrderFeedback } from '@/types/queue';
 import { checkGeneralRateLimit } from '@/lib/security';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { broadcastSSEOrderEvent } from '@/lib/sse-broker';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -229,9 +230,14 @@ export async function GET(req: NextRequest) {
   }
 
   if (orderNumber) {
-    const single = store.find(
+    let single = store.find(
       (o) => o.orderNumber.toLowerCase() === orderNumber.toLowerCase()
     );
+    if (!single) {
+      single = getStore().find(
+        (o) => o.orderNumber.toLowerCase() === orderNumber.toLowerCase()
+      );
+    }
     if (!single) {
       return NextResponse.json(
         {
@@ -324,6 +330,19 @@ export async function PATCH(req: NextRequest) {
 
     if (updatedOrder) {
       setStore(next);
+      try {
+        broadcastSSEOrderEvent({
+          type: isRePing ? 'ORDER_REPING' : 'ORDER_READY',
+          restaurantSlug: updatedOrder.restaurantSlug || updatedOrder.restaurant_slug || targetSlug || 'demo-cafe',
+          orderNumber: updatedOrder.orderNumber,
+          orderId: updatedOrder.id,
+          order: updatedOrder,
+          status: updatedOrder.status,
+          timestamp: Date.now(),
+        });
+      } catch (sseErr) {
+        console.warn('SSE broadcast warning in PATCH:', sseErr);
+      }
     }
 
     // Fire-and-forget Supabase update in background without blocking response
@@ -459,6 +478,18 @@ export async function POST(req: NextRequest) {
         setStore(next);
         updatedOrder = newOrder;
 
+        try {
+          broadcastSSEOrderEvent({
+            type: 'ORDER_ADDED',
+            restaurantSlug: targetSlug || 'demo-cafe',
+            orderNumber: newOrder.orderNumber,
+            orderId: newOrder.id,
+            order: newOrder,
+            status: newOrder.status,
+            timestamp: Date.now(),
+          });
+        } catch {}
+
         // Persist to Supabase if active
         if (isSupabaseConfigured() && supabase) {
           supabase
@@ -507,6 +538,20 @@ export async function POST(req: NextRequest) {
         });
         setStore(next);
 
+        if (updatedOrder) {
+          try {
+            broadcastSSEOrderEvent({
+              type: 'ORDER_READY',
+              restaurantSlug: updatedOrder.restaurantSlug || updatedOrder.restaurant_slug || targetSlug || 'demo-cafe',
+              orderNumber: updatedOrder.orderNumber,
+              orderId: updatedOrder.id,
+              order: updatedOrder,
+              status: 'ready',
+              timestamp: Date.now(),
+            });
+          } catch {}
+        }
+
         if (isSupabaseConfigured() && supabase) {
           supabase
             .from('orders_queue')
@@ -548,6 +593,20 @@ export async function POST(req: NextRequest) {
           return o;
         });
         setStore(next);
+
+        if (updatedOrder) {
+          try {
+            broadcastSSEOrderEvent({
+              type: 'ORDER_REPING',
+              restaurantSlug: updatedOrder.restaurantSlug || updatedOrder.restaurant_slug || targetSlug || 'demo-cafe',
+              orderNumber: updatedOrder.orderNumber,
+              orderId: updatedOrder.id,
+              order: updatedOrder,
+              status: updatedOrder.status,
+              timestamp: Date.now(),
+            });
+          } catch {}
+        }
 
         if (isSupabaseConfigured() && supabase && updatedOrder) {
           supabase
@@ -591,6 +650,20 @@ export async function POST(req: NextRequest) {
         });
         setStore(next);
 
+        if (updatedOrder) {
+          try {
+            broadcastSSEOrderEvent({
+              type: 'ORDER_COMPLETED',
+              restaurantSlug: updatedOrder.restaurantSlug || updatedOrder.restaurant_slug || targetSlug || 'demo-cafe',
+              orderNumber: updatedOrder.orderNumber,
+              orderId: updatedOrder.id,
+              order: updatedOrder,
+              status: 'completed',
+              timestamp: Date.now(),
+            });
+          } catch {}
+        }
+
         if (isSupabaseConfigured() && supabase) {
           supabase
             .from('orders_queue')
@@ -624,6 +697,17 @@ export async function POST(req: NextRequest) {
           return !(matchId && matchSlug);
         });
         setStore(next);
+
+        try {
+          broadcastSSEOrderEvent({
+            type: 'ORDER_CANCELLED',
+            restaurantSlug: targetSlug || 'demo-cafe',
+            orderNumber: orderNumber || '',
+            orderId: orderId,
+            status: 'cancelled',
+            timestamp: Date.now(),
+          });
+        } catch {}
 
         if (isSupabaseConfigured() && supabase) {
           supabase

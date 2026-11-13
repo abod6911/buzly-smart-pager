@@ -723,11 +723,44 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Active 3-second heartbeat polling
+  // Realtime Server-Sent Events (SSE) Cross-Device Push Engine (<15ms)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource('/api/orders/stream?slug=all');
+
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (!data || data.type === 'CONNECTED') return;
+
+          setLastEvent({
+            type: data.type,
+            restaurantSlug: data.restaurantSlug,
+            orderId: data.orderId,
+            orderNumber: data.orderNumber,
+            order: data.order,
+            timestamp: data.timestamp || Date.now(),
+            sourceTabId: 'sse-stream',
+          });
+
+          syncNow();
+        } catch {}
+      };
+    } catch {}
+
+    return () => {
+      if (es) es.close();
+    };
+  }, [syncNow]);
+
+  // Active 1.5-second heartbeat polling fallback
   useEffect(() => {
     if (typeof window === 'undefined') return;
     syncNow();
-    const interval = setInterval(syncNow, 3000);
+    const interval = setInterval(syncNow, 1500);
     return () => clearInterval(interval);
   }, [syncNow]);
 

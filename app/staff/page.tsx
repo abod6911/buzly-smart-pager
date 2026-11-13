@@ -226,8 +226,8 @@ export default function StaffCashierPage() {
             <StaffQueueGrid
               preparingOrders={preparingOrders}
               readyOrders={readyOrders}
-              onMarkReady={markReady}
-              onRePing={rePing}
+              onMarkReady={(id) => markReady(id, 'demo-cafe')}
+              onRePing={(id) => rePing(id, 'demo-cafe')}
               onComplete={completeOrder}
               onCancel={cancelOrder}
               onOpenQr={handleOpenQr}

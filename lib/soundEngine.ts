@@ -460,6 +460,10 @@ class HighDecibelSoundEngine {
     this.stopHaptic();
   }
 
+  public stopAlarmLoop(): void {
+    this.stopReadyAlarm();
+  }
+
   public getIsAlarmPlaying(): boolean {
     return this.isAlarmPlaying;
   }
