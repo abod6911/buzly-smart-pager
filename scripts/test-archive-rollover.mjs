@@ -2,7 +2,7 @@ import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
 
-const BASE_URL = 'http://127.0.0.1:3044';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:3044';
 const SLUG = 'demo-cafe';
 
 async function runArchiveTests() {
