@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
-  checkPinLockout,
-  recordPinFailure,
-  recordPinSuccess,
+  checkSuperAdminLockout,
+  recordSuperAdminFailure,
+  recordSuperAdminSuccess,
   createSuperAdminToken,
   verifySuperAdminToken,
   SUPER_ADMIN_COOKIE_NAME,
 } from '@/lib/security';
 import crypto from 'crypto';
 
-const masterPinSchema = z.object({
-  pin: z.string().trim().min(1).max(64),
+const masterAuthSchema = z.object({
+  username: z.string().trim().min(1).max(100),
+  password: z.string().trim().min(1).max(128),
 });
 
 function getClientIp(req: NextRequest): string {
@@ -22,57 +23,79 @@ function getClientIp(req: NextRequest): string {
   return '127.0.0.1';
 }
 
+function safeCompare(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+      // Dummy compare to avoid timing leak
+      crypto.timingSafeEqual(bufA, bufA);
+      return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
+  // Artificial delay against high-frequency bot probing
+  await new Promise((r) => setTimeout(r, 650));
+
   try {
     const body = await req.json();
-    const parseResult = masterPinSchema.safeParse(body);
+    const parseResult = masterAuthSchema.safeParse(body);
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, error: 'الرمز المدخل غير صالح' },
+        { success: false, error: 'بيانات الدخول غير مكتملة أو غير صالحة' },
         { status: 400 }
       );
     }
 
-    const { pin } = parseResult.data;
+    const { username, password } = parseResult.data;
     const clientIp = getClientIp(req);
-    const rateLimitKey = `${clientIp}:master_super_admin`;
 
-    // 1. Anti-Brute-Force Lockout Guard
-    const lockoutStatus = checkPinLockout(rateLimitKey);
+    // 1. Strict 3-Strike Lockout Check
+    const lockoutStatus = checkSuperAdminLockout(clientIp);
     if (!lockoutStatus.allowed) {
       return NextResponse.json(
         {
           success: false,
           locked: true,
           retryAfterSeconds: lockoutStatus.retryAfterSeconds,
-          error: `تم حظر المحاولات مؤقتاً بسبب تكرار الأخطاء (حماية قصوى). يرجى الانتظار ${Math.ceil(
-            (lockoutStatus.retryAfterSeconds || 900) / 60
-          )} دقيقة.`,
+          error: `تم إقفال الدخول للوحة المالك وحظر عنوانك الأمني مؤقتاً بسبب تكرار الأخطاء (حماية مشددة). يرجى الانتظار ${Math.ceil(
+            (lockoutStatus.retryAfterSeconds || 1800) / 60
+          )} دقيقة للمحاولة مجدداً.`,
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(lockoutStatus.retryAfterSeconds || 1800),
+          },
+        }
       );
     }
 
-    // 2. Expected Master Secret (From Env or Fallback)
-    const expectedPin = process.env.MASTER_ADMIN_PIN || '8888';
+    // 2. Expected Master Credentials
+    // Username defaults to 'owner' (or process.env.MASTER_ADMIN_USER)
+    // Password defaults to 'Buzly@Owner#2026!' (or process.env.MASTER_ADMIN_PASSWORD)
+    const expectedUsername = (process.env.MASTER_ADMIN_USER || 'owner').trim();
+    const expectedPassword = (process.env.MASTER_ADMIN_PASSWORD || 'Buzly@Owner#2026!').trim();
 
-    // Constant-time comparison
-    const pinBuffer = Buffer.from(pin);
-    const expectedBuffer = Buffer.from(expectedPin);
-    const isValid =
-      pinBuffer.length === expectedBuffer.length &&
-      crypto.timingSafeEqual(pinBuffer, expectedBuffer);
+    const isUserValid = safeCompare(username, expectedUsername);
+    const isPassValid = safeCompare(password, expectedPassword);
 
-    if (!isValid) {
-      const failureResult = recordPinFailure(rateLimitKey);
+    if (!isUserValid || !isPassValid) {
+      const failureResult = recordSuperAdminFailure(clientIp);
+
       if (failureResult.locked) {
         return NextResponse.json(
           {
             success: false,
             locked: true,
             retryAfterSeconds: failureResult.retryAfterSeconds,
-            error: 'تم تجاوز الحد الأقصى للمحاولات (5 محاولات). تم إقفال لوحة المالك لمدة 15 دقيقة لحمايتها.',
+            error: 'تم تجاوز الحد الأقصى للمحاولات (3 محاولات غير مصرح بها). تم إقفال النظام وحظر هذا الجهاز لمدة 30 دقيقة.',
           },
           { status: 429 }
         );
@@ -82,45 +105,47 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           remainingAttempts: failureResult.remainingAttempts,
-          error: `رمز المرور غير صحيح. يتبقى لديك ${failureResult.remainingAttempts} محاولات قبل الإغلاق الأمني.`,
+          error: `معرف المالك أو مفتاح التشفير السري غير صحيح. يتبقى لديك ${failureResult.remainingAttempts} محاولة قبل الحظر الأمني التام.`,
         },
         { status: 401 }
       );
     }
 
-    // 3. Success: issue Super Admin token
-    recordPinSuccess(rateLimitKey);
+    // 3. Authentication Succeeded -> Issue Secure Token
+    recordSuperAdminSuccess(clientIp);
     const token = createSuperAdminToken();
 
     const response = NextResponse.json(
       {
         success: true,
-        message: 'تم التحقق من هوية مالك المنصة بنجاح',
+        message: 'تم فك التشفير والتحقق من هوية مالك المنصة بنجاح',
         token,
       },
       { status: 200 }
     );
 
+    // Set hardened HttpOnly cookie
     response.cookies.set({
       name: SUPER_ADMIN_COOKIE_NAME,
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       path: '/',
-      maxAge: 24 * 60 * 60,
+      maxAge: 4 * 60 * 60, // 4 Hours
     });
 
     return response;
   } catch (err) {
-    console.error('Verify master pin error:', err);
+    console.error('Verify master error:', err);
     return NextResponse.json(
-      { success: false, error: 'حدث خطأ في الخادم أثناء التحقق' },
+      { success: false, error: 'حدث خطأ غير متوقع في الخادم الأمني' },
       { status: 500 }
     );
   }
 }
 
+// Check session status
 export async function GET(req: NextRequest) {
   const cookieToken = req.cookies.get(SUPER_ADMIN_COOKIE_NAME)?.value;
   const authHeader = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -131,4 +156,19 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ authenticated: false }, { status: 401 });
+}
+
+// Destroy session
+export async function DELETE() {
+  const response = NextResponse.json({ success: true, message: 'تم إنهاء الجلسة وتطهير التوكن' });
+  response.cookies.set({
+    name: SUPER_ADMIN_COOKIE_NAME,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 0,
+  });
+  return response;
 }

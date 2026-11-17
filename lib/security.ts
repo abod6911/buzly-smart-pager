@@ -220,12 +220,80 @@ export function verifyStaffToken(token: string): {
 
 export const SUPER_ADMIN_COOKIE_NAME = 'chimer_master_token';
 
+// In-Memory Super Admin 3-Strike Lockout Store
+const superAdminAttemptStore = new Map<string, PinAttemptRecord>();
+
+export function checkSuperAdminLockout(clientIp: string): {
+  allowed: boolean;
+  locked: boolean;
+  remainingAttempts: number;
+  retryAfterSeconds?: number;
+} {
+  const now = Date.now();
+  const record = superAdminAttemptStore.get(clientIp);
+
+  if (record?.lockedUntil && record.lockedUntil > now) {
+    const retryAfterSeconds = Math.ceil((record.lockedUntil - now) / 1000);
+    return {
+      allowed: false,
+      locked: true,
+      remainingAttempts: 0,
+      retryAfterSeconds,
+    };
+  }
+
+  const recentFailures = (record?.failures || []).filter(
+    (t) => now - t < 15 * 60 * 1000
+  );
+
+  const remaining = Math.max(0, 3 - recentFailures.length);
+  return {
+    allowed: remaining > 0,
+    locked: false,
+    remainingAttempts: remaining,
+  };
+}
+
+export function recordSuperAdminFailure(clientIp: string): {
+  locked: boolean;
+  remainingAttempts: number;
+  retryAfterSeconds?: number;
+} {
+  const now = Date.now();
+  let record = superAdminAttemptStore.get(clientIp);
+  if (!record) {
+    record = { failures: [] };
+    superAdminAttemptStore.set(clientIp, record);
+  }
+
+  record.failures = record.failures.filter((t) => now - t < 15 * 60 * 1000);
+  record.failures.push(now);
+
+  if (record.failures.length >= 3) {
+    record.lockedUntil = now + 30 * 60 * 1000; // 30 Minutes Lockout
+    return {
+      locked: true,
+      remainingAttempts: 0,
+      retryAfterSeconds: 30 * 60,
+    };
+  }
+
+  return {
+    locked: false,
+    remainingAttempts: Math.max(0, 3 - record.failures.length),
+  };
+}
+
+export function recordSuperAdminSuccess(clientIp: string): void {
+  superAdminAttemptStore.delete(clientIp);
+}
+
 export function createSuperAdminToken(): string {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     role: 'super_admin',
     iat: now,
-    exp: now + 24 * 60 * 60, // 24 Hours
+    exp: now + 4 * 60 * 60, // 4 Hours Max Session
   };
 
   const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');

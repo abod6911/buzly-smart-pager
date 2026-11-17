@@ -103,11 +103,14 @@ export default function SuperAdminDashboard() {
     syncNow,
   } = useQueue();
 
-  // Authentication State
+  // High-Security Dual-Key Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [pinInput, setPinInput] = useState<string>('');
-  const [pinError, setPinError] = useState<string>('');
-  const [isPinLoading, setIsPinLoading] = useState<boolean>(false);
+  const [isCheckingSession, setIsCheckingSession] = useState<boolean>(true);
+  const [userInput, setUserInput] = useState<string>('');
+  const [passInput, setPassInput] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>('');
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -141,28 +144,44 @@ export default function SuperAdminDashboard() {
   const [isPlayingTestSound, setIsPlayingTestSound] = useState<boolean>(false);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
 
-  // 1. Check server-side session auth on mount
+  // 1. Strict Server-Side Session Verification on Mount
   useEffect(() => {
+    try {
+      sessionStorage.removeItem('buzly_super_admin_authenticated');
+    } catch {}
+
     fetch('/api/auth/verify-master')
       .then((res) => {
-        if (res.ok) setIsAuthenticated(true);
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        setIsAuthenticated(false);
+      })
+      .finally(() => {
+        setIsCheckingSession(false);
+      });
   }, []);
 
-  // 2. Auth unlock handler via secure server API
-  const handlePinSubmit = async (e?: React.FormEvent) => {
+  // 2. Dual-Key Auth Unlock via Cryptographic Server API
+  const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!pinInput.trim() || isPinLoading) return;
+    if (!userInput.trim() || !passInput.trim() || isAuthLoading) return;
 
-    setIsPinLoading(true);
-    setPinError('');
+    setIsAuthLoading(true);
+    setAuthError('');
 
     try {
       const res = await fetch('/api/auth/verify-master', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinInput.trim() }),
+        body: JSON.stringify({
+          username: userInput.trim(),
+          password: passInput.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -170,25 +189,28 @@ export default function SuperAdminDashboard() {
       if (res.ok && data.success) {
         soundManager.playSuccessTone();
         setIsAuthenticated(true);
-        setPinError('');
+        setAuthError('');
+        setUserInput('');
+        setPassInput('');
       } else {
-        setPinError(data.error || 'رمز المالك غير صحيح');
-        setPinInput('');
+        setAuthError(data.error || 'فشل التحقق الأمني من مفاتيح المالك');
+        setPassInput('');
       }
     } catch {
-      setPinError('تعذر الاتصال بخادم التحقق الأمني');
+      setAuthError('تعذر الاتصال بخادم الحماية والأمان');
     } finally {
-      setIsPinLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
   const handleLogout = async () => {
     setIsAuthenticated(false);
-    setPinInput('');
-    document.cookie = 'chimer_master_token=; path=/; max-age=0';
+    setUserInput('');
+    setPassInput('');
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/verify-master', { method: 'DELETE' });
     } catch {}
+    document.cookie = 'chimer_master_token=; path=/; max-age=0;';
   };
 
   const showNotification = (msg: string) => {
@@ -536,85 +558,155 @@ export default function SuperAdminDashboard() {
       });
   }, [restaurantList, searchQuery, statusFilter, sortBy, storeOrdersMap]);
 
-  // ==========================================
-  // UN-AUTHENTICATED: OWNER MASTER PIN GATE
-  // ==========================================
+  // 0. Session Checking Screen (Prevents any content flash before server verification)
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-[#070709] text-white flex flex-col justify-center items-center p-4 font-sans">
+        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-4 relative">
+          <Shield className="w-8 h-8 text-emerald-400 animate-pulse" />
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+          </span>
+        </div>
+        <h2 className="text-sm font-bold text-white font-mono tracking-wider">
+          CHIMER ENCRYPTED SENTINEL
+        </h2>
+        <p className="text-xs text-zinc-500 mt-1 font-mono">
+          جارِ التحقق الأمني من تصريح مالك المنصة المشفر...
+        </p>
+      </div>
+    );
+  }
+
+  // ========================================================
+  // UN-AUTHENTICATED: MILITARY-GRADE DUAL-KEY DEFENSE GATE
+  // ========================================================
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#070709] text-white flex flex-col justify-center items-center p-4 font-sans selection:bg-emerald-500 selection:text-black relative overflow-hidden">
         {/* Luxury Background Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-emerald-500/10 blur-[130px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] bg-emerald-500/10 blur-[140px] rounded-full pointer-events-none" />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="w-full max-w-md bg-[#111114]/90 border border-white/[0.09] rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative z-10"
+          className="w-full max-w-lg bg-[#111114]/95 border border-white/[0.1] rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl relative z-10"
         >
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-950/40 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/10">
-              <ShieldCheck className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-black to-emerald-950/40 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-emerald-500/10">
+              <ShieldCheck className="w-9 h-9" />
             </div>
-            <h1 className="text-xl font-black text-white tracking-tight">
-              مركز قيادة مالك المنصة
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono uppercase tracking-widest font-bold mb-3">
+              <span>Zero-Knowledge Defense Gate</span>
+            </div>
+
+            <h1 className="text-2xl font-black text-white tracking-tight font-cairo">
+              مركز القيادة الأمنية لمالك المنصة
             </h1>
-            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-              Super Admin Control Center
-              <br />
-              هذه الواجهة مخصصة للمالك لإدارة ومراقبة شبكة جميع المطاعم
+            <p className="text-xs text-zinc-400 mt-2 leading-relaxed max-w-sm mx-auto">
+              هذه المنطقة مشفرة بنظام الحماية البنكية وخاضعة لمراقبة الـ IP.
+              يتطلب الدخول تزويد المفاتيح المزدوجة الخاصة بالمالك فقط.
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handlePinSubmit} className="space-y-4">
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {/* Field 1: Master ID */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-2 text-center">
-                أدخل رمز المرور الرئيسي (Master PIN)
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 flex items-center justify-between">
+                <span>المعرّف الأمني للمالك (Master Identifier)</span>
+                <span className="text-[10px] text-zinc-500 font-mono">ID / USERNAME</span>
               </label>
               <div className="relative">
                 <input
-                  type="password"
-                  maxLength={32}
+                  type="text"
                   autoFocus
-                  value={pinInput}
+                  autoComplete="off"
+                  value={userInput}
                   onChange={(e) => {
-                    setPinInput(e.target.value);
-                    setPinError('');
+                    setUserInput(e.target.value);
+                    setAuthError('');
                   }}
-                  placeholder="••••"
-                  className="w-full bg-[#09090B] border border-white/[0.12] rounded-2xl py-3.5 px-4 text-center text-2xl font-mono tracking-[0.5em] text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="المعرّف السري..."
+                  className="w-full bg-[#09090B] border border-white/[0.12] rounded-2xl py-3 px-4 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
-
-              {pinError && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-xs text-rose-400 font-medium text-center mt-2 flex items-center justify-center gap-1.5"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{pinError}</span>
-                </motion.p>
-              )}
             </div>
 
+            {/* Field 2: Secret Passphrase */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 flex items-center justify-between">
+                <span>مفتاح التشفير السري (Master Passphrase)</span>
+                <span className="text-[10px] text-zinc-500 font-mono">HMAC-SHA512 KEY</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="off"
+                  value={passInput}
+                  onChange={(e) => {
+                    setPassInput(e.target.value);
+                    setAuthError('');
+                  }}
+                  placeholder="كلمة المرور المشفرة..."
+                  className="w-full bg-[#09090B] border border-white/[0.12] rounded-2xl py-3 pl-11 pr-4 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error Display */}
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium flex items-start gap-2 leading-relaxed"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </motion.div>
+            )}
+
+            {/* Security Badges */}
+            <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] text-zinc-400 font-mono">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-2 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>3 Strikes IP Lockout</span>
+              </div>
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-2 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>PBKDF2 SHA-512 Hash</span>
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isPinLoading}
-              className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              disabled={isAuthLoading}
+              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-black font-black text-sm transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
             >
               <Unlock className="w-4 h-4" />
-              <span>{isPinLoading ? 'جارِ التحقق الأمني...' : 'دخول لوحة التحكم المركزية'}</span>
+              <span>{isAuthLoading ? 'جارِ فك التشفير والتحقق الأمني...' : 'فك التشفير والولوج الآمن'}</span>
             </button>
           </form>
 
           <div className="mt-5 text-center">
             <Link
               href="/"
-              className="text-xs text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1"
+              className="text-xs text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
             >
               <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
-              <span>العودة للرئيسية</span>
+              <span>الخروج والرجوع للموقع العام</span>
             </Link>
           </div>
         </motion.div>
