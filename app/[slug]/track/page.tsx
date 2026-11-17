@@ -36,9 +36,9 @@ export default function TenantTrackEntryPage() {
   const restaurantName = restaurant?.name || slug;
 
   return (
-    <div className="min-h-screen bg-[#070709] text-white flex flex-col justify-between p-4 sm:p-6 font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#000000] text-white flex flex-col justify-between p-4 sm:p-6 font-sans selection:bg-[#34C759] selection:text-black">
       {/* Top Header */}
-      <header className="max-w-md w-full mx-auto flex items-center justify-between py-2 z-10">
+      <header className="max-w-md w-full mx-auto flex items-center justify-between py-2.5 z-10">
         <div className="flex items-center gap-3">
           <RestaurantAvatar
             logoUrl={restaurant?.logoUrl}
@@ -47,55 +47,38 @@ export default function TenantTrackEntryPage() {
             size="md"
           />
           <div>
-            <h1 className="font-bold text-sm text-white tracking-tight">
+            <h1 className="font-semibold text-[15px] text-white tracking-tight">
               {restaurantName}
             </h1>
-            <span className="text-[11px] font-mono text-zinc-500">
-              {t('smartPagingService')}
+            <span className="text-[11px] text-zinc-400">
+              خدمة النداء الرقمي
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <LanguageSwitcher variant="minimal" />
-
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>{t('serviceActive')}</span>
-          </div>
         </div>
       </header>
 
       {/* Main Content Card */}
       <main className="max-w-md w-full mx-auto my-auto py-4 z-10 flex flex-col items-center">
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-xl border border-white/10 bg-white/[0.04]">
-            <Utensils className="w-6 h-6 text-emerald-400" />
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {t('trackTitle')}
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed">
-            {t('smartPagingSubline')}
-          </p>
-        </div>
-
         {/* Tactile Customer Numpad */}
         <div className="w-full">
           <CustomerNumpad activeOrders={activeOrders} slug={slug} />
         </div>
 
         {/* Reassuring Footer */}
-        <div className="mt-6 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+        <div className="mt-5 text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{t('noAppNeeded')}</span>
         </div>
       </main>
 
       {/* Bottom Footer */}
       <footer className="max-w-md w-full mx-auto text-center py-2 z-10">
-        <p className="text-[11px] text-zinc-600 font-mono">
-          Buzly Smart Pager • {slug}
+        <p className="text-[11px] text-zinc-400 font-sans">
+          استرح وسيقوم هاتفك بالرنين والاهتزاز فور جهوزية طلبك
         </p>
       </footer>
     </div>

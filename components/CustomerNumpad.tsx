@@ -43,38 +43,38 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6">
-      {/* Display Screen */}
-      <div className="bg-obsidian-surface border-2 border-obsidian-border rounded-3xl p-5 shadow-2xl text-center">
-        <p className="text-xs text-zinc-400 mb-2 font-semibold">{t('enterBillNumber')}</p>
+    <div className="w-full max-w-md mx-auto space-y-5">
+      {/* Apple Clean Keypad Surface */}
+      <div className="bg-[#161618] border border-white/[0.08] rounded-[32px] p-6 sm:p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] text-center">
+        <p className="text-xs text-zinc-400 mb-3 font-medium">{t('enterBillNumber')}</p>
 
+        {/* Display Screen */}
         <div
           dir="ltr"
           style={{ direction: 'ltr' }}
-          className="bg-obsidian-400 border border-obsidian-border rounded-2xl py-4 px-6 flex items-center justify-center gap-2 mb-4"
+          className="bg-[#0B0B0D] border border-white/[0.06] rounded-[22px] py-4 px-6 flex items-center justify-center gap-2 mb-6"
         >
-          <span className="text-emerald-500 font-mono text-3xl font-bold select-none">#</span>
+          <span className="text-zinc-500 font-mono text-2xl font-semibold select-none">#</span>
           <span
             dir="ltr"
             style={{ direction: 'ltr' }}
-            className={`font-mono tabular-nums text-5xl font-black tracking-widest ${
-              orderNumber ? 'text-white' : 'text-zinc-600'
+            className={`font-mono tabular-nums text-4xl sm:text-5xl font-bold tracking-widest ${
+              orderNumber ? 'text-white' : 'text-zinc-700'
             }`}
           >
-            {orderNumber || '---'}
+            {orderNumber || '••••'}
           </span>
         </div>
 
-        {/* Numpad 1-9, C, 0, Backspace */}
-        <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-2.5 mb-4">
+        {/* Apple Circular Numpad 1-9, C, 0, Backspace */}
+        <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-3 sm:gap-4 max-w-[280px] sm:max-w-[320px] mx-auto mb-6">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <motion.button
               key={digit}
               type="button"
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => handleDigit(digit)}
-              className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border transition-colors shadow-sm flex items-center justify-center select-none"
+              className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-white/[0.05] hover:bg-white/[0.1] active:bg-white/[0.18] text-white text-2xl sm:text-3xl font-medium font-sans border border-white/[0.06] transition-all flex items-center justify-center select-none shadow-sm cursor-pointer mx-auto"
             >
               {digit}
             </motion.button>
@@ -82,60 +82,56 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
 
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
-            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.92 }}
             onClick={handleClear}
-            className="h-16 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-base border border-rose-500/20 transition-colors flex items-center justify-center select-none"
+            className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-white/[0.02] hover:bg-rose-500/15 text-zinc-400 hover:text-rose-400 text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center select-none cursor-pointer mx-auto"
           >
             {t('clear')}
           </motion.button>
 
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
-            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => handleDigit('0')}
-            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-white text-2xl font-mono tabular-nums font-bold border border-obsidian-border transition-colors shadow-sm flex items-center justify-center select-none"
+            className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-white/[0.05] hover:bg-white/[0.1] active:bg-white/[0.18] text-white text-2xl sm:text-3xl font-medium font-sans border border-white/[0.06] transition-all flex items-center justify-center select-none shadow-sm cursor-pointer mx-auto"
           >
             0
           </motion.button>
 
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
-            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.92 }}
             onClick={handleBackspace}
-            className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border transition-colors flex items-center justify-center select-none"
+            className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-white/[0.02] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors flex items-center justify-center select-none cursor-pointer mx-auto"
             title={t('backspace')}
           >
-            <Delete className="w-6 h-6" />
+            <Delete className="w-5 h-5 sm:w-6 sm:h-6" />
           </motion.button>
         </div>
 
-        {/* Submit Tracking Button */}
+        {/* Submit Tracking Button (Apple HIG Primary) */}
         <motion.button
           type="button"
-          whileTap={orderNumber.trim() ? { scale: 0.96 } : undefined}
-          whileHover={orderNumber.trim() ? { scale: 1.01 } : undefined}
+          whileTap={orderNumber.trim() ? { scale: 0.97 } : undefined}
           disabled={!orderNumber.trim()}
           onClick={handleTrack}
-          className={`w-full py-4 px-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all shadow-xl ${
+          className={`w-full py-4 px-6 rounded-[20px] font-bold text-base flex items-center justify-center gap-2 transition-all ${
             orderNumber.trim()
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/25 cursor-pointer'
-              : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
+              ? 'bg-[#34C759] hover:bg-[#30D158] text-black shadow-lg shadow-emerald-500/20 cursor-pointer'
+              : 'bg-white/[0.04] text-zinc-600 border border-white/[0.05] cursor-not-allowed'
           }`}
         >
           <span>{t('trackMyOrder')}</span>
-          <ArrowLeft className={`w-5 h-5 stroke-[2.5] ${isRTL ? '' : 'rotate-180'}`} />
+          <ArrowLeft className={`w-4 h-4 stroke-[2.5] ${isRTL ? '' : 'rotate-180'}`} />
         </motion.button>
       </div>
 
-      {/* Quick Select from Active Orders (if any) */}
+      {/* Quick Select from Active Orders (Apple Grouped Capsule) */}
       {activeOrders.length > 0 && (
-        <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-5 shadow-xl">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-buzly-amber" /> {t('orChooseFromActive')}
+        <div className="bg-[#161618] border border-white/[0.08] rounded-[24px] p-4 shadow-md">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <span>{t('orChooseFromActive')}</span>
             </span>
             <span className="text-[11px] text-zinc-500 font-mono">
               {t('activeOrdersCount', { count: activeOrders.length })}
