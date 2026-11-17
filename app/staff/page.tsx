@@ -8,6 +8,7 @@ import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
 import { soundManager } from '@/lib/audio';
 import { BrandLogo } from '@/components/BrandLogo';
+import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import {
   Bell,
   Volume2,
@@ -34,7 +35,10 @@ export default function StaffCashierPage() {
     isSupabaseActive,
     getActiveOrder,
     warmupLiveChannel,
+    getRestaurant,
   } = useQueue();
+
+  const restaurant = getRestaurant('demo-cafe');
 
   // Persistent Pre-Warming of Supabase Realtime Broadcast Channel on Cashier mount
   useEffect(() => {
@@ -69,9 +73,10 @@ export default function StaffCashierPage() {
   };
 
   return (
-    <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
-      {/* Top Staff Navigation Bar */}
-      <header className="border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5">
+    <StaffPinGuard restaurant={restaurant} onUnlocked={() => {}}>
+      <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
+        {/* Top Staff Navigation Bar */}
+        <header className="border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Logo & Role Badge */}
           <div className="flex items-center gap-3">
@@ -150,6 +155,9 @@ export default function StaffCashierPage() {
               <span>شاشة العميل</span>
               <ExternalLink className="w-3 h-3 opacity-70" />
             </Link>
+
+            {/* Instant Terminal Lock */}
+            <StaffLockBtn />
           </div>
         </div>
       </header>
@@ -244,5 +252,6 @@ export default function StaffCashierPage() {
         restaurantSlug="demo-cafe"
       />
     </div>
+  </StaffPinGuard>
   );
 }

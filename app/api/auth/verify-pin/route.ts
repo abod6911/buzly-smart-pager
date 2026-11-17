@@ -93,7 +93,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Constant-time / secure PIN comparison
-    const isValid = pin === expectedPin || pin === '1234';
+    // Strictly verify against restaurant PIN. '1234' is only valid if expectedPin is explicitly '1234'
+    const isValid = pin === expectedPin;
 
     if (!isValid) {
       const failureResult = recordPinFailure(rateLimitKey);

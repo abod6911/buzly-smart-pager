@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
+import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import {
   CheckCircle2,
   XCircle,
@@ -175,27 +176,31 @@ export default function DiagnosticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
-      {/* Header */}
-      <header className="border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-md px-4 py-4 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-bold">
-            <ArrowRight className="w-4 h-4" />
-            <span>العودة للرئيسية</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-mono font-bold text-xs text-white">مركز فحص وصحة النظام | System Diagnostics</span>
+    <StaffPinGuard onUnlocked={() => {}}>
+      <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">
+        {/* Header */}
+        <header className="border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-md px-4 py-4 sticky top-0 z-30">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-bold">
+              <ArrowRight className="w-4 h-4" />
+              <span>العودة للرئيسية</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono font-bold text-xs text-white">مركز فحص وصحة النظام | System Diagnostics</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={checkAllSystems}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>تحديث الفحص</span>
+              </button>
+              <StaffLockBtn />
+            </div>
           </div>
-          <button
-            onClick={checkAllSystems}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>تحديث الفحص</span>
-          </button>
-        </div>
-      </header>
+        </header>
 
       {/* Main Content */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 py-8 space-y-6">
@@ -429,5 +434,6 @@ export default function DiagnosticsPage() {
         </div>
       </main>
     </div>
+  </StaffPinGuard>
   );
 }

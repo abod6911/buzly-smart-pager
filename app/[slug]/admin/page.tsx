@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useQueue } from '@/context/QueueContext';
-import { StaffPinGuard } from '@/components/StaffPinGuard';
+import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import {
   Settings,
@@ -319,6 +319,7 @@ export default function TenantAdminBrandingPage() {
                 <BarChart3 className="w-4 h-4 text-emerald-400" />
                 <span className="hidden sm:inline">التحليلات</span>
               </Link>
+              <StaffLockBtn label="قفل الإعدادات" />
             </div>
           </div>
         </header>

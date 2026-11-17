@@ -23,13 +23,10 @@ export default function TrackEntryPage() {
             </span>
           </Link>
 
-          <Link
-            href="/staff"
-            className="text-xs text-zinc-400 hover:text-emerald-400 flex items-center gap-1 transition-colors"
-          >
-            <span>شاشة الكاشير</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>نظام النداء الآلي</span>
+          </div>
         </div>
       </header>
 

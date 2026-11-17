@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
-import { StaffPinGuard } from '@/components/StaffPinGuard';
+import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import { StaffNumpad } from '@/components/StaffNumpad';
 import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
@@ -255,6 +255,8 @@ export default function TenantStaffCashierPage() {
                 <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
                 <span>شاشة العميل</span>
               </Link>
+
+              <StaffLockBtn label="قفل الكاشير" />
             </div>
           </div>
         </header>

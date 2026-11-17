@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
-import { StaffPinGuard } from '@/components/StaffPinGuard';
+import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import {
   BarChart3,
@@ -161,6 +161,7 @@ export default function KitchenAnalyticsPage() {
               >
                 إعدادات المتجر
               </Link>
+              <StaffLockBtn label="قفل الشاشة" />
             </div>
           </div>
         </header>

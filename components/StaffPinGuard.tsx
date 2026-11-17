@@ -35,7 +35,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
       try {
         const res = await fetch('/api/auth/session', { cache: 'no-store' });
         const data = await res.json();
-        if (data.authenticated && data.slug === restaurant?.slug) {
+        if (data.authenticated && (!restaurant?.slug || data.slug === restaurant?.slug)) {
           setIsAuthenticated(true);
           onUnlocked();
         }
@@ -45,6 +45,16 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
     };
 
     checkActiveSession();
+
+    // Listen for instant lock / logout events
+    const handleLock = () => {
+      setIsAuthenticated(false);
+      setPin('');
+      setErrorMessage(null);
+    };
+
+    window.addEventListener('chimer:lock', handleLock);
+    return () => window.removeEventListener('chimer:lock', handleLock);
   }, [restaurant?.slug, onUnlocked]);
 
   // 2. Lockout Countdown Timer
@@ -280,12 +290,62 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
           </>
         )}
 
-        <div className="pt-2 border-t border-white/[0.06] text-center">
-          <p className="text-[11px] text-zinc-500 font-mono">
-            الرمز الافتراضي للتجربة: <span className="text-zinc-400">1234</span>
-          </p>
+        <div className="pt-3 border-t border-white/[0.06] text-center flex items-center justify-center gap-1.5 text-zinc-500 text-xs">
+          <ShieldAlert className="w-3.5 h-3.5 text-emerald-400/80" />
+          <span>منطقة كاشير وإدارة مشفرة ومحمية بالكامل</span>
         </div>
       </motion.div>
     </div>
+  );
+};
+
+/**
+ * Instantly terminates active staff session and triggers immediate lock on all open guards
+ */
+export async function lockStaffSession(): Promise<void> {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
+  } catch (err) {
+    console.warn('Logout request failed:', err);
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('chimer:lock'));
+  }
+}
+
+/**
+ * Reusable One-Tap Terminal Lock Button for Staff & Admin Headers
+ */
+export const StaffLockBtn: React.FC<{
+  className?: string;
+  label?: string;
+}> = ({ className, label = 'قفل الشاشة' }) => {
+  const [isLocking, setIsLocking] = useState(false);
+
+  const handleLock = async () => {
+    setIsLocking(true);
+    try {
+      await lockStaffSession();
+    } finally {
+      setIsLocking(false);
+    }
+  };
+
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.94 }}
+      whileHover={{ scale: 1.02 }}
+      onClick={handleLock}
+      disabled={isLocking}
+      className={
+        className ||
+        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/30 text-rose-300 border border-rose-500/25 text-xs font-semibold transition-all shadow-sm disabled:opacity-50 select-none'
+      }
+      title="قفل الشاشة فوراً لمنع التطفل وتأمين البيانات"
+    >
+      <Lock className="w-3.5 h-3.5 text-rose-400" />
+      <span>{label}</span>
+    </motion.button>
   );
 };

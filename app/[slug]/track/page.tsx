@@ -54,13 +54,10 @@ export default function TenantTrackEntryPage() {
           </div>
         </div>
 
-        <Link
-          href={`/${slug}/staff`}
-          className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-full border border-white/[0.08]"
-        >
-          <Lock className="w-3 h-3 text-zinc-400" />
-          <span>الكاشير</span>
-        </Link>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>الخدمة مفعلة</span>
+        </div>
       </header>
 
       {/* Main Content Card */}

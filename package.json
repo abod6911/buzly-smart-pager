@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:e2e": "node scripts/test-e2e-realtime.mjs"
+    "test:e2e": "node scripts/test-e2e-realtime.mjs",
+    "test:security": "node scripts/test-pin-security.mjs",
+    "test": "node scripts/test-e2e-realtime.mjs && node scripts/test-pin-security.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
