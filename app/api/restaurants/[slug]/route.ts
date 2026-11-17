@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Restaurant } from '@/types/queue';
+import { getRestaurantFromStore } from '@/lib/restaurantStore';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   req: NextRequest,
@@ -16,39 +18,31 @@ export async function GET(
     );
   }
 
-  // 1. Fetch from Supabase
-  if (isSupabaseConfigured() && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('id, slug, name, logo_url, theme_color, whatsapp_fallback_enabled, created_at')
-        .eq('slug', slug)
-        .maybeSingle();
+  const restaurant = await getRestaurantFromStore(slug);
 
-      if (!error && data) {
-        const restaurant: Restaurant = {
-          id: data.id,
-          slug: data.slug,
-          name: data.name,
-          logoUrl: data.logo_url || '/logo.png',
-          themeColor: data.theme_color || '#10B981',
-          whatsappFallbackEnabled: data.whatsapp_fallback_enabled ?? true,
-          createdAt: data.created_at,
-        };
-        return NextResponse.json({ success: true, restaurant });
+  if (restaurant) {
+    return NextResponse.json(
+      { success: true, restaurant },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        },
       }
-    } catch (err) {
-      console.warn('Supabase fetch error for restaurant slug:', slug, err);
-    }
+    );
   }
 
-  // Not found in database
+  // Not found in server store
   return NextResponse.json(
     {
       success: false,
       error: 'المتجر غير مسجل',
       restaurant: null,
     },
-    { status: 404 }
+    {
+      status: 404,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      },
+    }
   );
 }

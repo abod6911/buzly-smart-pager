@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
@@ -55,6 +55,23 @@ const CHIME_OPTIONS: { id: ChimeSoundTheme; title: string; desc: string }[] = [
 export default function RestaurantOnboardingPage() {
   const router = useRouter();
   const { createRestaurant } = useQueue();
+
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/verify-master')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) {
+          setIsAuthorized(true);
+        } else {
+          router.replace('/admin');
+        }
+      })
+      .catch(() => {
+        router.replace('/admin');
+      });
+  }, [router]);
 
   const [name, setName] = useState<string>('');
   const [slug, setSlug] = useState<string>('');
@@ -135,6 +152,15 @@ export default function RestaurantOnboardingPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-[#09090B] text-white flex flex-col items-center justify-center p-4 font-sans">
+        <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-3" />
+        <p className="text-xs text-zinc-400 font-mono">التحقق من الصلاحيات الأمنية...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-obsidian text-white flex flex-col font-cairo selection:bg-emerald-500 selection:text-black">

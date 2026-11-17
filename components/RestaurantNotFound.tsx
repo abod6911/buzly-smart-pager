@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Store, ArrowRight, PlusCircle, AlertCircle } from 'lucide-react';
+import { QrCode, RefreshCw, AlertCircle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface RestaurantNotFoundProps {
@@ -10,43 +9,71 @@ interface RestaurantNotFoundProps {
 }
 
 export const RestaurantNotFound: React.FC<RestaurantNotFoundProps> = ({ slug }) => {
+  const handleReload = () => {
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  };
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined') {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = `/${slug}/track`;
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#09090B] text-white flex flex-col items-center justify-center p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-[#000000] text-white flex flex-col items-center justify-center p-4 sm:p-6 font-sans selection:bg-[#34C759] selection:text-black">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md w-full bg-[#121215] border border-white/[0.08] rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-md w-full bg-[#161618] border border-white/[0.08] rounded-[32px] p-7 sm:p-8 text-center shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative overflow-hidden"
       >
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4">
-          <Store className="w-8 h-8 stroke-[1.5]" />
+        {/* Soft Apple Alert Icon */}
+        <div className="w-16 h-16 rounded-full bg-white/[0.05] border border-white/[0.08] text-amber-400 flex items-center justify-center mx-auto mb-5">
+          <QrCode className="w-7 h-7 stroke-[1.75]" />
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-zinc-400 text-xs font-mono mb-3">
-          <span>/{slug}</span>
+        {/* Clean Identifier Pill */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-zinc-400 text-xs font-mono mb-4">
+          <span>#{slug}</span>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
-          المتجر غير مسجل
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-2.5 tracking-tight">
+          الرابط غير متاح حالياً
         </h1>
+
         <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed mb-6">
-          عذراً، الرابط المطلوب غير مرتبط بأي متجر مفعّل في النظام حالياً. يرجى التحقق من الرابط أو تسجيل المتجر الجديد.
+          عذراً، هذا الرابط غير مرتبط بطلب نشط في النظام. يرجى مسح رمز QR المطبوع على فاتورتك أو مراجعة الكاونتر لمتابعة طلبك.
         </p>
 
-        <div className="space-y-2.5">
-          <Link
-            href="/onboard"
-            className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+        {/* Customer Safe Actions - NO ADMIN OR ONBOARDING LINKS */}
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={handleReload}
+            className="w-full py-3.5 px-4 rounded-[20px] bg-white/[0.08] hover:bg-white/[0.14] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>تسجيل وتفعيل متجر جديد</span>
-          </Link>
+            <RefreshCw className="w-4 h-4" />
+            <span>إعادة التحقق</span>
+          </button>
 
-          <Link
-            href="/"
-            className="w-full py-2.5 px-4 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 hover:text-white font-medium text-xs flex items-center justify-center gap-2 border border-white/[0.06] transition-colors"
+          <button
+            type="button"
+            onClick={handleBack}
+            className="w-full py-3 px-4 rounded-[18px] bg-white/[0.02] hover:bg-white/[0.06] text-zinc-400 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <span>العودة للرئيسية</span>
-          </Link>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>الرجوع للخلف</span>
+          </button>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-white/[0.05] text-[11px] text-zinc-400 font-sans">
+          خدمة النداء الرقمي للعملاء
         </div>
       </motion.div>
     </div>

@@ -272,6 +272,25 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!isSupabaseConfigured()) {
         setIsRestaurantsLoaded(true);
       }
+
+      // Background sync all restaurants from server store
+      fetch('/api/restaurants')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && data?.restaurants) {
+            setRestaurants((prev) => {
+              const merged = { ...prev, ...data.restaurants };
+              try {
+                localStorage.setItem(STORAGE_RESTAURANTS_KEY, JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsRestaurantsLoaded(true);
+        });
     }
   }, []);
 
@@ -874,6 +893,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           })
           .then();
       }
+
+      // Sync with Next.js server store
+      fetch('/api/restaurants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant: updated }),
+      }).catch(() => {});
     },
     [getRestaurant, orders, restaurants, saveAndBroadcast]
   );
@@ -919,6 +945,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .then();
       }
 
+      // Sync with Next.js server store
+      fetch('/api/restaurants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant: newRest }),
+      }).catch(() => {});
+
       return newRest;
     },
     [orders, restaurants, saveAndBroadcast]
@@ -949,6 +982,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         supabase.from('restaurants').delete().eq('slug', cleanSlug).then();
         supabase.from('orders_queue').delete().eq('restaurant_slug', cleanSlug).then();
       }
+
+      // Sync deletion with Next.js server store
+      fetch('/api/restaurants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'DELETE', slug: cleanSlug }),
+      }).catch(() => {});
     },
     [orders, restaurants, saveAndBroadcast]
   );

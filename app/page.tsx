@@ -43,10 +43,11 @@ export default function LandingRoleSwitcherPage() {
             </Link>
 
             <Link
-              href="/onboard"
-              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors shadow-sm"
+              href="/admin"
+              className="px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 hover:text-white font-medium text-xs flex items-center gap-1.5 transition-colors border border-white/[0.08]"
             >
-              {t('registerStore')}
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>إدارة المنصة</span>
             </Link>
           </div>
         </div>
@@ -73,10 +74,11 @@ export default function LandingRoleSwitcherPage() {
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/onboard"
-              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all shadow-sm"
+              href="/admin"
+              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all shadow-sm flex items-center gap-2"
             >
-              {t('startFree')}
+              <Shield className="w-4 h-4" />
+              <span>لوحة المالك والعمليات المركزية</span>
             </Link>
 
             <Link
@@ -179,8 +181,15 @@ export default function LandingRoleSwitcherPage() {
       </main>
 
       {/* Minimal Luxury Footer */}
-      <footer className="border-t border-white/[0.07] px-4 py-6 text-center text-xs text-zinc-500 mt-auto">
-        <p>Chimer Smart Restaurant Pager © 2026</p>
+      <footer className="border-t border-white/[0.07] px-4 py-6 text-center text-xs text-zinc-500 mt-auto flex flex-col sm:flex-row items-center justify-between max-w-6xl w-full mx-auto gap-2">
+        <p>Buzly Smart Restaurant Pager © 2026</p>
+        <Link
+          href="/admin"
+          className="text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1.5"
+        >
+          <Shield className="w-3.5 h-3.5" />
+          <span>بوابة الإدارة المركزية المشفرة</span>
+        </Link>
       </footer>
     </div>
   );
