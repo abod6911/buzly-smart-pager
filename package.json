@@ -10,7 +10,8 @@
     "test:e2e": "node scripts/test-e2e-realtime.mjs",
     "test:security": "node scripts/test-pin-security.mjs",
     "test:archive": "node scripts/test-archive-rollover.mjs",
-    "test": "node scripts/test-e2e-realtime.mjs && node scripts/test-pin-security.mjs && node scripts/test-archive-rollover.mjs"
+    "test:i18n": "node scripts/test-i18n.mjs",
+    "test": "node scripts/test-e2e-realtime.mjs && node scripts/test-pin-security.mjs && node scripts/test-archive-rollover.mjs && node scripts/test-i18n.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

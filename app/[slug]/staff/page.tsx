@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { StaffNumpad } from '@/components/StaffNumpad';
 import { StaffQueueGrid } from '@/components/StaffQueueGrid';
 import { QrModal } from '@/components/QrModal';
@@ -36,6 +37,7 @@ export default function TenantStaffCashierPage() {
   const params = useParams();
   const rawSlug = (params.slug as string) || 'demo-cafe';
   const slug = rawSlug.toLowerCase().trim();
+  const { language, isRTL, t } = useLanguage();
 
   const {
     getRestaurant,
@@ -118,13 +120,9 @@ export default function TenantStaffCashierPage() {
   };
 
   const handleStartNewDay = async () => {
-    if (
-      window.confirm(
-        'تأكيد بدء يوم عمل جديد؟\n\nسيتم تصفير عداد الطلبات فوراً وأرشفة جميع طلبات اليوم في السجل المشفر داخل معلومات المطعم.'
-      )
-    ) {
+    if (window.confirm(t('resetDayConfirm'))) {
       const count = await startNewDay(slug);
-      setFeedbackToast(`تم تصفير العداد بنجاح ونقل ${count} طلب إلى الأرشيف المشفر`);
+      setFeedbackToast(t('resetDayToast', { count }));
       setTimeout(() => setFeedbackToast(null), 3000);
     }
   };
@@ -195,17 +193,17 @@ export default function TenantStaffCashierPage() {
                       {restaurant?.name || slug}
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      كاشير POS
+                      {t('cashierPos')}
                     </span>
                     {networkStatus === 'connected' ? (
                       <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>متصل لحظياً</span>
+                        <span>{t('liveConnected')}</span>
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                        <span>جاري إعادة الاتصال...</span>
+                        <span>{t('reconnecting')}</span>
                       </span>
                     )}
                   </div>
@@ -213,18 +211,20 @@ export default function TenantStaffCashierPage() {
               </div>
             </div>
 
-            {/* Right: Management Entry (Protected by PIN) & Instant Terminal Lock */}
+            {/* Right: Language Switcher, Management Entry (Protected by PIN) & Instant Terminal Lock */}
             <div className="flex items-center gap-2">
+              <LanguageSwitcher variant="minimal" />
+
               <Link
                 href={`/${slug}/admin`}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-xs font-medium transition-colors"
-                title="إعدادات المتجر والمشرف (محمية برمز PIN)"
+                title="إعدادات المتجر والمشرف"
               >
                 <Settings className="w-3.5 h-3.5 text-zinc-400" />
-                <span>إدارة المتجر</span>
+                <span className="hidden sm:inline">{t('storeManagement')}</span>
               </Link>
 
-              <StaffLockBtn label="قفل الكاشير" />
+              <StaffLockBtn label={t('lockTerminal')} />
             </div>
           </div>
         </header>
@@ -277,7 +277,7 @@ export default function TenantStaffCashierPage() {
 
             <div className="bg-[#121215] border border-emerald-500/20 rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-emerald-400">جاهز للاستلام</p>
+                <p className="text-[11px] text-emerald-400">{t('readyForPickup')}</p>
                 <p className="text-2xl font-bold font-mono text-emerald-400 mt-0.5 tabular-nums">
                   {readyOrders.length}
                 </p>
@@ -289,7 +289,7 @@ export default function TenantStaffCashierPage() {
 
             <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-3 flex items-center justify-between">
               <div>
-                <p className="text-[11px] text-zinc-400">مكتمل اليوم</p>
+                <p className="text-[11px] text-zinc-400">{t('todayCompleted')}</p>
                 <p className="text-2xl font-bold font-mono text-zinc-300 mt-0.5 tabular-nums">
                   {completedOrders.length}
                 </p>
@@ -299,19 +299,19 @@ export default function TenantStaffCashierPage() {
                   <button
                     onClick={() => archiveCompletedOrders(slug)}
                     className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.06] transition-colors"
-                    title="أرشفة الطلبات المكتملة إلى ملف الأرشيف"
+                    title={t('archive')}
                   >
                     <Archive className="w-3.5 h-3.5" />
-                    <span>أرشفة</span>
+                    <span>{t('archive')}</span>
                   </button>
                 )}
                 <button
                   onClick={handleStartNewDay}
                   className="flex items-center gap-1 text-[11px] text-amber-300 hover:text-amber-200 font-medium bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20 transition-colors"
-                  title="تصفير العداد وأرشفة جميع الطلبات لبدء يوم جديد"
+                  title={t('resetDayConfirm')}
                 >
                   <RotateCcw className="w-3 h-3 text-amber-400" />
-                  <span>تصفير اليوم</span>
+                  <span>{t('startNewDay')}</span>
                 </button>
               </div>
             </div>

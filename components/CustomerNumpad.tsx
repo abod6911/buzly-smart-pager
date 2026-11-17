@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Delete, ArrowLeft, Search, Sparkles } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CustomerNumpadProps {
   activeOrders: Order[];
@@ -15,6 +16,7 @@ interface CustomerNumpadProps {
 export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, slug }) => {
   const [orderNumber, setOrderNumber] = useState<string>('');
   const router = useRouter();
+  const { language, isRTL, t } = useLanguage();
 
   const handleDigit = (digit: string) => {
     soundManager.playKeyClick();
@@ -44,7 +46,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
     <div className="w-full max-w-md mx-auto space-y-6">
       {/* Display Screen */}
       <div className="bg-obsidian-surface border-2 border-obsidian-border rounded-3xl p-5 shadow-2xl text-center">
-        <p className="text-xs text-zinc-400 mb-2 font-semibold">أدخل رقم الفاتورة أو الاستلام</p>
+        <p className="text-xs text-zinc-400 mb-2 font-semibold">{t('enterBillNumber')}</p>
 
         <div
           dir="ltr"
@@ -85,7 +87,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
             onClick={handleClear}
             className="h-16 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-base border border-rose-500/20 transition-colors flex items-center justify-center select-none"
           >
-            مسح
+            {t('clear')}
           </motion.button>
 
           <motion.button
@@ -104,7 +106,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
             whileHover={{ scale: 1.01 }}
             onClick={handleBackspace}
             className="h-16 rounded-2xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border transition-colors flex items-center justify-center select-none"
-            title="تراجع"
+            title={t('backspace')}
           >
             <Delete className="w-6 h-6" />
           </motion.button>
@@ -123,8 +125,8 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
               : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
           }`}
         >
-          <span>تتبع طلبي الآن</span>
-          <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+          <span>{t('trackMyOrder')}</span>
+          <ArrowLeft className={`w-5 h-5 stroke-[2.5] ${isRTL ? '' : 'rotate-180'}`} />
         </motion.button>
       </div>
 
@@ -133,10 +135,10 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
         <div className="bg-obsidian-surface border border-obsidian-border rounded-3xl p-5 shadow-xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-buzly-amber" /> أو اختر من الطلبات النشطة حالياً
+              <Sparkles className="w-3.5 h-3.5 text-buzly-amber" /> {t('orChooseFromActive')}
             </span>
             <span className="text-[11px] text-zinc-500 font-mono">
-              {activeOrders.length} طلبات
+              {t('activeOrdersCount', { count: activeOrders.length })}
             </span>
           </div>
 
@@ -162,11 +164,11 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
                       }`}
                     />
                     <span className="text-[10px] text-zinc-400">
-                      {ord.status === 'ready' ? 'جاهز للاستلام' : 'قيد التحضير'}
+                      {ord.status === 'ready' ? t('ready') : t('preparing')}
                     </span>
                   </div>
                 </div>
-                <ArrowLeft className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
+                <ArrowLeft className={`w-4 h-4 text-zinc-500 group-hover:text-white transition-colors ${isRTL ? '' : 'rotate-180'}`} />
               </button>
             ))}
           </div>

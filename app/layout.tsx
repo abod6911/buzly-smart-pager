@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Sans_Arabic, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { QueueProvider } from '@/context/QueueContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   subsets: ['arabic', 'latin'],
@@ -52,7 +53,9 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-obsidian text-white min-h-screen antialiased selection:bg-emerald-500 selection:text-black font-sans">
-        <QueueProvider>{children}</QueueProvider>
+        <LanguageProvider>
+          <QueueProvider>{children}</QueueProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

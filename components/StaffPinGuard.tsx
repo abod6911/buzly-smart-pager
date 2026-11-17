@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { soundManager } from '@/lib/audio';
 import { Restaurant } from '@/types/queue';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 
 interface StaffPinGuardProps {
   restaurant?: Restaurant;
@@ -18,6 +19,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
   onUnlocked,
   children,
 }) => {
+  const { language, isRTL, t } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [pin, setPin] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
@@ -182,6 +184,11 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         transition={{ type: 'spring', mass: 0.8, stiffness: 260, damping: 25 }}
         className="w-full max-w-sm bg-[#121215] border border-white/[0.08] rounded-2xl p-6 sm:p-7 shadow-2xl text-center relative overflow-hidden"
       >
+        {/* Language Switcher in Pin Guard Header */}
+        <div className="flex justify-end mb-2">
+          <LanguageSwitcher variant="minimal" />
+        </div>
+
         {/* Restaurant Header */}
         <div className="mb-6 flex flex-col items-center">
           <div className="mb-3">
@@ -192,10 +199,10 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
               size="lg"
             />
           </div>
-          <h2 className="text-lg font-bold text-white">{restaurant?.name || 'الكاشير'}</h2>
+          <h2 className="text-lg font-bold text-white">{restaurant?.name || t('cashierPos')}</h2>
           <span className="text-xs text-zinc-400 mt-1 flex items-center gap-1.5 font-normal">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />
-            <span>لوحة الكاشير محمية بتشفير الجلسة</span>
+            <span>{t('pinPromptTitle')}</span>
           </span>
         </div>
 
@@ -204,10 +211,10 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 mb-6 text-center">
             <ShieldAlert className="w-6 h-6 text-rose-400 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-rose-300">
-              تم حظر المحاولات مؤقتاً
+              {t('pinLockedTitle')}
             </h3>
             <p className="text-xs text-zinc-400 mt-1">
-              تم تجاوز الحد المسموح (5 محاولات خاطئة). يرجى الانتظار:
+              {t('pinLockedMsg')}
             </p>
             <div className="font-mono text-2xl font-bold text-rose-400 mt-2 tabular-nums">
               {Math.floor((lockedUntilSeconds || 0) / 60)}:
@@ -254,7 +261,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
                   </p>
                   {remainingAttempts !== null && remainingAttempts > 0 && (
                     <p className="text-[11px] text-zinc-500 mt-1">
-                      محاولات متبقية قبل القفل: {remainingAttempts}
+                      {t('pinAttemptsRemaining')} {remainingAttempts}
                     </p>
                   )}
                 </motion.div>
@@ -284,7 +291,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
                 disabled={isVerifying || isLocked}
                 className="h-12 sm:h-13 rounded-xl bg-transparent hover:bg-white/[0.04] text-zinc-400 hover:text-white text-xs font-medium border border-transparent transition-colors flex items-center justify-center select-none disabled:opacity-40"
               >
-                مسح
+                {t('clear')}
               </motion.button>
 
               <motion.button
@@ -305,7 +312,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
                 disabled={isVerifying || isLocked}
                 className="h-12 sm:h-13 rounded-xl bg-transparent hover:bg-white/[0.04] text-zinc-400 hover:text-white text-xs font-medium border border-transparent transition-colors flex items-center justify-center select-none disabled:opacity-40"
               >
-                حذف
+                {t('delete')}
               </motion.button>
             </div>
           </>
@@ -313,7 +320,7 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
 
         <div className="pt-3 border-t border-white/[0.06] text-center flex items-center justify-center gap-1.5 text-zinc-500 text-xs">
           <ShieldAlert className="w-3.5 h-3.5 text-emerald-400/80" />
-          <span>منطقة كاشير وإدارة مشفرة ومحمية بالكامل</span>
+          <span>{t('protectedAreaNotice')}</span>
         </div>
       </motion.div>
     </div>

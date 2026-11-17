@@ -6,6 +6,7 @@ import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
@@ -44,6 +45,8 @@ function TenantCustomerTrackerInner() {
     getOrCreateLiveChannel,
     warmupLiveChannel,
   } = useQueue();
+
+  const { language, isRTL, t } = useLanguage();
 
   const restaurant = getRestaurant(slug);
   const liveOrder = getOrder(decodedOrderNumber, slug);
@@ -501,28 +504,32 @@ function TenantCustomerTrackerInner() {
           href={`/${slug}/track`}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition-colors"
         >
-          <ArrowRight className="w-3.5 h-3.5" />
-          <span>طلب آخر</span>
+          <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
+          <span>{t('anotherOrder')}</span>
         </Link>
 
         {/* Live Pulse Pill */}
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-medium text-zinc-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>متصل لحظياً</span>
+          <span>{t('liveConnected')}</span>
         </div>
 
-        {/* Audio Status Quick Icon */}
-        <button
-          onClick={handleExplicitUnlock}
-          className="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          title="فحص الصوت"
-        >
-          {isAudioUnlocked ? (
-            <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
-          )}
-        </button>
+        {/* Language & Audio Controls */}
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher variant="minimal" />
+
+          <button
+            onClick={handleExplicitUnlock}
+            className="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            title={t('audioCheck')}
+          >
+            {isAudioUnlocked ? (
+              <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+            )}
+          </button>
+        </div>
       </header>
 
       {/* 1. Floating In-App Heads-Up Alert (Guaranteed visual notification even if mobile OS blocks push) */}
@@ -547,11 +554,11 @@ function TenantCustomerTrackerInner() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-xs text-emerald-300">تنبيه فوري</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">الآن</span>
+                  <span className="font-black text-xs text-emerald-300">{t('instantAlert')}</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">{t('now')}</span>
                 </div>
                 <div className="text-sm font-black text-white">
-                  طلبك #{decodedOrderNumber} جاهز للاستلام! 🍔
+                  {t('orderReadyAlertText', { orderNumber: decodedOrderNumber })}
                 </div>
               </div>
             </div>
@@ -563,7 +570,7 @@ function TenantCustomerTrackerInner() {
               }}
               className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors cursor-pointer"
             >
-              كتم التنبيه
+              {t('muteAlert')}
             </button>
           </motion.div>
         )}
@@ -584,11 +591,11 @@ function TenantCustomerTrackerInner() {
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-emerald-400 animate-bounce" />
               <span className="font-bold text-emerald-200">
-                اضغط هنا لتأكيد رنين واهتزاز هاتفك عند الجاهزية 🔔
+                {t('confirmAlertPrompt')}
               </span>
             </div>
             <span className="px-2.5 py-1 rounded-lg bg-emerald-500 text-black font-extrabold text-[11px] shadow-sm">
-              تفعيل الآن
+              {t('activateNow')}
             </span>
           </button>
         </motion.div>
@@ -637,14 +644,14 @@ function TenantCustomerTrackerInner() {
                     : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                 }`}
               >
-                {isReady ? 'جاهز للاستلام' : isCompleted ? 'تم الاستلام' : 'قيد التحضير'}
+                {t(order.status as any) || (isReady ? t('ready') : isCompleted ? t('completed') : t('preparing'))}
               </div>
             </div>
 
             {/* Hero Order Number Glass Card */}
             <div className="bg-[#0A0A0E]/80 backdrop-blur-md rounded-2xl p-6 text-center border border-white/[0.06] shadow-inner relative overflow-hidden">
               <span className="text-[11px] font-mono font-medium tracking-widest text-zinc-500 uppercase block mb-1">
-                رقم الطلب
+                {t('orderNumber')}
               </span>
 
               <div className="text-7xl sm:text-8xl font-black font-mono tracking-tight tabular-nums text-white dir-ltr my-1 drop-shadow-md">
@@ -655,20 +662,20 @@ function TenantCustomerTrackerInner() {
               {isPreparing && (
                 <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-amber-300/90 mt-2">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>الوقت المتوقع للتحضير: قرابة {remainingMinutes} دقيقة</span>
+                  <span>{t('estPrepTime', { min: remainingMinutes })}</span>
                 </div>
               )}
 
               {isReady && (
                 <div className="flex items-center justify-center gap-1.5 text-sm font-bold text-emerald-300 mt-2 animate-pulse">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>تفضل إلى الكاونتر لاستلام طلبك الآن</span>
+                  <span>{t('proceedToCounter')}</span>
                 </div>
               )}
 
               {isCompleted && (
                 <div className="text-xs text-zinc-400 mt-2">
-                  تم تسليم هذا الطلب بنجاح. بالعافية!
+                  {t('orderDeliveredThanks')}
                 </div>
               )}
             </div>
@@ -710,12 +717,12 @@ function TenantCustomerTrackerInner() {
 
               {/* Step Labels */}
               <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                <span className="text-emerald-400">تأكيد الطلب</span>
+                <span className="text-emerald-400">{t('orderConfirmed')}</span>
                 <span className={isPreparing ? 'text-amber-300 font-bold' : isReady || isCompleted ? 'text-emerald-400' : 'text-zinc-600'}>
-                  قيد التحضير
+                  {t('preparing')}
                 </span>
                 <span className={isReady ? 'text-emerald-300 font-bold' : isCompleted ? 'text-emerald-400' : 'text-zinc-600'}>
-                  جاهز للاستلام
+                  {t('ready')}
                 </span>
               </div>
             </div>
@@ -727,10 +734,10 @@ function TenantCustomerTrackerInner() {
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs">
                     <div className="flex items-center gap-2 text-zinc-300">
                       <Volume2 className="w-4 h-4 text-emerald-400" />
-                      <span>جرس التنبيه والاهتزاز مفعّل</span>
+                      <span>{t('chimeAndVibeActive')}</span>
                     </div>
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                      مفعّل
+                      {t('active')}
                     </span>
                   </div>
                 ) : (
@@ -740,10 +747,10 @@ function TenantCustomerTrackerInner() {
                   >
                     <div className="flex items-center gap-2 font-medium">
                       <VolumeX className="w-4 h-4 text-emerald-400" />
-                      <span>تفعيل الرنين والاهتزاز عند الجاهزية</span>
+                      <span>{t('enableChimeOnReady')}</span>
                     </div>
                     <span className="text-[11px] font-bold text-emerald-300 underline">
-                      اضغط للتفعيل
+                      {t('tapToEnable')}
                     </span>
                   </button>
                 )}
@@ -760,7 +767,7 @@ function TenantCustomerTrackerInner() {
                 className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-base transition-all shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                <span>استلمت طلبي — إيقاف الرنين</span>
+                <span>{t('receivedMyOrder')}</span>
               </motion.button>
             )}
 
@@ -769,7 +776,7 @@ function TenantCustomerTrackerInner() {
               <div className="space-y-4 pt-2">
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-center space-y-3">
                   <p className="text-xs font-semibold text-zinc-300">
-                    كيف كانت تجربتك مع طلبك اليوم؟
+                    {t('howWasExperience')}
                   </p>
                   <div className="flex items-center justify-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -803,12 +810,12 @@ function TenantCustomerTrackerInner() {
                       }}
                       className="px-6 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-bold text-white border border-white/[0.08] transition-colors cursor-pointer"
                     >
-                      إرسال التقييم
+                      {t('submitFeedback')}
                     </button>
                   ) : (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-semibold">
                       <Check className="w-4 h-4" />
-                      <span>شكراً لمشاركتك تقييمك!</span>
+                      <span>{t('feedbackThanks')}</span>
                     </div>
                   )}
                 </div>
@@ -817,7 +824,7 @@ function TenantCustomerTrackerInner() {
                   href={`/${slug}/track`}
                   className="block w-full py-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-center text-xs font-bold text-white transition-all"
                 >
-                  تتبع طلب جديد
+                  {t('trackNewOrder')}
                 </Link>
               </div>
             )}

@@ -16,6 +16,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Order } from '@/types/queue';
+import { useLanguage } from '@/context/LanguageContext';
 import { soundManager } from '@/lib/audio';
 import { appleSpringQuick } from '@/lib/motion';
 
@@ -40,6 +41,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
   onOpenQr,
   onRevertToPreparing,
 }) => {
+  const { language, isRTL, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'all' | 'preparing' | 'ready'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [now, setNow] = useState<number>(Date.now());
@@ -97,7 +99,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          الكل ({preparingOrders.length + readyOrders.length})
+          {t('all')} ({preparingOrders.length + readyOrders.length})
         </button>
         <button
           onClick={() => setActiveTab('preparing')}
@@ -107,7 +109,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          قيد التحضير ({preparingOrders.length})
+          {t('preparing')} ({preparingOrders.length})
         </button>
         <button
           onClick={() => setActiveTab('ready')}
@@ -117,19 +119,21 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          جاهز للاستلام ({readyOrders.length})
+          {t('ready')} ({readyOrders.length})
         </button>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="relative">
-        <Search className="w-4 h-4 text-zinc-500 absolute top-3 right-3.5" />
+        <Search className={`w-4 h-4 text-zinc-500 absolute top-3 ${isRTL ? 'right-3.5' : 'left-3.5'}`} />
         <input
           type="text"
-          placeholder="بحث سريع برقم الطلب # أو الملاحظة أو رقم الجوال..."
+          placeholder={t('searchOrdersPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-[#121215] border border-white/[0.08] rounded-xl pr-10 pl-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+          className={`w-full bg-[#121215] border border-white/[0.08] rounded-xl py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 ${
+            isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
+          }`}
         />
         {searchQuery && (
           <button
@@ -253,7 +257,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                           className="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                         >
                           <BellRing className="w-3.5 h-3.5" strokeWidth={1.75} />
-                          <span>نداء الاستلام</span>
+                          <span>{t('callReady')}</span>
                         </motion.button>
                       </motion.div>
                     );
@@ -271,7 +275,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
             <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06] mb-3.5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <h3 className="font-semibold text-emerald-400 text-sm">جاهز للاستلام</h3>
+                <h3 className="font-semibold text-emerald-400 text-sm">{t('readyForPickup')}</h3>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-medium tabular-nums">
                 {filteredReady.length}
@@ -376,7 +380,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                             className="py-2 px-3 rounded-lg bg-[#202026] hover:bg-[#282830] text-amber-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-all border border-amber-500/20"
                           >
                             <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
-                            <span>إعادة النداء</span>
+                            <span>{t('reCall')}</span>
                           </motion.button>
 
                           <motion.button
@@ -389,7 +393,7 @@ export const StaffQueueGrid: React.FC<StaffQueueGridProps> = ({
                             className="py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                           >
                             <Check className="w-3.5 h-3.5 stroke-[2.5]" strokeWidth={1.75} />
-                            <span>تم التسليم</span>
+                            <span>{t('completeOrder')}</span>
                           </motion.button>
                         </div>
                       </motion.div>

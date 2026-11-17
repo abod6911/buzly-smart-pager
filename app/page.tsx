@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BrandLogo } from '@/components/BrandLogo';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import {
   Smartphone,
   Store,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function LandingRoleSwitcherPage() {
+  const { language, isRTL, t } = useLanguage();
   return (
     <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black relative">
       {/* Subtle Luxury Radial Spotlight */}
@@ -30,18 +32,20 @@ export default function LandingRoleSwitcherPage() {
           </Link>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="minimal" />
+
             <Link
               href="/demo-cafe/staff"
               className="text-xs text-zinc-300 hover:text-white px-3 py-1.5 font-medium transition-colors"
             >
-              دخول الكاشير
+              {t('cashierLogin')}
             </Link>
 
             <Link
               href="/onboard"
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors shadow-sm"
             >
-              سجّل مطعمك
+              {t('registerStore')}
             </Link>
           </div>
         </div>
@@ -51,19 +55,19 @@ export default function LandingRoleSwitcherPage() {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center relative z-10">
         <div className="text-center max-w-3xl mx-auto pt-8 pb-10">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-emerald-400 text-xs font-medium mb-5">
-            <span>نظام استدعاء سحابي</span>
+            <span>{t('cloudPagingSystem')}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight sm:leading-tight">
-            نظام بيجر المطاعم الذكي
+            {t('smartRestaurantPager')}
             <br />
             <span className="text-zinc-400">
-              في متصفح جوال الزبون مباشرة
+              {t('inCustomerBrowserDirectly')}
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-zinc-400 mt-4 leading-relaxed max-w-xl mx-auto">
-            امسح الكود واستلم إشعارك فور جاهزية طلبك.
+            {t('heroDescription')}
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
@@ -71,14 +75,14 @@ export default function LandingRoleSwitcherPage() {
               href="/onboard"
               className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all shadow-sm"
             >
-              ابدأ الآن مجاناً
+              {t('startFree')}
             </Link>
 
             <Link
               href="/demo-cafe/staff"
               className="px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-200 font-medium text-sm transition-all"
             >
-              معاينة مباشرة
+              {t('liveDemo')}
             </Link>
           </div>
         </div>
@@ -96,12 +100,12 @@ export default function LandingRoleSwitcherPage() {
                   <Store className="w-5 h-5" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-6">
-                  شاشة الكاشير POS
+                  {language === 'ar' ? 'شاشة الكاشير POS' : 'Cashier POS Terminal'}
                 </h2>
               </div>
               <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-emerald-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
-                <span>فتح الكاشير</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{language === 'ar' ? 'فتح الكاشير' : 'Open Cashier'}</span>
+                <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
               </div>
             </Link>
           </motion.div>
@@ -118,11 +122,11 @@ export default function LandingRoleSwitcherPage() {
                   <Layers className="w-5 h-5" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-6">
-                  شاشة التلفاز التفاعلية
+                  {language === 'ar' ? 'شاشة التلفاز التفاعلية' : 'Interactive TV Board'}
                 </h2>
               </div>
               <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-amber-400 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
-                <span>عرض شاشة التلفاز</span>
+                <span>{language === 'ar' ? 'عرض شاشة التلفاز' : 'Launch TV Display'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </div>
             </Link>
@@ -140,12 +144,12 @@ export default function LandingRoleSwitcherPage() {
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-6">
-                  شاشة بيجر العميل
+                  {language === 'ar' ? 'شاشة بيجر العميل' : 'Guest Pager Screen'}
                 </h2>
               </div>
               <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-emerald-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
-                <span>تجربة شاشة العميل</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{language === 'ar' ? 'تجربة شاشة العميل' : 'Preview Guest Pager'}</span>
+                <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
               </div>
             </Link>
           </motion.div>
@@ -161,12 +165,12 @@ export default function LandingRoleSwitcherPage() {
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-6">
-                  إدارة المتجر والطباعة
+                  {language === 'ar' ? 'إدارة المتجر والطباعة' : 'Store Settings & Print'}
                 </h2>
               </div>
               <div className="w-full py-2 px-3 rounded-xl bg-white/[0.04] group-hover:bg-purple-500 group-hover:text-black border border-white/[0.06] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
-                <span>إعدادات المتجر والطباعة</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{language === 'ar' ? 'إعدادات المتجر والطباعة' : 'Store Management'}</span>
+                <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
               </div>
             </Link>
           </motion.div>

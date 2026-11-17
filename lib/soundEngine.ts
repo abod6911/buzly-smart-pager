@@ -614,6 +614,45 @@ class HighDecibelSoundEngine {
       console.warn('Speech synthesis error:', err);
     }
   }
+
+  public announceOrderEnglish(orderNumber: string, restaurantName?: string): void {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    try {
+      const speechText = `Order number ${orderNumber} is ready for pickup`;
+      const utterance = new SpeechSynthesisUtterance(speechText);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice = voices.find((v) => v.lang.startsWith('en'));
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Speech synthesis error:', err);
+    }
+  }
+
+  public announceOrder(
+    orderNumber: string,
+    mode: 'ar' | 'en' | 'bilingual' = 'ar',
+    restaurantName?: string
+  ): void {
+    if (mode === 'en') {
+      this.announceOrderEnglish(orderNumber, restaurantName);
+    } else if (mode === 'bilingual') {
+      this.announceOrderArabic(orderNumber, restaurantName);
+      setTimeout(() => {
+        this.announceOrderEnglish(orderNumber, restaurantName);
+      }, 2200);
+    } else {
+      this.announceOrderArabic(orderNumber, restaurantName);
+    }
+  }
 }
 
 export const soundEngine = new HighDecibelSoundEngine();

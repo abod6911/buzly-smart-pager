@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import {
   Settings,
   Palette,
@@ -70,6 +71,7 @@ const CHIME_THEMES: { id: ChimeSoundTheme; name: string; desc: string }[] = [
 export default function TenantAdminBrandingPage() {
   const params = useParams();
   const slug = (params.slug as string) || 'demo-cafe';
+  const { language, isRTL, t } = useLanguage();
 
   const { getRestaurant, updateRestaurant, isRestaurantsLoaded } = useQueue();
   const restaurant = getRestaurant(slug);
@@ -292,11 +294,11 @@ export default function TenantAdminBrandingPage() {
                 className="p-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-white transition-colors"
                 title="الرجوع للكاشير"
               >
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className={`w-5 h-5 ${isRTL ? '' : 'rotate-180'}`} />
               </Link>
               <div>
                 <h1 className="font-extrabold text-lg text-white font-cairo flex items-center gap-2">
-                  <span>إعدادات وهوية المتجر</span>
+                  <span>{t('storeManagement')}</span>
                   <span
                     className="text-[10px] font-mono px-2 py-0.5 rounded-full text-black font-bold"
                     style={{ backgroundColor: themeColor }}
@@ -309,22 +311,24 @@ export default function TenantAdminBrandingPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <LanguageSwitcher variant="minimal" />
+
               <Link
                 href={`/${slug}/tv`}
                 target="_blank"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-zinc-300 border border-obsidian-border"
               >
                 <Tv className="w-4 h-4 text-buzly-amber" />
-                <span className="hidden sm:inline">شاشة TV</span>
+                <span className="hidden sm:inline">{t('tvTitle')}</span>
               </Link>
               <Link
                 href={`/${slug}/admin/analytics`}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-zinc-300 border border-obsidian-border"
               >
                 <BarChart3 className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">التحليلات</span>
+                <span className="hidden sm:inline">{t('viewAnalytics')}</span>
               </Link>
-              <StaffLockBtn label="قفل الإعدادات" />
+              <StaffLockBtn label={t('lockTerminal')} />
             </div>
           </div>
         </header>
@@ -341,9 +345,9 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Tv className="w-4 h-4 text-sky-400" />
-              <span>مركز الشاشات والمشرف</span>
+              <span>{t('supervisorCommandCenter')}</span>
               <span className="text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-mono">
-                تحكم
+                {t('controlBadge')}
               </span>
             </button>
 
@@ -356,7 +360,7 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Palette className="w-4 h-4" />
-              <span>الهوية والتخصيص</span>
+              <span>{t('brandingTab')}</span>
             </button>
 
             <button
@@ -368,7 +372,7 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Printer className="w-4 h-4" />
-              <span>طباعة ستاندات الطاولات</span>
+              <span>{t('tableStandsTab')}</span>
             </button>
 
             <button
@@ -380,9 +384,9 @@ export default function TenantAdminBrandingPage() {
               }`}
             >
               <Archive className="w-4 h-4 text-amber-400" />
-              <span>سجل الأرشيف والمبيعات المشفر</span>
+              <span>{t('archiveTab')}</span>
               <span className="text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">
-                محمي
+                {t('protectedBadge')}
               </span>
             </button>
           </div>
@@ -401,13 +405,13 @@ export default function TenantAdminBrandingPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      <span>مركز تحكم الشاشات والمشرف</span>
+                      <span>{t('supervisorCommandCenter')}</span>
                       <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
-                        محمي برمز المدير
+                        {t('supervisorBadge')}
                       </span>
                     </h2>
                     <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-                      من هنا يستطيع المشرف أو المدير فتح وضبط كل شاشة في مكانها المخصص (شاشة التلفزيون في الصالة، شاشة الكاشير في الكاونتر، وباركودات الطاولات).
+                      {t('supervisorIntro')}
                     </p>
                   </div>
                 </div>
@@ -418,7 +422,7 @@ export default function TenantAdminBrandingPage() {
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md"
                   >
                     <Store className="w-4 h-4" />
-                    <span>الانتقال لكاشير POS</span>
+                    <span>{t('launchCashier')}</span>
                   </Link>
                 </div>
               </div>
@@ -432,16 +436,18 @@ export default function TenantAdminBrandingPage() {
                       <Tv className="w-5 h-5" />
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-white text-base">شاشة العرض الكبيرة (TV)</h3>
+                      <h3 className="font-bold text-white text-base">{t('tvTitle')}</h3>
                       <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                        للصالة والتلفزيون
+                        {language === 'ar' ? 'للصالة والتلفزيون' : 'Dining Hall TV'}
                       </span>
                     </div>
                     <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                      تُعرض على شاشة التلفزيون المعلقة في صالة المطعم أو منطقة الاستلام. تعرض أرقام الطلبات الجاهزة والتحضير مع نداء صوتي عربي فخم.
+                      {language === 'ar'
+                        ? 'تُعرض على شاشة التلفزيون المعلقة في صالة المطعم أو منطقة الاستلام. تعرض أرقام الطلبات الجاهزة والتحضير مع نداء صوتي عربي وإنجليزي فخم.'
+                        : 'Displayed on dining hall TVs or pickup counter screens. Shows preparing and ready orders with bilingual voice announcements.'}
                     </p>
                     <div className="mt-4 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-[11px] text-zinc-400">
-                      💡 نصيحة: بعد فتح الشاشة على التلفزيون اضغط مفتاح <span className="font-mono text-white bg-white/10 px-1 py-0.5 rounded">F11</span> لملء الشاشة بالكامل.
+                      💡 {t('fullscreenTip')}
                     </div>
                   </div>
 
@@ -451,7 +457,7 @@ export default function TenantAdminBrandingPage() {
                       target="_blank"
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all"
                     >
-                      <span>تشغيل شاشة التلفزيون</span>
+                      <span>{t('launchTv')}</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -464,16 +470,18 @@ export default function TenantAdminBrandingPage() {
                       <Store className="w-5 h-5" />
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-white text-base">محطة الكاشير POS</h3>
+                      <h3 className="font-bold text-white text-base">{t('cashierPos')}</h3>
                       <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        لجهاز الكاشير
+                        {t('protectedBadge')}
                       </span>
                     </div>
                     <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                      شاشة العمل المستقلة المخصصة لموظف الكاشير لإدخال الطلبات بنقرة واحدة ونداء استلام الزبائن بزر نداء فوري.
+                      {language === 'ar'
+                        ? 'شاشة العمل المستقلة المخصصة لموظف الكاشير لإدخال الطلبات بنقرة واحدة ونداء استلام الزبائن بزر نداء فوري.'
+                        : 'Dedicated standalone terminal for cashiers to enter orders and chime customers with zero latency.'}
                     </p>
                     <div className="mt-4 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-[11px] text-zinc-400">
-                      🔒 محمية برمز PIN ومستقلة تماماً بدون أي روابط إدارية تشتت الكاشير.
+                      🔒 {t('protectedAreaNotice')}
                     </div>
                   </div>
 
@@ -482,8 +490,8 @@ export default function TenantAdminBrandingPage() {
                       href={`/${slug}/staff`}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all"
                     >
-                      <span>فتح لوحة الكاشير</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>{t('launchCashier')}</span>
+                      <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
                     </Link>
                   </div>
                 </div>

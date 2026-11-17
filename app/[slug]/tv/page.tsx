@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { soundManager } from '@/lib/audio';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
@@ -22,6 +23,7 @@ export default function KitchenTvBoardPage() {
   const slug = (params.slug as string) || '';
 
   const { getRestaurant, getOrdersForRestaurant, isRestaurantsLoaded, lastEvent } = useQueue();
+  const { language, isRTL, t } = useLanguage();
   const restaurant = getRestaurant(slug);
   const orders = getOrdersForRestaurant(slug);
 
@@ -103,7 +105,11 @@ export default function KitchenTvBoardPage() {
       const voiceActive = restaurant?.voiceAnnounceEnabled ?? true;
       if (voiceActive) {
         setTimeout(() => {
-          soundManager.announceOrderArabic(orderNum, restaurant?.name || '');
+          soundManager.announceOrder(
+            orderNum,
+            language === 'en' ? 'en' : 'bilingual',
+            restaurant?.name || ''
+          );
         }, 1300);
       }
     }
@@ -194,8 +200,10 @@ export default function KitchenTvBoardPage() {
             </div>
           </div>
 
-          {/* Status & Minimal Controls (Clock & Fullscreen Only) */}
+          {/* Status & Minimal Controls (Clock, Language & Fullscreen) */}
           <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="minimal" />
+
             {/* Digital Clock in Western / English numerals */}
             <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <Clock className="w-4 h-4 text-zinc-400" />
@@ -210,7 +218,7 @@ export default function KitchenTvBoardPage() {
               whileHover={{ scale: 1.05 }}
               onClick={toggleFullscreen}
               className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] cursor-pointer"
-              title="ملء الشاشة"
+              title={t('fullscreen')}
             >
               <Maximize2 className="w-4 h-4" />
             </motion.button>
@@ -259,7 +267,7 @@ export default function KitchenTvBoardPage() {
               >
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>نداء جديد</span>
+                  <span>{t('newCall')}</span>
                 </div>
 
                 <div className="font-mono text-7xl sm:text-9xl font-black text-white tracking-tight tabular-nums my-2 drop-shadow-lg">
@@ -267,10 +275,10 @@ export default function KitchenTvBoardPage() {
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-4 tracking-tight">
-                  جاهز للاستلام الآن
+                  {language === 'ar' ? 'جاهز للاستلام الآن' : 'READY FOR PICKUP'}
                 </h2>
                 <p className="text-sm sm:text-base text-zinc-300 mt-2 font-medium">
-                  تفضل بالتوجه إلى كاونتر الاستلام
+                  {language === 'ar' ? 'تفضل بالتوجه إلى كاونتر الاستلام' : 'Please proceed to the counter to collect your order'}
                 </p>
               </motion.div>
             </motion.div>
@@ -285,8 +293,11 @@ export default function KitchenTvBoardPage() {
               <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-5">
                 <div className="flex items-center gap-3">
                   <span className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.45)]" />
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-zinc-100 tracking-tight">
-                    قيد التحضير
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-zinc-100 tracking-tight flex items-baseline gap-2">
+                    <span>{t('nowPreparing')}</span>
+                    {language === 'ar' && (
+                      <span className="text-xl font-bold text-zinc-500 uppercase">PREPARING</span>
+                    )}
                   </h2>
                 </div>
                 <span className="px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-base lg:text-lg font-mono font-bold tabular-nums">
@@ -320,13 +331,13 @@ export default function KitchenTvBoardPage() {
                         <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
                         <span className="text-xs font-mono text-zinc-400 font-medium mb-1 flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                          <span>طلب رقم</span>
+                          <span>{t('orderNumber')}</span>
                         </span>
                         <div className="font-mono text-4xl lg:text-5xl font-black text-white tracking-tight tabular-nums my-1 drop-shadow-sm">
                           {order.orderNumber}
                         </div>
                         <div className="mt-2 text-[11px] font-mono text-zinc-400 bg-white/[0.04] px-2.5 py-0.5 rounded-full border border-white/[0.06] tabular-nums">
-                          منذ {getElapsedMins(order.createdAt || order.created_at || new Date().toISOString())} د
+                          {t('elapsedAgo', { min: getElapsedMins(order.createdAt || order.created_at || new Date().toISOString()) })}
                         </div>
                       </motion.div>
                     ))}
@@ -335,7 +346,7 @@ export default function KitchenTvBoardPage() {
 
                 {preparingOrders.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-base font-medium">لا توجد طلبات قيد التحضير حالياً</p>
+                    <p className="text-base font-medium">{t('noPreparingOrders')}</p>
                   </div>
                 )}
               </div>
@@ -346,8 +357,11 @@ export default function KitchenTvBoardPage() {
               <div className="flex items-center justify-between pb-4 border-b border-emerald-500/20 mb-5">
                 <div className="flex items-center gap-3">
                   <span className="w-3.5 h-3.5 rounded-full bg-emerald-400" />
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-emerald-400 tracking-tight">
-                    جاهز للاستلام
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-emerald-400 tracking-tight flex items-baseline gap-2">
+                    <span>{t('readyForPickup')}</span>
+                    {language === 'ar' && (
+                      <span className="text-xl font-bold text-emerald-500/70 uppercase">READY</span>
+                    )}
                   </h2>
                 </div>
                 <span className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-base lg:text-lg font-mono font-bold tabular-nums">
@@ -385,7 +399,7 @@ export default function KitchenTvBoardPage() {
                       >
                         <span className="text-[11px] uppercase font-black text-emerald-300 mb-1 flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span>جاهز الآن</span>
+                          <span>{t('ready')}</span>
                         </span>
                         <motion.div
                           initial={{ scale: 0.82 }}
@@ -397,7 +411,7 @@ export default function KitchenTvBoardPage() {
                         </motion.div>
                         <span className="mt-1.5 text-xs font-bold text-emerald-200 bg-emerald-500/20 border border-emerald-500/40 px-3 py-0.5 rounded-full shadow-inner flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>تفضل للاستلام</span>
+                          <span>{t('proceedToCounter')}</span>
                         </span>
                       </motion.div>
                     ))}
@@ -406,7 +420,7 @@ export default function KitchenTvBoardPage() {
 
                 {readyOrders.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-base font-medium">بانتظار جاهزية الطلبات</p>
+                    <p className="text-base font-medium">{t('waitingForReady')}</p>
                   </div>
                 )}
               </div>

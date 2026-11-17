@@ -4,6 +4,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
+import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
@@ -14,6 +15,7 @@ export default function TenantTrackEntryPage() {
   const slug = (Array.isArray(params?.slug) ? params.slug[0] : params?.slug) || 'demo-cafe';
 
   const { getRestaurant, getOrdersForRestaurant, isRestaurantsLoaded } = useQueue();
+  const { language, isRTL, t } = useLanguage();
   const restaurant = getRestaurant(slug);
   const orders = getOrdersForRestaurant(slug);
   const activeOrders = (orders || []).filter((o) => o && (o.status === 'preparing' || o.status === 'ready'));
@@ -49,14 +51,18 @@ export default function TenantTrackEntryPage() {
               {restaurantName}
             </h1>
             <span className="text-[11px] font-mono text-zinc-500">
-              خدمة النداء الذكي
+              {t('smartPagingService')}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>الخدمة مفعلة</span>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher variant="minimal" />
+
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{t('serviceActive')}</span>
+          </div>
         </div>
       </header>
 
@@ -67,10 +73,10 @@ export default function TenantTrackEntryPage() {
             <Utensils className="w-6 h-6 text-emerald-400" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            استلام الطلب
+            {t('trackTitle')}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed">
-            أدخل رقم طلبك من الفاتورة لتحويل هاتفك إلى بيجر ذكي ينبهك فور الجاهزية
+            {t('smartPagingSubline')}
           </p>
         </div>
 
@@ -82,7 +88,7 @@ export default function TenantTrackEntryPage() {
         {/* Reassuring Footer */}
         <div className="mt-6 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-          <span>تنبيه فوري بالصوت والاهتزاز دون الحاجة لأي تطبيق</span>
+          <span>{t('noAppNeeded')}</span>
         </div>
       </main>
 

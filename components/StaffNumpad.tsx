@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, RotateCcw, Clock, Check, X, FileText, AlertCircle, BellRing } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
+import { useLanguage } from '@/context/LanguageContext';
 import { OdometerNumber } from '@/components/OdometerNumber';
 import { appleTapDialpad } from '@/lib/motion';
 
@@ -28,6 +29,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
   getActiveOrder,
   isSubmitting = false,
 }) => {
+  const { language, isRTL, t } = useLanguage();
   const [orderNumber, setOrderNumber] = useState<string>('');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(10);
   const [notes, setNotes] = useState<string>('');
@@ -157,7 +159,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
                   className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#052E16] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <BellRing className="w-4 h-4" />
-                  <span>استدعاء الطلب الآن</span>
+                  <span>{t('callOrderNow')}</span>
                 </motion.button>
               )}
 
@@ -174,7 +176,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
                 className="w-full py-2 rounded-xl bg-[#202026] hover:bg-[#282830] text-zinc-200 border border-white/[0.08] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>استبدال بطلب جديد</span>
+                <span>{t('replaceWithNewOrder')}</span>
               </motion.button>
 
               <button
@@ -182,7 +184,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
                 onClick={() => setDuplicatePromptOrder(null)}
                 className="w-full py-1 text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer"
               >
-                إلغاء التعديل
+                {t('cancelEdit')}
               </button>
             </div>
           </motion.div>
@@ -193,7 +195,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-zinc-300">
-            إدخال رقم الطلب
+            {t('enterOrderNumLabel')}
           </span>
         </div>
 
@@ -208,9 +210,9 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
             >
               <span className="flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
-                <span>تمت إضافة الطلب #{lastAddedOrderNum}</span>
+                <span>{t('orderAddedToast', { orderNumber: lastAddedOrderNum })}</span>
               </span>
-              <span className="text-[10px] text-emerald-400/80 font-mono">قيد التحضير</span>
+              <span className="text-[10px] text-emerald-400/80 font-mono">{t('preparing')}</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -257,13 +259,13 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
               className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1"
             >
               <FileText className="w-3.5 h-3.5 text-zinc-500" />
-              <span>إضافة ملاحظة على الطلب</span>
+              <span>{t('addNote')}</span>
             </button>
           ) : (
             <div className="relative">
               <input
                 type="text"
-                placeholder="ملاحظات الطلب (مثال: برجر سفري بدون بصل)..."
+                placeholder={t('notesPlaceholder')}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full bg-[#18181C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
@@ -307,7 +309,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
             onClick={handleClear}
             className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-rose-950/30 text-rose-400 text-sm font-semibold border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
           >
-            مسح
+            {t('clear')}
           </motion.button>
 
           {/* Zero Key */}
@@ -328,7 +330,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
             whileHover={{ scale: 1.01 }}
             onClick={handleBackspace}
             className="h-12 sm:h-14 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 text-sm border border-white/[0.06] transition-colors flex items-center justify-center select-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-            title="تراجع"
+            title={t('backspace')}
           >
             <RotateCcw className="w-4 h-4" />
           </motion.button>
@@ -348,7 +350,7 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           }`}
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>{isBusy ? 'جاري الإضافة...' : 'إضافة للانتظار'}</span>
+          <span>{isBusy ? t('addingToQueue') : t('addToQueue')}</span>
         </motion.button>
       </div>
     </div>
