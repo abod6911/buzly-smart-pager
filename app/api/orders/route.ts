@@ -95,7 +95,7 @@ const orderInputSchema = z.object({
   notes: z.string().max(300).optional(),
   customerPhone: z.string().max(30).optional(),
   customerName: z.string().max(100).optional(),
-  status: z.enum(['preparing', 'ready', 'completed', 'cancelled']).optional(),
+  status: z.enum(['preparing', 'ready', 'completed', 'cancelled', 'archived']).optional(),
   createdAt: z.string().optional(),
   created_at: z.string().optional(),
 });

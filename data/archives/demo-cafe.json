@@ -1,5 +1,21 @@
 [
   {
+    "id": "ord_arch_test_1794933571351",
+    "orderNumber": "A99",
+    "restaurantSlug": "demo-cafe",
+    "status": "completed",
+    "customerPhone": "0501234567",
+    "notes": "طلب أرشيف تجريبي للتأكد من حفظ الملف",
+    "estimatedMinutes": 8,
+    "createdAt": "2026-11-17T16:39:31.351Z",
+    "readyAt": "2026-11-17T16:44:31.352Z",
+    "completedAt": "2026-11-17T16:47:31.352Z",
+    "feedback": {
+      "rating": 5,
+      "submittedAt": "2026-11-17T16:39:31.352Z"
+    }
+  },
+  {
     "id": "ord_arch_test_1794932177171",
     "orderNumber": "A99",
     "restaurantSlug": "demo-cafe",

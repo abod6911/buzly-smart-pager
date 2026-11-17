@@ -27,9 +27,20 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
   const [lockedUntilSeconds, setLockedUntilSeconds] = useState<number | null>(null);
   const [mounted, setMounted] = useState<boolean>(false);
 
-  // 1. Initial Session Check via Secure HttpOnly Cookie
+  // 1. Initial Session Check (Enforce PIN prompt on every fresh tab/visit from the very first time)
   useEffect(() => {
     setMounted(true);
+
+    const slugKey = restaurant?.slug || 'demo-cafe';
+    const isUnlockedInThisTab =
+      typeof window !== 'undefined' &&
+      sessionStorage.getItem(`chimer_tab_unlocked_${slugKey}`) === 'true';
+
+    // If this tab was not explicitly unlocked in this session, ALWAYS show PIN prompt
+    if (!isUnlockedInThisTab) {
+      setIsAuthenticated(false);
+      return;
+    }
 
     const checkActiveSession = async () => {
       try {
@@ -38,6 +49,9 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         if (data.authenticated && (!restaurant?.slug || data.slug === restaurant?.slug)) {
           setIsAuthenticated(true);
           onUnlocked();
+        } else {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem(`chimer_tab_unlocked_${slugKey}`);
         }
       } catch (err) {
         console.warn('Session verification error:', err);
@@ -51,6 +65,9 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
       setIsAuthenticated(false);
       setPin('');
       setErrorMessage(null);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(`chimer_tab_unlocked_${slugKey}`);
+      }
     };
 
     window.addEventListener('chimer:lock', handleLock);
@@ -87,6 +104,10 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
 
         if (res.ok && data.success) {
           soundManager.playSuccessTone();
+          const slugKey = restaurant?.slug || 'demo-cafe';
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(`chimer_tab_unlocked_${slugKey}`, 'true');
+          }
           setIsAuthenticated(true);
           onUnlocked();
         } else if (res.status === 429 || data.locked) {
@@ -309,6 +330,11 @@ export async function lockStaffSession(): Promise<void> {
     console.warn('Logout request failed:', err);
   }
   if (typeof window !== 'undefined') {
+    Object.keys(sessionStorage).forEach((key) => {
+      if (key.startsWith('chimer_tab_unlocked_')) {
+        sessionStorage.removeItem(key);
+      }
+    });
     window.dispatchEvent(new CustomEvent('chimer:lock'));
   }
 }

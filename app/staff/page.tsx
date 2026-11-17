@@ -126,16 +126,6 @@ export default function StaffCashierPage() {
               <span className="hidden sm:inline">تجربة الجرس</span>
             </button>
 
-            {/* Restaurant QR Code */}
-            <button
-              onClick={() => handleOpenQr(undefined)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-300 border border-obsidian-border text-xs font-bold transition-all"
-              title="رمز QR للكاونتر"
-            >
-              <QrCode className="w-4 h-4 text-zinc-300" />
-              <span className="hidden sm:inline">QR الكاونتر</span>
-            </button>
-
             {/* Start New Day / Reset Queue */}
             <button
               onClick={async () => {
@@ -154,15 +144,14 @@ export default function StaffCashierPage() {
               <span className="hidden md:inline">بدء يوم جديد</span>
             </button>
 
-            {/* Customer Tracker Link */}
+            {/* Management Entry */}
             <Link
-              href="/track"
-              target="_blank"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all"
+              href="/demo-cafe/admin"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-xs font-bold transition-all"
+              title="إدارة المتجر والمشرف (تتطلب رمز PIN)"
             >
-              <Smartphone className="w-4 h-4" />
-              <span>شاشة العميل</span>
-              <ExternalLink className="w-3 h-3 opacity-70" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="hidden sm:inline">الإدارة</span>
             </Link>
 
             {/* Instant Terminal Lock */}

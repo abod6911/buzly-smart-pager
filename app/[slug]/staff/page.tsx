@@ -182,7 +182,7 @@ export default function TenantStaffCashierPage() {
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             {/* Left: Brand & Live Status */}
             <div className="flex items-center gap-3">
-              <Link href={`/${slug}/admin`} className="flex items-center gap-2.5 group">
+              <div className="flex items-center gap-2.5">
                 <RestaurantAvatar
                   logoUrl={restaurant?.logoUrl}
                   name={restaurant?.name || slug}
@@ -193,6 +193,9 @@ export default function TenantStaffCashierPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-white">
                       {restaurant?.name || slug}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      كاشير POS
                     </span>
                     {networkStatus === 'connected' ? (
                       <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
@@ -207,66 +210,18 @@ export default function TenantStaffCashierPage() {
                     )}
                   </div>
                 </div>
-              </Link>
+              </div>
             </div>
 
-            {/* Middle: Segmented View Navigation */}
-            <nav className="hidden md:flex items-center bg-[#121215] border border-white/[0.08] p-1 rounded-xl text-xs font-medium text-zinc-400">
-              <span className="px-3 py-1.5 rounded-lg bg-zinc-800 text-white font-semibold shadow-sm">
-                لوحة الكاشير
-              </span>
-              <Link
-                href={`/${slug}/tv`}
-                target="_blank"
-                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
-              >
-                <Tv className="w-3.5 h-3.5 text-zinc-400" />
-                <span>شاشة العرض TV</span>
-              </Link>
-              <Link
-                href={`/${slug}/admin/analytics`}
-                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
-              >
-                <BarChart3 className="w-3.5 h-3.5 text-zinc-400" />
-                <span>التحليلات</span>
-              </Link>
+            {/* Right: Management Entry (Protected by PIN) & Instant Terminal Lock */}
+            <div className="flex items-center gap-2">
               <Link
                 href={`/${slug}/admin`}
-                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-xs font-medium transition-colors"
+                title="إعدادات المتجر والمشرف (محمية برمز PIN)"
               >
                 <Settings className="w-3.5 h-3.5 text-zinc-400" />
-                <span>إعدادات المتجر</span>
-              </Link>
-              <Link
-                href="/debug"
-                target="_blank"
-                className="px-3 py-1.5 rounded-lg hover:text-white transition-colors flex items-center gap-1.5"
-              >
-                <Activity className="w-3.5 h-3.5 text-zinc-400" />
-                <span>فحص النظام</span>
-              </Link>
-            </nav>
-
-            {/* Right: Actions */}
-            <div className="flex items-center gap-2">
-              <motion.button
-                whileTap={{ scale: 0.94 }}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => handleOpenQr(undefined)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] text-xs font-medium transition-colors shadow-sm"
-                title="عرض رمز الباركود للطاولات"
-              >
-                <QrCode className="w-3.5 h-3.5 text-emerald-400" />
-                <span>باركود الطاولات</span>
-              </motion.button>
-
-              <Link
-                href={`/${slug}/track`}
-                target="_blank"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18181C] hover:bg-[#202026] text-zinc-300 border border-white/[0.08] text-xs font-medium transition-colors shadow-sm"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
-                <span>شاشة العميل</span>
+                <span>إدارة المتجر</span>
               </Link>
 
               <StaffLockBtn label="قفل الكاشير" />

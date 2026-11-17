@@ -27,6 +27,9 @@ import {
   Volume2,
   Mic,
   Archive,
+  Activity,
+  ExternalLink,
+  Store,
 } from 'lucide-react';
 import { ChimeSoundTheme } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
@@ -71,7 +74,7 @@ export default function TenantAdminBrandingPage() {
   const { getRestaurant, updateRestaurant, isRestaurantsLoaded } = useQueue();
   const restaurant = getRestaurant(slug);
 
-  const [activeTab, setActiveTab] = useState<'branding' | 'stand' | 'archive'>('branding');
+  const [activeTab, setActiveTab] = useState<'screens' | 'branding' | 'stand' | 'archive'>('screens');
 
   // Form states
   const [name, setName] = useState<string>(restaurant?.name || '');
@@ -328,10 +331,25 @@ export default function TenantAdminBrandingPage() {
 
         {/* Tab Controls */}
         <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6">
-          <div className="flex border-b border-obsidian-border gap-2">
+          <div className="flex border-b border-obsidian-border gap-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('screens')}
+              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+                activeTab === 'screens'
+                  ? 'border-emerald-500 text-white'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Tv className="w-4 h-4 text-sky-400" />
+              <span>مركز الشاشات والمشرف</span>
+              <span className="text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-mono">
+                تحكم
+              </span>
+            </button>
+
             <button
               onClick={() => setActiveTab('branding')}
-              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
                 activeTab === 'branding'
                   ? 'border-emerald-500 text-white'
                   : 'border-transparent text-zinc-400 hover:text-white'
@@ -343,7 +361,7 @@ export default function TenantAdminBrandingPage() {
 
             <button
               onClick={() => setActiveTab('stand')}
-              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
                 activeTab === 'stand'
                   ? 'border-emerald-500 text-white'
                   : 'border-transparent text-zinc-400 hover:text-white'
@@ -355,7 +373,7 @@ export default function TenantAdminBrandingPage() {
 
             <button
               onClick={() => setActiveTab('archive')}
-              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+              className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
                 activeTab === 'archive'
                   ? 'border-emerald-500 text-white'
                   : 'border-transparent text-zinc-400 hover:text-white'
@@ -372,6 +390,224 @@ export default function TenantAdminBrandingPage() {
 
         {/* Main Body */}
         <main className="max-w-6xl w-full mx-auto p-4 sm:px-6 py-8 flex-1">
+          {/* TAB 0: SUPERVISOR & SCREENS CONTROL CENTER */}
+          {activeTab === 'screens' && (
+            <div className="space-y-6">
+              {/* Intro Banner */}
+              <div className="bg-[#121215] border border-white/[0.08] rounded-3xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0">
+                    <Tv className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <span>مركز تحكم الشاشات والمشرف</span>
+                      <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                        محمي برمز المدير
+                      </span>
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-1 max-w-xl">
+                      من هنا يستطيع المشرف أو المدير فتح وضبط كل شاشة في مكانها المخصص (شاشة التلفزيون في الصالة، شاشة الكاشير في الكاونتر، وباركودات الطاولات).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/${slug}/staff`}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md"
+                  >
+                    <Store className="w-4 h-4" />
+                    <span>الانتقال لكاشير POS</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Grid of Screen Station Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* Station 1: TV Customer Screen */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-amber-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Tv className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">شاشة العرض الكبيرة (TV)</h3>
+                      <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                        للصالة والتلفزيون
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      تُعرض على شاشة التلفزيون المعلقة في صالة المطعم أو منطقة الاستلام. تعرض أرقام الطلبات الجاهزة والتحضير مع نداء صوتي عربي فخم.
+                    </p>
+                    <div className="mt-4 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-[11px] text-zinc-400">
+                      💡 نصيحة: بعد فتح الشاشة على التلفزيون اضغط مفتاح <span className="font-mono text-white bg-white/10 px-1 py-0.5 rounded">F11</span> لملء الشاشة بالكامل.
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href={`/${slug}/tv`}
+                      target="_blank"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all"
+                    >
+                      <span>تشغيل شاشة التلفزيون</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Station 2: Cashier POS Screen */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-emerald-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">محطة الكاشير POS</h3>
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        لجهاز الكاشير
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      شاشة العمل المستقلة المخصصة لموظف الكاشير لإدخال الطلبات بنقرة واحدة ونداء استلام الزبائن بزر نداء فوري.
+                    </p>
+                    <div className="mt-4 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-[11px] text-zinc-400">
+                      🔒 محمية برمز PIN ومستقلة تماماً بدون أي روابط إدارية تشتت الكاشير.
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href={`/${slug}/staff`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all"
+                    >
+                      <span>فتح لوحة الكاشير</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Station 3: Table QR & Counter Stands */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-purple-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Printer className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">ستاندات باركود الطاولات</h3>
+                      <span className="text-[10px] bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                        طباعة A6 / كاونتر
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      تصميم وطباعة ستاندات الأكريليك الفاخرة للطاولات أو ملصق الكاونتر ليمسحه الزبائن بكاميرا هواتفهم فوراً.
+                    </p>
+                    <div className="mt-4 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-[11px] text-zinc-400">
+                      📄 قياس A6 احترافي مع شعار المطعم وألوان هويتك التلقائية.
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveTab('stand')}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold transition-all"
+                    >
+                      <span>معاينة وطباعة الستاند</span>
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Station 4: Customer Tracker Mobile Preview */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-sky-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Smartphone className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">شاشة جوال الزبون</h3>
+                      <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full">
+                        معاينة مباشرة
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      معاينة الواجهة الذكية التي يراها الزبون على هاتفه، مع اختبار رنين واهتزاز الجوال الحقيقي فور جهوزية الطلب.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href={`/${slug}/track`}
+                      target="_blank"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.08] text-xs font-bold transition-all"
+                    >
+                      <span>معاينة شاشة الزبون</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Station 5: Kitchen Speed Analytics */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-emerald-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <BarChart3 className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">تحليلات سرعة المطبخ</h3>
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        تقارير الأداء
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      إحصائيات حية عن متوسط سرعة التحضير وتأخير استلام الزبائن ومؤشرات كفاءة موظفي المطبخ والكاشير.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href={`/${slug}/admin/analytics`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.08] text-xs font-bold transition-all"
+                    >
+                      <span>عرض التحليلات</span>
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Station 6: System Diagnostics */}
+                <div className="bg-[#121215] border border-white/[0.08] hover:border-zinc-500/30 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                  <div>
+                    <div className="w-11 h-11 rounded-2xl bg-zinc-800 text-zinc-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Activity className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white text-base">فحص وصحة النظام</h3>
+                      <span className="text-[10px] bg-zinc-700/50 text-zinc-300 border border-zinc-600 px-2 py-0.5 rounded-full">
+                        تشخيص الاتصال
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                      فحص سرعة استجابة السيرفر المحلي والإنترنت وشهادات الأمان ومحرك الأصوات للتأكد من جاهزية التشغيل بدون أي مشاكل.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href="/debug"
+                      target="_blank"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.08] text-xs font-bold transition-all"
+                    >
+                      <span>تشغيل الفحص</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: BRANDING STUDIO */}
           {activeTab === 'branding' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
