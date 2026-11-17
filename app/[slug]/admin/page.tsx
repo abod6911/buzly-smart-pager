@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { ChimeSoundTheme } from '@/types/queue';
 import { soundManager } from '@/lib/audio';
+import { LogoPicker } from '@/components/LogoPicker';
 
 const COLOR_OPTIONS = [
   { name: 'زمردي كلاسيكي', hex: '#10B981' },
@@ -378,17 +379,13 @@ export default function TenantAdminBrandingPage() {
                     />
                   </div>
 
-                  {/* Logo URL */}
+                  {/* Enhanced Logo Selector & Uploader */}
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      رابط شعار المتجر
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://example.com/logo.png"
+                    <LogoPicker
                       value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      className="w-full bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 dir-ltr"
+                      onChange={setLogoUrl}
+                      restaurantName={name}
+                      themeColor={themeColor}
                     />
                   </div>
 

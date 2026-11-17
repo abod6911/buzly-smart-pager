@@ -433,30 +433,9 @@ export default function KitchenTvBoardPage() {
                 />
               </div>
 
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-4">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>النظام متصل وجاهز للاستدعاء</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
-                {restaurant?.name || 'أهلاً بكم'}
+              <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tight">
+                {restaurant?.name || slug}
               </h2>
-
-              <p className="text-sm sm:text-base text-zinc-400 max-w-lg leading-relaxed mb-8">
-                ستظهر أرقام الطلبات على هذه الشاشة فور بدء تحضيرها وندائها صوتياً فور جاهزيتها للاستلام.
-              </p>
-
-              <div className="flex items-center gap-6 text-xs text-zinc-500 font-mono">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-zinc-400" />
-                  <span className="text-zinc-300 font-bold text-sm tabular-nums dir-ltr">{currentTime || '--:--'}</span>
-                </div>
-                <span className="text-zinc-700">•</span>
-                <div className="flex items-center gap-2">
-                  <UtensilsCrossed className="w-4 h-4 text-zinc-400" />
-                  <span>الخدمة الذاتية الذكية</span>
-                </div>
-              </div>
             </motion.div>
           </main>
         )}

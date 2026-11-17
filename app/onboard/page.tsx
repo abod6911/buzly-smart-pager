@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { useQueue } from '@/context/QueueContext';
 import { soundManager } from '@/lib/audio';
 import { ChimeSoundTheme } from '@/types/queue';
+import { LogoPicker } from '@/components/LogoPicker';
 import {
   Store,
   Sparkles,
@@ -203,17 +204,13 @@ export default function RestaurantOnboardingPage() {
             <p className="text-[11px] text-zinc-500 mt-1">هذا الرابط سيفتحه زبائنك عند مسح الباركود</p>
           </div>
 
-          {/* Logo URL */}
+          {/* Logo Selector & Uploader */}
           <div>
-            <label className="block text-xs font-bold text-zinc-200 mb-1.5">
-              رابط الشعار أو صورة البراند (اختياري)
-            </label>
-            <input
-              type="url"
-              placeholder="https://example.com/logo.png"
+            <LogoPicker
               value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              className="w-full bg-obsidian-card border border-obsidian-border rounded-2xl px-4 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 dir-ltr"
+              onChange={setLogoUrl}
+              restaurantName={name}
+              themeColor={themeColor}
             />
           </div>
 

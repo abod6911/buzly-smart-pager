@@ -66,24 +66,18 @@ export const QrModal: React.FC<QrModalProps> = ({
     );
   }, [activeBaseUrl]);
 
+  const isOrderQr = Boolean(orderNumber);
+
   const targetUrl = useMemo(() => {
     const base = (activeBaseUrl || currentOrigin || '').replace(/\/+$/, '');
     const cleanSlug = (restaurantSlug || 'demo-cafe').toLowerCase();
 
     if (orderNumber) {
-      const params = new URLSearchParams({
-        est: String(estimatedMinutes || 10),
-        status: 'preparing',
-        slug: cleanSlug,
-        created: new Date().toISOString(),
-      });
-      if (orderNotes) params.set('notes', orderNotes);
-
-      return `${base}/${cleanSlug}/track/${encodeURIComponent(orderNumber)}?${params.toString()}`;
+      return `${base}/${cleanSlug}/track/${encodeURIComponent(orderNumber)}`;
     }
 
     return `${base}/${cleanSlug}/track`;
-  }, [activeBaseUrl, currentOrigin, restaurantSlug, orderNumber, estimatedMinutes, orderNotes]);
+  }, [activeBaseUrl, currentOrigin, restaurantSlug, orderNumber]);
 
   useEffect(() => {
     if (!isOpen || !targetUrl) return;
@@ -145,47 +139,98 @@ export const QrModal: React.FC<QrModalProps> = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-        <head>
-          <title>Chimer - ${orderNumber ? `طلب #${orderNumber}` : 'كود الكاونتر'}</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              text-align: center;
-              padding: 24px;
-              color: #000;
-              margin: 0;
-            }
-            .card {
-              border: 2px solid #E4E4E7;
-              border-radius: 16px;
-              padding: 24px;
-              max-width: 300px;
-              margin: 20px auto;
-            }
-            h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
-            .subtitle { font-size: 12px; color: #71717A; margin-bottom: 12px; }
-            .order-num { font-size: 42px; font-weight: 800; font-family: monospace; margin: 10px 0; }
-            img { width: 210px; height: 210px; border-radius: 12px; }
-            p { font-size: 12px; color: #3F3F46; margin: 12px 0 0; font-weight: 600; line-height: 1.4; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <h1>CHIMER PAGER</h1>
-            <div class="subtitle">بيجر ذكي لمتابعة جاهزية الطلب</div>
-            ${orderNumber ? `<div class="order-num">#${orderNumber}</div>` : '<div>امسح لمتابعة طلبك</div>'}
-            <img src="${qrDataUrl}" alt="QR Code" />
-            <p>امسح الكود بكاميرا جوالك لتفعيل جرس التنبيه الفوري عند جاهزية الطلب.</p>
-          </div>
-          <script>
-            window.onload = function() { window.print(); }
-          </script>
-        </body>
-      </html>
-    `);
+    if (orderNumber) {
+      // 1. ORDER SPECIFIC RECEIPT SLIP
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+          <head>
+            <title>إيصال طلب #${orderNumber}</title>
+            <style>
+              body {
+                font-family: system-ui, -apple-system, sans-serif;
+                text-align: center;
+                padding: 16px;
+                color: #000;
+                margin: 0;
+                background: #fff;
+              }
+              .receipt {
+                border: 2px dashed #71717A;
+                border-radius: 12px;
+                padding: 20px;
+                max-width: 260px;
+                margin: 10px auto;
+              }
+              .store-name { font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+              .badge { display: inline-block; font-size: 11px; background: #000; color: #fff; padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; }
+              .order-num { font-size: 54px; font-weight: 900; font-family: monospace; margin: 4px 0; letter-spacing: -1px; }
+              img { width: 180px; height: 180px; margin: 8px 0; }
+              .instructions { font-size: 12px; font-weight: 700; color: #18181B; line-height: 1.4; margin-top: 6px; }
+              .footer { font-size: 10px; color: #71717A; margin-top: 12px; border-top: 1px solid #E4E4E7; pt: 8px; }
+            </style>
+          </head>
+          <body>
+            <div class="receipt">
+              <div class="store-name">${restaurantSlug || 'المتجر'}</div>
+              <div class="badge">بيجر ذكي للطلب</div>
+              <div class="order-num">#${orderNumber}</div>
+              <img src="${qrDataUrl}" alt="QR" />
+              <div class="instructions">امسح الكود بكاميرا جوالك وسيرن هاتفك تلقائياً فور جاهزية وجبتك.</div>
+              <div class="footer">${new Date().toLocaleString('ar-SA')}</div>
+            </div>
+            <script>
+              window.onload = function() { window.print(); }
+            </script>
+          </body>
+        </html>
+      `);
+    } else {
+      // 2. COUNTER & TABLE ACRYLIC STAND (A6)
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+          <head>
+            <title>ستاند طاولة - ${restaurantSlug || 'المتجر'}</title>
+            <style>
+              body {
+                font-family: system-ui, -apple-system, sans-serif;
+                text-align: center;
+                padding: 30px;
+                color: #000;
+                margin: 0;
+                background: #fff;
+              }
+              .stand {
+                border: 3px solid #18181B;
+                border-radius: 20px;
+                padding: 32px 24px;
+                max-width: 320px;
+                margin: 20px auto;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+              }
+              .store-name { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+              .subtitle { font-size: 13px; color: #71717A; margin-bottom: 16px; font-weight: 600; }
+              img { width: 220px; height: 220px; border-radius: 12px; margin: 10px 0; }
+              .callout { font-size: 15px; font-weight: 800; color: #059669; margin-top: 14px; }
+              .instructions { font-size: 12px; color: #52525B; margin-top: 6px; line-height: 1.5; font-weight: 500; }
+            </style>
+          </head>
+          <body>
+            <div class="stand">
+              <div class="store-name">${restaurantSlug || 'المتجر'}</div>
+              <div class="subtitle">خدمة النداء والبيجر الذكي</div>
+              <img src="${qrDataUrl}" alt="QR" />
+              <div class="callout">امسح لمتابعة طلبك من طاولتك</div>
+              <div class="instructions">افتح كاميرا جوالك وامسح الرمز لتفعيل جرس التنبيه الفوري عند جاهزية طلبك للاستلام.</div>
+            </div>
+            <script>
+              window.onload = function() { window.print(); }
+            </script>
+          </body>
+        </html>
+      `);
+    }
     printWindow.document.close();
   };
 
@@ -193,10 +238,16 @@ export const QrModal: React.FC<QrModalProps> = ({
     <AppleBottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title={orderNumber ? `باركود تتبع الطلب #${orderNumber}` : 'رمز الكاونتر الموحد'}
+      title={orderNumber ? `باركود استلام الطلب #${orderNumber}` : 'رمز الطاولات والكاونتر الموحد'}
       maxWidth="max-w-md"
     >
       <div className="space-y-4 text-center">
+        {/* Purpose description */}
+        <p className="text-xs text-zinc-400 font-medium leading-relaxed">
+          {orderNumber
+            ? `هذا الباركود مخصص للطلب #${orderNumber} فقط، يفتحه العميل لمتابعة وجبته ورنين جواله عند الجاهزية.`
+            : 'هذا الباركود موحد للطاولات والكاونتر لمسحه بواسطة العملاء لمتابعة طلباتهم.'}
+        </p>
         {/* Localhost Warning Notice */}
         {isLocalhost && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-right">
@@ -328,7 +379,7 @@ export const QrModal: React.FC<QrModalProps> = ({
             className="py-3 px-3 rounded-2xl bg-[#18181C] hover:bg-[#202026] border border-white/[0.08] text-zinc-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-emerald-400" />
-            <span>طباعة ستاند A6</span>
+            <span>{orderNumber ? 'طباعة إيصال الطلب' : 'طباعة ستاند A6 للطاولة'}</span>
           </button>
           <button
             onClick={handleDownload}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store } from 'lucide-react';
 
 interface RestaurantAvatarProps {
@@ -45,6 +45,11 @@ export const RestaurantAvatar: React.FC<RestaurantAvatarProps> = ({
 }) => {
   const [currentSrc, setCurrentSrc] = useState<string | null>(logoUrl || null);
   const [imgError, setImgError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setCurrentSrc(logoUrl || null);
+    setImgError(false);
+  }, [logoUrl]);
   const trimmedName = (name || '').trim();
   const initial = trimmedName ? trimmedName.charAt(0).toUpperCase() : '';
 

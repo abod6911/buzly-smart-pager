@@ -248,44 +248,6 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           )}
         </div>
 
-        {/* Estimated Prep Time: Segmented Control Bar */}
-        <div className="mb-3.5">
-          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1.5">
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-zinc-400" />
-              <span>الوقت المقدر</span>
-            </span>
-            <span className="font-mono text-xs font-semibold text-zinc-200 tabular-nums">
-              {estimatedMinutes} دقيقة
-            </span>
-          </div>
-
-          <div className="bg-[#18181C] p-1 rounded-xl border border-white/[0.06] grid grid-cols-5 gap-1">
-            {PRESET_MINUTES.map((mins) => {
-              const isSelected = estimatedMinutes === mins;
-              return (
-                <motion.button
-                  key={mins}
-                  type="button"
-                  whileTap={{ scale: 0.94 }}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => {
-                    soundManager.playKeyClick();
-                    setEstimatedMinutes(mins);
-                  }}
-                  className={`py-1.5 rounded-lg text-xs font-mono font-medium tabular-nums transition-colors ${
-                    isSelected
-                      ? 'bg-zinc-800 text-white shadow-sm border border-white/10'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  {mins} د
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Optional Note input */}
         <div className="mb-3.5">
           {!showNotes ? (
