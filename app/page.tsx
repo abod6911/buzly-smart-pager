@@ -12,6 +12,7 @@ import {
   Sparkles,
   ArrowLeft,
   ExternalLink,
+  Shield,
 } from 'lucide-react';
 
 export default function LandingRoleSwitcherPage() {

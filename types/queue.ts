@@ -28,6 +28,8 @@ export interface Restaurant {
   chimeTheme?: ChimeSoundTheme;
   voiceAnnounceEnabled?: boolean;
   createdAt: string;
+  isPaused?: boolean;
+  notes?: string;
 }
 
 export interface Order {
@@ -73,7 +75,8 @@ export type QueueEventType =
   | 'QUEUE_RESET'
   | 'PUSH_REGISTERED'
   | 'RESTAURANT_CREATED'
-  | 'RESTAURANT_UPDATED';
+  | 'RESTAURANT_UPDATED'
+  | 'RESTAURANT_DELETED';
 
 export interface QueueRealtimeEvent {
   type: QueueEventType;

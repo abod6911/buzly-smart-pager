@@ -314,6 +314,15 @@ export default function TenantAdminBrandingPage() {
               <LanguageSwitcher variant="minimal" />
 
               <Link
+                href="/admin"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-emerald-400 border border-emerald-500/30 transition-colors"
+                title="الرجوع إلى لوحة تحكم المالك الرئيسية لجميع المطاعم"
+              >
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">كل المطاعم</span>
+              </Link>
+
+              <Link
                 href={`/${slug}/tv`}
                 target="_blank"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-xs font-bold text-zinc-300 border border-obsidian-border"

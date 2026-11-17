@@ -217,3 +217,46 @@ export function verifyStaffToken(token: string): {
     return { valid: false };
   }
 }
+
+export const SUPER_ADMIN_COOKIE_NAME = 'chimer_master_token';
+
+export function createSuperAdminToken(): string {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    role: 'super_admin',
+    iat: now,
+    exp: now + 24 * 60 * 60, // 24 Hours
+  };
+
+  const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', TOKEN_SECRET)
+    .update(`${headerB64}.${payloadB64}`)
+    .digest('base64url');
+
+  return `${headerB64}.${payloadB64}.${signature}`;
+}
+
+export function verifySuperAdminToken(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    const [headerB64, payloadB64, signature] = parts;
+    const expectedSignature = crypto
+      .createHmac('sha256', TOKEN_SECRET)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64url');
+
+    if (!crypto.timingSafeEqual(Buffer.from(signature, 'utf8'), Buffer.from(expectedSignature, 'utf8'))) {
+      return false;
+    }
+
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    const now = Math.floor(Date.now() / 1000);
+    return payload.role === 'super_admin' && payload.exp >= now;
+  } catch {
+    return false;
+  }
+}

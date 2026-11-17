@@ -23,6 +23,19 @@ const STORAGE_ORDERS_KEY = 'buzly_multitenant_orders_v3';
 const STORAGE_RESTAURANTS_KEY = 'buzly_multitenant_restaurants_v3';
 const BROADCAST_CHANNEL_NAME = 'buzly_realtime_queue_v3';
 
+export const DEFAULT_DEMO_RESTAURANT: Restaurant = {
+  id: 'res_demo-cafe',
+  slug: 'demo-cafe',
+  name: 'كافيه دي مو (Demo Cafe)',
+  logoUrl: '/logo.png',
+  themeColor: '#10B981',
+  staffPin: '1234',
+  whatsappFallbackEnabled: true,
+  chimeTheme: 'hospitality',
+  voiceAnnounceEnabled: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
 interface QueueContextType {
   orders: Order[];
   restaurants: Record<string, Restaurant>;
@@ -33,6 +46,7 @@ interface QueueContextType {
   getRestaurant: (slug: string) => Restaurant | undefined;
   updateRestaurant: (slug: string, data: Partial<Restaurant>) => Promise<void>;
   createRestaurant: (data: Omit<Restaurant, 'id' | 'createdAt'>) => Promise<Restaurant>;
+  deleteRestaurant: (slug: string) => Promise<void>;
   addOrder: (
     orderNumber: string,
     estimatedMinutes: number,
@@ -239,8 +253,10 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         STORAGE_RESTAURANTS_KEY,
         {}
       );
-      if (storedRest && typeof storedRest === 'object') {
+      if (storedRest && typeof storedRest === 'object' && Object.keys(storedRest).length > 0) {
         setRestaurants(storedRest);
+      } else {
+        setRestaurants({ 'demo-cafe': DEFAULT_DEMO_RESTAURANT });
       }
 
       const storedOrders = safeParseStorage<Order[] | null>(
@@ -798,6 +814,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (restaurants[cleanSlug]) {
         return restaurants[cleanSlug];
       }
+      if (cleanSlug === 'demo-cafe') {
+        return DEFAULT_DEMO_RESTAURANT;
+      }
       if (typeof window !== 'undefined' && !fetchedSlugsRef.current.has(cleanSlug)) {
         fetchedSlugsRef.current.add(cleanSlug);
         fetch(`/api/restaurants/${cleanSlug}`)
@@ -901,6 +920,35 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       return newRest;
+    },
+    [orders, restaurants, saveAndBroadcast]
+  );
+
+  const deleteRestaurant = useCallback(
+    async (slug: string): Promise<void> => {
+      const cleanSlug = slug.toLowerCase().trim();
+      const nextRestaurants = { ...restaurants };
+      delete nextRestaurants[cleanSlug];
+
+      const nextOrders = orders.filter(
+        (o) => (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim() !== cleanSlug
+      );
+
+      saveAndBroadcast(
+        nextOrders,
+        {
+          type: 'RESTAURANT_DELETED',
+          restaurantSlug: cleanSlug,
+          timestamp: Date.now(),
+          sourceTabId: tabIdRef.current,
+        },
+        nextRestaurants
+      );
+
+      if (isSupabaseConfigured() && supabase) {
+        supabase.from('restaurants').delete().eq('slug', cleanSlug).then();
+        supabase.from('orders_queue').delete().eq('restaurant_slug', cleanSlug).then();
+      }
     },
     [orders, restaurants, saveAndBroadcast]
   );
@@ -1909,6 +1957,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getRestaurant,
     updateRestaurant,
     createRestaurant,
+    deleteRestaurant,
     addOrder,
     getActiveOrder,
     markReady,
