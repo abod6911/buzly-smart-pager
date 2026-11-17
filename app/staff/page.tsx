@@ -32,6 +32,7 @@ export default function StaffCashierPage() {
     cancelOrder,
     resetToDemoOrders,
     clearQueue,
+    startNewDay,
     isSupabaseActive,
     getActiveOrder,
     warmupLiveChannel,
@@ -135,14 +136,22 @@ export default function StaffCashierPage() {
               <span className="hidden sm:inline">QR الكاونتر</span>
             </button>
 
-            {/* Clear Orders */}
+            {/* Start New Day / Reset Queue */}
             <button
-              onClick={() => clearQueue('demo-cafe')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-card hover:bg-obsidian-border text-zinc-400 hover:text-white border border-obsidian-border text-xs font-bold transition-all"
-              title="تفريغ طابور الطلبات"
+              onClick={async () => {
+                if (
+                  window.confirm(
+                    'تأكيد بدء يوم عمل جديد؟\n\nسيتم تصفير عداد الطلبات وأرشفة جميع الطلبات السابقة في السجل المشفر للمتجر.'
+                  )
+                ) {
+                  await startNewDay('demo-cafe');
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 text-xs font-bold transition-all"
+              title="تصفير العداد وأرشفة الطلبات السابقة لبدء يوم جديد"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">تفريغ الطابور</span>
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">بدء يوم جديد</span>
             </button>
 
             {/* Customer Tracker Link */}

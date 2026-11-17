@@ -52,6 +52,7 @@ interface QueueContextType {
     restaurantSlug?: string
   ) => Promise<void>;
   archiveCompletedOrders: (restaurantSlug: string) => Promise<void>;
+  startNewDay: (restaurantSlug: string) => Promise<number>;
   registerPushSubscription: (
     orderNumber: string,
     sub: PushSubscriptionData,
@@ -1442,7 +1443,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [saveAndBroadcast]
   );
 
-  // 9. Action: Auto-Archive Completed Orders
+  // 9. Action: Auto-Archive Completed Orders & Save to Archive File
   const archiveCompletedOrders = useCallback(
     async (restaurantSlug: string) => {
       const slug = restaurantSlug.toLowerCase().trim();
@@ -1452,6 +1453,24 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === slug &&
           ord.status === 'completed'
       );
+
+      if (completedList.length > 0) {
+        // Save to persistent file storage & client archive
+        try {
+          fetch(`/api/restaurants/${slug}/archive`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders: completedList }),
+          }).catch(() => {});
+
+          const archiveKey = `chimer_archive_${slug}`;
+          const existingLocal = JSON.parse(localStorage.getItem(archiveKey) || '[]');
+          localStorage.setItem(archiveKey, JSON.stringify([...completedList, ...existingLocal]));
+        } catch (err) {
+          console.warn('Archive write warning:', err);
+        }
+      }
+
       completedList.forEach((o) => tombstoneIdsRef.current.add(o.id));
 
       const next = currentOrders.filter(
@@ -1482,6 +1501,101 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     [saveAndBroadcast]
   );
+
+  // 9b. Action: Start New Day & Auto-Archive Previous Day Orders (Reset Counter to 0)
+  const startNewDay = useCallback(
+    async (restaurantSlug: string): Promise<number> => {
+      const slug = restaurantSlug.toLowerCase().trim();
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+      
+      const toArchive = currentOrders.filter(
+        (ord) => (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() === slug
+      );
+
+      if (toArchive.length > 0) {
+        // Save all past orders to secure archive file & client archive
+        try {
+          await fetch(`/api/restaurants/${slug}/archive`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders: toArchive }),
+          }).catch(() => {});
+
+          const archiveKey = `chimer_archive_${slug}`;
+          const existingLocal = JSON.parse(localStorage.getItem(archiveKey) || '[]');
+          localStorage.setItem(archiveKey, JSON.stringify([...toArchive, ...existingLocal]));
+        } catch (err) {
+          console.warn('Day archive write error:', err);
+        }
+
+        toArchive.forEach((o) => tombstoneIdsRef.current.add(o.id));
+      }
+
+      const next = currentOrders.filter(
+        (ord) => (ord.restaurantSlug || ord.restaurant_slug || '').toLowerCase() !== slug
+      );
+
+      // Record today's calendar date as rollover checkpoint
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        localStorage.setItem(`chimer_rollover_${slug}`, today);
+      } catch {}
+
+      saveAndBroadcast(next, {
+        type: 'QUEUE_RESET',
+        restaurantSlug: slug,
+        timestamp: Date.now(),
+        sourceTabId: tabIdRef.current,
+      });
+
+      if (isSupabaseConfigured() && supabase) {
+        supabase
+          .from('orders_queue')
+          .delete()
+          .eq('restaurant_slug', slug)
+          .then();
+      }
+
+      soundManager.playSuccessTone();
+      return toArchive.length;
+    },
+    [saveAndBroadcast]
+  );
+
+  // 9c. Automatic Daily Midnight / Morning Rollover (Resets to 0 for the new day)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkDailyRollover = () => {
+      const today = new Date().toISOString().split('T')[0];
+      const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
+
+      const slugs = new Set<string>();
+      currentOrders.forEach((o) => {
+        const s = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
+        if (s) slugs.add(s);
+      });
+      slugs.add('demo-cafe');
+
+      slugs.forEach((slug) => {
+        const lastRollover = localStorage.getItem(`chimer_rollover_${slug}`);
+        if (!lastRollover) {
+          // Initialize for current shift
+          localStorage.setItem(`chimer_rollover_${slug}`, today);
+          return;
+        }
+
+        if (lastRollover < today) {
+          console.log(`[CHIMER] New day rollover triggered for ${slug} (${lastRollover} -> ${today}). Archiving past orders.`);
+          startNewDay(slug);
+        }
+      });
+    };
+
+    checkDailyRollover();
+    const interval = setInterval(checkDailyRollover, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [startNewDay]);
 
   // 10. Action: Cancel Order
   const cancelOrder = useCallback(
@@ -1803,6 +1917,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     cancelOrder,
     submitOrderFeedback,
     archiveCompletedOrders,
+    startNewDay,
     registerPushSubscription,
     revertToPreparing,
     restoreOrder,

@@ -1,4 +1,4 @@
-export type OrderStatus = 'preparing' | 'ready' | 'completed' | 'cancelled';
+export type OrderStatus = 'preparing' | 'ready' | 'completed' | 'cancelled' | 'archived';
 
 export type ChimeSoundTheme = 'hospitality' | 'coffee-zen' | 'fast-casual' | 'buzzer-retro';
 
@@ -50,6 +50,15 @@ export interface Order {
   completedAt?: string; // ISO string
   lastPingAt?: string; // ISO string
   feedback?: OrderFeedback;
+}
+
+export interface DayArchiveSummary {
+  date: string; // YYYY-MM-DD
+  totalOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  avgPrepMinutes: number | null;
+  orders: Order[];
 }
 
 export type QueueEventType =

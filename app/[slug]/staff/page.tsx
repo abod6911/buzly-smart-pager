@@ -50,6 +50,7 @@ export default function TenantStaffCashierPage() {
     revertToPreparing,
     restoreOrder,
     archiveCompletedOrders,
+    startNewDay,
     networkStatus,
     warmupLiveChannel,
   } = useQueue();
@@ -113,6 +114,18 @@ export default function TenantStaffCashierPage() {
     if (undoAction?.order) {
       await restoreOrder(undoAction.order, slug);
       setUndoAction(null);
+    }
+  };
+
+  const handleStartNewDay = async () => {
+    if (
+      window.confirm(
+        'تأكيد بدء يوم عمل جديد؟\n\nسيتم تصفير عداد الطلبات فوراً وأرشفة جميع طلبات اليوم في السجل المشفر داخل معلومات المطعم.'
+      )
+    ) {
+      const count = await startNewDay(slug);
+      setFeedbackToast(`تم تصفير العداد بنجاح ونقل ${count} طلب إلى الأرشيف المشفر`);
+      setTimeout(() => setFeedbackToast(null), 3000);
     }
   };
 
@@ -326,18 +339,26 @@ export default function TenantStaffCashierPage() {
                   {completedOrders.length}
                 </p>
               </div>
-              {completedOrders.length > 0 ? (
+              <div className="flex items-center gap-1.5">
+                {completedOrders.length > 0 && (
+                  <button
+                    onClick={() => archiveCompletedOrders(slug)}
+                    className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.06] transition-colors"
+                    title="أرشفة الطلبات المكتملة إلى ملف الأرشيف"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    <span>أرشفة</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => archiveCompletedOrders(slug)}
-                  className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.06] transition-colors"
-                  title="أرشفة الطلبات المكتملة"
+                  onClick={handleStartNewDay}
+                  className="flex items-center gap-1 text-[11px] text-amber-300 hover:text-amber-200 font-medium bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20 transition-colors"
+                  title="تصفير العداد وأرشفة جميع الطلبات لبدء يوم جديد"
                 >
-                  <Archive className="w-3.5 h-3.5" />
-                  <span>أرشفة</span>
+                  <RotateCcw className="w-3 h-3 text-amber-400" />
+                  <span>تصفير اليوم</span>
                 </button>
-              ) : (
-                <span className="text-xs text-zinc-600 font-mono">—</span>
-              )}
+              </div>
             </div>
           </div>
 
