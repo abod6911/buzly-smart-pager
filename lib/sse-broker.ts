@@ -51,12 +51,22 @@ export function broadcastSSEOrderEvent(event: {
   const encoded = new TextEncoder().encode(text);
 
   const targetSlug = (event.restaurantSlug || 'demo-cafe').toLowerCase().trim();
-  const targetNum = String(event.orderNumber || '').toLowerCase().trim();
+  const rawTargetNum = String(event.orderNumber || '').trim();
+  const cleanTargetNum = rawTargetNum.replace(/^#/, '').toLowerCase().trim();
 
   for (const [id, client] of clients.entries()) {
     try {
-      const matchSlug = !client.slug || client.slug.toLowerCase().trim() === targetSlug;
-      const matchNum = !client.orderNumber || client.orderNumber.toLowerCase().trim() === targetNum;
+      const clientSlug = (client.slug || '').toLowerCase().trim();
+      const matchSlug = !clientSlug || clientSlug === 'all' || clientSlug === targetSlug;
+
+      const rawClientNum = String(client.orderNumber || '').trim();
+      const cleanClientNum = rawClientNum.replace(/^#/, '').toLowerCase().trim();
+
+      const matchNum =
+        !client.orderNumber ||
+        cleanClientNum === '' ||
+        cleanClientNum === cleanTargetNum ||
+        rawClientNum.toLowerCase() === rawTargetNum.toLowerCase();
 
       if (matchSlug && matchNum) {
         client.controller.enqueue(encoded);

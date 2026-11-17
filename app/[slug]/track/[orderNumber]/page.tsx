@@ -130,10 +130,12 @@ function TenantCustomerTrackerInner() {
 
           const pSlug = (data.restaurantSlug || data.order?.restaurantSlug || '').toLowerCase().trim();
           const pNum = String(data.orderNumber || data.order?.orderNumber || '').trim();
+          const cleanPNum = pNum.replace(/^#/, '').toLowerCase();
+          const cleanTargetNum = decodedOrderNumber.replace(/^#/, '').toLowerCase();
 
           const matches =
-            (!pSlug || pSlug === slug.toLowerCase().trim()) &&
-            (!pNum || pNum.toLowerCase() === decodedOrderNumber.toLowerCase());
+            (!pSlug || pSlug === 'all' || pSlug === slug.toLowerCase().trim()) &&
+            (!pNum || pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum);
 
           if (matches && (data.type === 'ORDER_READY' || data.type === 'ORDER_REPING')) {
             const updatedReadyOrder: Order = {
@@ -216,8 +218,13 @@ function TenantCustomerTrackerInner() {
       if (!payload) return;
       const pSlug = (payload.restaurantSlug || payload.order?.restaurantSlug || '').toLowerCase().trim();
       const pNum = String(payload.orderNumber || payload.order?.orderNumber || '').trim();
+      const cleanPNum = pNum.replace(/^#/, '').toLowerCase();
+      const cleanTargetNum = decodedOrderNumber.replace(/^#/, '').toLowerCase();
 
-      if (pSlug === slug.toLowerCase().trim() && pNum === decodedOrderNumber) {
+      const matchSlug = !pSlug || pSlug === slug.toLowerCase().trim();
+      const matchNum = pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum;
+
+      if (matchSlug && matchNum) {
         // Zero-Latency Instant Delivery (<100ms) - Direct Phone Reaction!
         const updatedReadyOrder: Order = {
           ...(overrideOrder || liveOrder || fallbackOrder),
@@ -517,6 +524,75 @@ function TenantCustomerTrackerInner() {
           )}
         </button>
       </header>
+
+      {/* 1. Floating In-App Heads-Up Alert (Guaranteed visual notification even if mobile OS blocks push) */}
+      <AnimatePresence>
+        {isReady && !hasUserSilenced && (
+          <motion.div
+            initial={{ y: -80, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -80, opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed top-3 left-4 right-4 max-w-md mx-auto z-50 bg-[#07241A] border-2 border-emerald-400 rounded-2xl p-4 shadow-2xl shadow-emerald-500/40 flex items-center justify-between ring-1 ring-emerald-500/50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <RestaurantAvatar
+                  logoUrl={restaurant?.logoUrl}
+                  name={restaurant?.name || slug}
+                  themeColor={restaurant?.themeColor}
+                  size="sm"
+                />
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-xs text-emerald-300">تنبيه فوري</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">الآن</span>
+                </div>
+                <div className="text-sm font-black text-white">
+                  طلبك #{decodedOrderNumber} جاهز للاستلام! 🍔
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                soundManager.stopReadyAlarm();
+                soundManager.stopHaptic();
+                setHasUserSilenced(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors cursor-pointer"
+            >
+              كتم التنبيه
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 2. Top Audio Activation Banner (Ensures mobile touch gesture unlocks audio & push) */}
+      {isPreparing && !isAudioUnlocked && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full mx-auto z-20 my-2"
+        >
+          <button
+            type="button"
+            onClick={handleExplicitUnlock}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-500/15 to-emerald-500/10 border border-emerald-500/40 text-xs text-white shadow-lg cursor-pointer animate-pulse hover:border-emerald-400 transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-emerald-400 animate-bounce" />
+              <span className="font-bold text-emerald-200">
+                اضغط هنا لتأكيد رنين واهتزاز هاتفك عند الجاهزية 🔔
+              </span>
+            </div>
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-500 text-black font-extrabold text-[11px] shadow-sm">
+              تفعيل الآن
+            </span>
+          </button>
+        </motion.div>
+      )}
 
       {/* Main Luxury Apple Wallet Boarding Pass */}
       <main className="max-w-md w-full mx-auto my-auto z-10 py-3">

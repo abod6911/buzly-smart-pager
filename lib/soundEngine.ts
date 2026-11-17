@@ -433,15 +433,37 @@ class HighDecibelSoundEngine {
    */
   public startReadyAlarmLoop(theme: ChimeSoundTheme = this.currentTheme): void {
     const ctx = this.initAudioChain();
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
 
     if (this.isAlarmPlaying) return;
     this.isAlarmPlaying = true;
 
-    // Fire immediately on first tick in 0ms
-    this.playThemedChime(theme);
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        if (this.isAlarmPlaying) {
+          this.playThemedChime(theme);
+        }
+      }).catch(() => {});
+
+      // Fallback gesture hook: trigger alarm the exact millisecond user taps if browser policy blocked background sound
+      if (typeof window !== 'undefined') {
+        const handleGestureUnlock = () => {
+          if (ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+              if (this.isAlarmPlaying) {
+                this.playThemedChime(theme);
+              }
+            }).catch(() => {});
+          }
+          window.removeEventListener('pointerdown', handleGestureUnlock);
+          window.removeEventListener('touchstart', handleGestureUnlock);
+        };
+        window.addEventListener('pointerdown', handleGestureUnlock, { once: true });
+        window.addEventListener('touchstart', handleGestureUnlock, { once: true });
+      }
+    } else {
+      // Fire immediately on first tick in 0ms
+      this.playThemedChime(theme);
+    }
 
     // Repeat every 2.5 seconds
     this.loopIntervalId = setInterval(() => {

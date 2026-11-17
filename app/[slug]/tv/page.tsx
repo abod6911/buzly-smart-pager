@@ -14,6 +14,7 @@ import {
   Bell,
   UtensilsCrossed,
   Store,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function KitchenTvBoardPage() {
@@ -295,21 +296,36 @@ export default function KitchenTvBoardPage() {
 
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <AnimatePresence>
+                  <AnimatePresence mode="popLayout">
                     {preparingOrders.map((order) => (
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.94 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.94 }}
-                        className="bg-[#18181C] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm"
+                        initial={{ opacity: 0, scale: 0.72, y: 24, filter: 'blur(8px)' }}
+                        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.65,
+                          y: -24,
+                          filter: 'blur(10px)',
+                          transition: { duration: 0.28, ease: 'easeInOut' },
+                        }}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 340, damping: 28 },
+                          scale: { type: 'spring', stiffness: 380, damping: 25 },
+                          opacity: { duration: 0.25 },
+                        }}
+                        className="bg-[#18181C] border border-white/[0.08] hover:border-white/20 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group"
                       >
-                        <span className="text-[11px] font-mono text-zinc-500 mb-1">طلب</span>
-                        <div className="font-mono text-4xl lg:text-5xl font-bold text-white tracking-tight tabular-nums">
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+                        <span className="text-xs font-mono text-zinc-400 font-medium mb-1 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          <span>طلب رقم</span>
+                        </span>
+                        <div className="font-mono text-4xl lg:text-5xl font-black text-white tracking-tight tabular-nums my-1 drop-shadow-sm">
                           {order.orderNumber}
                         </div>
-                        <div className="mt-2 text-[11px] font-mono text-zinc-400 tabular-nums">
+                        <div className="mt-2 text-[11px] font-mono text-zinc-400 bg-white/[0.04] px-2.5 py-0.5 rounded-full border border-white/[0.06] tabular-nums">
                           منذ {getElapsedMins(order.createdAt || order.created_at || new Date().toISOString())} د
                         </div>
                       </motion.div>
@@ -341,26 +357,47 @@ export default function KitchenTvBoardPage() {
 
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <AnimatePresence>
+                  <AnimatePresence mode="popLayout">
                     {readyOrders.map((order) => (
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.92 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-                        className="bg-[#071F18] border border-emerald-500/35 hover:border-emerald-500/50 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.65, y: 32, filter: 'blur(10px)' }}
+                        animate={{
+                          opacity: 1,
+                          scale: 1,
+                          y: 0,
+                          filter: 'blur(0px)',
+                        }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.55,
+                          y: -35,
+                          filter: 'blur(12px)',
+                          transition: { duration: 0.35, ease: [0.32, 0.72, 0, 1] },
+                        }}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 320, damping: 26 },
+                          scale: { type: 'spring', stiffness: 420, damping: 22 },
+                          opacity: { duration: 0.28 },
+                        }}
+                        className="bg-gradient-to-b from-[#08281E] to-[#041712] border-2 border-emerald-400/80 hover:border-emerald-300 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center shadow-xl shadow-emerald-500/20 relative overflow-hidden ring-1 ring-emerald-500/40"
                       >
-                        <span className="text-[10px] uppercase font-semibold text-emerald-400 mb-1 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="text-[11px] uppercase font-black text-emerald-300 mb-1 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                           <span>جاهز الآن</span>
                         </span>
-                        <div className="font-mono text-5xl lg:text-6xl font-bold text-white tracking-tight tabular-nums my-1">
+                        <motion.div
+                          initial={{ scale: 0.82 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 450, damping: 18 }}
+                          className="font-mono text-5xl lg:text-6xl font-black text-white tracking-tight tabular-nums my-1 drop-shadow-[0_4px_14px_rgba(16,185,129,0.5)]"
+                        >
                           {order.orderNumber}
-                        </div>
-                        <span className="mt-1 text-[10px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                          تفضل للاستلام
+                        </motion.div>
+                        <span className="mt-1.5 text-xs font-bold text-emerald-200 bg-emerald-500/20 border border-emerald-500/40 px-3 py-0.5 rounded-full shadow-inner flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>تفضل للاستلام</span>
                         </span>
                       </motion.div>
                     ))}

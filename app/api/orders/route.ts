@@ -116,11 +116,12 @@ export async function GET(req: NextRequest) {
   const rawSlug = searchParams.get('slug')?.toLowerCase();
   const rawOrderNumber = searchParams.get('orderNumber')?.trim();
 
-  // Sanitize query params
+  // Sanitize query params (strip optional leading '#' from customer QR / URL)
   const slug = rawSlug && /^[a-z0-9-]+$/.test(rawSlug) ? rawSlug : undefined;
+  const cleanOrderNumber = rawOrderNumber ? rawOrderNumber.replace(/^#/, '').trim() : '';
   const orderNumber =
-    rawOrderNumber && /^[0-9A-Za-z-]+$/.test(rawOrderNumber) && rawOrderNumber.length <= 8
-      ? rawOrderNumber
+    cleanOrderNumber && /^[0-9A-Za-z-]+$/.test(cleanOrderNumber) && cleanOrderNumber.length <= 8
+      ? cleanOrderNumber
       : undefined;
 
   const currentStore = getStore();
@@ -230,13 +231,21 @@ export async function GET(req: NextRequest) {
   }
 
   if (orderNumber) {
-    let single = store.find(
-      (o) => o.orderNumber.toLowerCase() === orderNumber.toLowerCase()
-    );
-    if (!single) {
-      single = getStore().find(
-        (o) => o.orderNumber.toLowerCase() === orderNumber.toLowerCase()
+    const rawTarget = String(orderNumber).trim();
+    const cleanTarget = rawTarget.replace(/^#/, '').toLowerCase();
+
+    const matchesNumber = (o: Order) => {
+      const oNum = String(o.orderNumber || '').trim();
+      const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+      return (
+        oNum.toLowerCase() === rawTarget.toLowerCase() ||
+        cleanONum === cleanTarget
       );
+    };
+
+    let single = store.find(matchesNumber);
+    if (!single) {
+      single = getStore().find(matchesNumber);
     }
     if (!single) {
       return NextResponse.json(
@@ -304,12 +313,18 @@ export async function PATCH(req: NextRequest) {
     let updatedOrder: Order | undefined;
     const isRePing = action === 'ORDER_REPING' || action === 'REPING';
 
+    const cleanTargetNumber = targetNumber.replace(/^#/, '').toLowerCase();
+
     const next = store.map((o) => {
-      const matchSlug = targetSlug
-        ? (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === targetSlug
-        : true;
+      const oSlug = (o.restaurantSlug || o.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+      const matchSlug = targetSlug ? oSlug === targetSlug : true;
+
+      const oNum = String(o.orderNumber || '').trim();
+      const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+
       const matchId =
-        (orderId && o.id === orderId) || (targetNumber && o.orderNumber === targetNumber);
+        (orderId && o.id === orderId) ||
+        (targetNumber !== '' && (oNum.toLowerCase() === targetNumber.toLowerCase() || cleanONum === cleanTargetNumber));
       if (matchId && matchSlug) {
         updatedOrder = {
           ...o,
@@ -522,10 +537,19 @@ export async function POST(req: NextRequest) {
 
       case 'READY':
       case 'ORDER_READY': {
-        const targetSlug = (restaurantSlug || '').toLowerCase();
+        const targetSlug = (restaurantSlug || '').toLowerCase().trim();
+        const rawOrderNum = String(orderNumber || '').trim();
+        const cleanTargetNum = rawOrderNum.replace(/^#/, '').toLowerCase();
+
         const next = store.map((o) => {
-          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
-          const matchId = o.id === orderId || o.orderNumber === orderNumber;
+          const oSlug = (o.restaurantSlug || o.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+          const matchSlug = targetSlug ? oSlug === targetSlug : true;
+          const oNum = String(o.orderNumber || '').trim();
+          const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+          const matchId =
+            (orderId && o.id === orderId) ||
+            (rawOrderNum !== '' && (oNum.toLowerCase() === rawOrderNum.toLowerCase() || cleanONum === cleanTargetNum));
+
           if (matchId && matchSlug) {
             updatedOrder = {
               ...o,
@@ -578,10 +602,19 @@ export async function POST(req: NextRequest) {
 
       case 'REPING':
       case 'ORDER_REPING': {
-        const targetSlug = (restaurantSlug || '').toLowerCase();
+        const targetSlug = (restaurantSlug || '').toLowerCase().trim();
+        const rawOrderNum = String(orderNumber || '').trim();
+        const cleanTargetNum = rawOrderNum.replace(/^#/, '').toLowerCase();
+
         const next = store.map((o) => {
-          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
-          const matchId = o.id === orderId || o.orderNumber === orderNumber;
+          const oSlug = (o.restaurantSlug || o.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+          const matchSlug = targetSlug ? oSlug === targetSlug : true;
+          const oNum = String(o.orderNumber || '').trim();
+          const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+          const matchId =
+            (orderId && o.id === orderId) ||
+            (rawOrderNum !== '' && (oNum.toLowerCase() === rawOrderNum.toLowerCase() || cleanONum === cleanTargetNum));
+
           if (matchId && matchSlug) {
             updatedOrder = {
               ...o,
@@ -634,10 +667,19 @@ export async function POST(req: NextRequest) {
 
       case 'COMPLETE':
       case 'ORDER_COMPLETED': {
-        const targetSlug = (restaurantSlug || '').toLowerCase();
+        const targetSlug = (restaurantSlug || '').toLowerCase().trim();
+        const rawOrderNum = String(orderNumber || '').trim();
+        const cleanTargetNum = rawOrderNum.replace(/^#/, '').toLowerCase();
+
         const next = store.map((o) => {
-          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
-          const matchId = o.id === orderId || o.orderNumber === orderNumber;
+          const oSlug = (o.restaurantSlug || o.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+          const matchSlug = targetSlug ? oSlug === targetSlug : true;
+          const oNum = String(o.orderNumber || '').trim();
+          const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+          const matchId =
+            (orderId && o.id === orderId) ||
+            (rawOrderNum !== '' && (oNum.toLowerCase() === rawOrderNum.toLowerCase() || cleanONum === cleanTargetNum));
+
           if (matchId && matchSlug) {
             updatedOrder = {
               ...o,
@@ -690,10 +732,19 @@ export async function POST(req: NextRequest) {
 
       case 'CANCEL':
       case 'ORDER_CANCELLED': {
-        const targetSlug = (restaurantSlug || '').toLowerCase();
+        const targetSlug = (restaurantSlug || '').toLowerCase().trim();
+        const rawOrderNum = String(orderNumber || '').trim();
+        const cleanTargetNum = rawOrderNum.replace(/^#/, '').toLowerCase();
+
         const next = store.filter((o) => {
-          const matchSlug = targetSlug ? o.restaurantSlug.toLowerCase() === targetSlug : true;
-          const matchId = o.id === orderId || o.orderNumber === orderNumber;
+          const oSlug = (o.restaurantSlug || o.restaurant_slug || 'demo-cafe').toLowerCase().trim();
+          const matchSlug = targetSlug ? oSlug === targetSlug : true;
+          const oNum = String(o.orderNumber || '').trim();
+          const cleanONum = oNum.replace(/^#/, '').toLowerCase();
+          const matchId =
+            (orderId && o.id === orderId) ||
+            (rawOrderNum !== '' && (oNum.toLowerCase() === rawOrderNum.toLowerCase() || cleanONum === cleanTargetNum));
+
           return !(matchId && matchSlug);
         });
         setStore(next);
