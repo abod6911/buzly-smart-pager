@@ -460,6 +460,60 @@ function TenantCustomerTrackerInner() {
     };
   }, []);
 
+  // 10. Global one-touch audio unlock for mobile Safari & Chrome
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlockAudio = async () => {
+      await soundManager.unlock();
+      soundManager.startSilentKeepAlive();
+      setIsAudioUnlocked(true);
+    };
+
+    window.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+    window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
+    window.addEventListener('click', unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('click', unlockAudio);
+    };
+  }, []);
+
+  // 11. Gentle background push notification permission request on enter
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          Notification.requestPermission().catch(() => {});
+        } catch {}
+      }
+    }
+  }, []);
+
+  // 12. Dynamic Title Flash when order is ready & window is inactive/background
+  useEffect(() => {
+    if (!order || order.status !== 'ready' || hasUserSilenced) return;
+
+    const originalTitle = typeof document !== 'undefined' ? document.title : '';
+    let flash = false;
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined') {
+        document.title = flash
+          ? `🚨 طلبك جاهز! (#${decodedOrderNumber})`
+          : `🔔 تفضل باستلام طلبك من الكاونتر`;
+        flash = !flash;
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      if (typeof document !== 'undefined' && originalTitle) {
+        document.title = originalTitle;
+      }
+    };
+  }, [order?.status, hasUserSilenced, decodedOrderNumber]);
+
   const handleExplicitUnlock = async () => {
     await soundManager.unlock();
     soundManager.startSilentKeepAlive();

@@ -50,6 +50,8 @@ import {
   X,
   Printer,
   FileSpreadsheet,
+  Key,
+  AlertTriangle,
 } from 'lucide-react';
 
 const MASTER_PIN = '8888';
@@ -129,6 +131,22 @@ export default function SuperAdminDashboard() {
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [liveRadarOpen, setLiveRadarOpen] = useState<boolean>(true);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
+  const [securityData, setSecurityData] = useState<{
+    status?: {
+      isPasswordCustomized: boolean;
+      isUserCustomized: boolean;
+      isSecretCustomized: boolean;
+      isSupabaseConfigured: boolean;
+      currentUsername: string;
+    };
+    generated?: {
+      recommendedUser: string;
+      generatedPassword: string;
+      generatedSecret: string;
+    };
+  } | null>(null);
+  const [copiedEnv, setCopiedEnv] = useState<boolean>(false);
 
   // Form fields for Create / Edit
   const [formName, setFormName] = useState<string>('');
@@ -354,6 +372,20 @@ export default function SuperAdminDashboard() {
     await deleteRestaurant(deleteTargetRestaurant.slug);
     setDeleteTargetRestaurant(null);
     showNotification(`تم حذف مطعم "${name}" نهائياً من المنصة 🗑️`);
+  };
+
+  const openSecurityModal = async () => {
+    setIsSecurityModalOpen(true);
+    setCopiedEnv(false);
+    try {
+      const res = await fetch('/api/admin/security-info');
+      if (res.ok) {
+        const data = await res.json();
+        setSecurityData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Open Quick QR Modal
@@ -767,6 +799,15 @@ export default function SuperAdminDashboard() {
           {/* Actions & Lock */}
           <div className="flex items-center gap-2">
             <LanguageSwitcher variant="minimal" />
+
+            <button
+              onClick={openSecurityModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white font-medium text-xs border border-white/[0.08] transition-colors cursor-pointer"
+              title="إعدادات الأمان وبيئة Vercel"
+            >
+              <Key className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">أمان Vercel</span>
+            </button>
 
             <button
               onClick={openCreateModal}
@@ -1618,6 +1659,138 @@ export default function SuperAdminDashboard() {
                   نعم، احذف نهائياً
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SECURITY & VERCEL PRODUCTION HUB MODAL */}
+      <AnimatePresence>
+        {isSecurityModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-[#121215] border border-white/[0.08] rounded-[28px] max-w-xl w-full p-6 sm:p-7 shadow-2xl relative overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>إعدادات الأمان وبيئة Vercel</span>
+                      <span className="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full font-mono">
+                        PRODUCTION READY
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      تأمين بيانات المالك وتشفير جلسات المنصة قبل الإطلاق
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsSecurityModalOpen(false)}
+                  className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Status Pills */}
+              <div className="space-y-3 mb-5">
+                <div className="bg-[#0B0B0E] border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">حالة كلمة مرور المالك (Master Password):</span>
+                    {securityData?.status?.isPasswordCustomized ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> مخصصة وآمنة في Vercel
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
+                        <AlertTriangle className="w-3.5 h-3.5" /> القيمة الافتراضية نشطة (يُنصح بتغييرها)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">اسم المستخدم المالك:</span>
+                    <span className="font-mono text-zinc-200 bg-white/[0.05] px-2 py-0.5 rounded-md">
+                      {securityData?.status?.currentUsername || 'owner'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommended Production Env Block */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>المتغيرات الموصى بنسخها إلى Vercel:</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openSecurityModal}
+                    className="text-[11px] text-zinc-400 hover:text-cyan-400 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>توليد قيم جديدة</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <pre
+                    dir="ltr"
+                    className="bg-[#08080A] border border-white/[0.08] rounded-2xl p-4 text-xs font-mono text-emerald-400/90 overflow-x-auto selection:bg-emerald-500 selection:text-black leading-relaxed"
+                  >
+{`MASTER_ADMIN_USER=${securityData?.generated?.recommendedUser || 'admin_buzly'}
+MASTER_ADMIN_PASSWORD=${securityData?.generated?.generatedPassword || 'Buzly@SecurePass#2026'}
+STAFF_TOKEN_SECRET=${securityData?.generated?.generatedSecret || 'f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8'}`}
+                  </pre>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snippet = `MASTER_ADMIN_USER=${securityData?.generated?.recommendedUser || 'admin_buzly'}\nMASTER_ADMIN_PASSWORD=${securityData?.generated?.generatedPassword || 'Buzly@SecurePass#2026'}\nSTAFF_TOKEN_SECRET=${securityData?.generated?.generatedSecret || 'f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8'}`;
+                      navigator.clipboard.writeText(snippet);
+                      setCopiedEnv(true);
+                      showNotification('تم نسخ المتغيرات للحافظة بنجاح 📋');
+                      setTimeout(() => setCopiedEnv(false), 2500);
+                    }}
+                    className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                  >
+                    {copiedEnv ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">تم النسخ!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>نسخ الكل</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  💡 <strong>طريقة التفعيل:</strong> افتح مشروعك في Vercel ➔ اضغط <strong>Settings</strong> ➔ ثم <strong>Environment Variables</strong> ➔ الصق هذه الأسطر واضغط <strong>Save</strong>.
+                </p>
+              </div>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsSecurityModalOpen(false)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                إغلاق النافذة
+              </button>
             </motion.div>
           </div>
         )}

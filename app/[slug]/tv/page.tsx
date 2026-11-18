@@ -16,6 +16,7 @@ import {
   UtensilsCrossed,
   Store,
   CheckCircle2,
+  Volume2,
 } from 'lucide-react';
 
 export default function KitchenTvBoardPage() {
@@ -30,6 +31,8 @@ export default function KitchenTvBoardPage() {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const [highlightOrderNumber, setHighlightOrderNumber] = useState<string | null>(null);
+  const [isTestingAudio, setIsTestingAudio] = useState<boolean>(false);
+  const [isWakeLockActive, setIsWakeLockActive] = useState<boolean>(false);
   const previousReadyCount = useRef<number>(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
@@ -41,6 +44,8 @@ export default function KitchenTvBoardPage() {
       if ('wakeLock' in navigator && !isCancelled) {
         try {
           wakeLockRef.current = await navigator.wakeLock.request('screen');
+          setIsWakeLockActive(true);
+          wakeLockRef.current.addEventListener('release', () => setIsWakeLockActive(false));
         } catch {
           // Wake lock rejected or unsupported
         }
@@ -145,6 +150,30 @@ export default function KitchenTvBoardPage() {
       document.exitFullscreen().catch(() => {});
     }
   };
+
+  const handleTestVoice = async () => {
+    if (isTestingAudio) return;
+    setIsTestingAudio(true);
+    await soundManager.testTvVoiceAnnouncement('104', restaurant?.name || 'Demo Cafe');
+    setTimeout(() => {
+      setIsTestingAudio(false);
+    }, 4500);
+  };
+
+  // Keyboard shortcut: Press F or F11 for Fullscreen, T for voice test
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11' || e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+      if (e.key.toLowerCase() === 't') {
+        handleTestVoice();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const getElapsedMins = (createdAt: string) => {
     const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
@@ -453,6 +482,47 @@ export default function KitchenTvBoardPage() {
             </motion.div>
           </main>
         )}
+
+        {/* 4. SMART TV OPERATOR BAR (Floating Minimalist Dock) */}
+        <div className="fixed bottom-3 left-4 right-4 z-40 flex items-center justify-between pointer-events-none">
+          {/* Wake Lock & System Live Indicator */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121215]/90 border border-white/[0.08] text-xs backdrop-blur-md shadow-lg">
+              <span className={`w-2 h-2 rounded-full ${isWakeLockActive ? 'bg-[#34C759]' : 'bg-amber-400'} animate-pulse`} />
+              <span className="text-zinc-300 font-medium text-[11px]">
+                {isWakeLockActive ? 'منع إغلاق الشاشة نشط • 24/7' : 'حماية الشاشة نشطة'}
+              </span>
+            </div>
+          </div>
+
+          {/* Quick TV Control Actions */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {/* Instant Speaker & Voice Test Button */}
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.02 }}
+              onClick={handleTestVoice}
+              disabled={isTestingAudio}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] text-xs font-semibold backdrop-blur-md transition-all shadow-lg cursor-pointer disabled:opacity-50"
+              title="اختبار سماعات الصالة والنداء الصوتي"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${isTestingAudio ? 'animate-bounce text-[#34C759]' : 'text-zinc-300'}`} />
+              <span>{isTestingAudio ? 'جاري اختبار الصوت في الصالة...' : 'تجربة الصوت والنداء'}</span>
+            </motion.button>
+
+            {/* Instant Fullscreen Toggle Button */}
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.02 }}
+              onClick={toggleFullscreen}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34C759] hover:bg-[#30D158] text-black text-xs font-bold transition-all shadow-lg cursor-pointer"
+              title="ملء الشاشة بالكامل (F11 أو F)"
+            >
+              <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>ملء الشاشة (F11)</span>
+            </motion.button>
+          </div>
+        </div>
       </div>
     </ErrorBoundary>
   );

@@ -441,6 +441,7 @@ class HighDecibelSoundEngine {
       ctx.resume().then(() => {
         if (this.isAlarmPlaying) {
           this.playThemedChime(theme);
+          this.triggerHaptic([600, 150, 600, 150, 1000]);
         }
       }).catch(() => {});
 
@@ -451,6 +452,7 @@ class HighDecibelSoundEngine {
             ctx.resume().then(() => {
               if (this.isAlarmPlaying) {
                 this.playThemedChime(theme);
+                this.triggerHaptic([600, 150, 600, 150, 1000]);
               }
             }).catch(() => {});
           }
@@ -461,14 +463,16 @@ class HighDecibelSoundEngine {
         window.addEventListener('touchstart', handleGestureUnlock, { once: true });
       }
     } else {
-      // Fire immediately on first tick in 0ms
+      // Fire immediately on first tick in 0ms (Audio + Vibration)
       this.playThemedChime(theme);
+      this.triggerHaptic([600, 150, 600, 150, 1000]);
     }
 
-    // Repeat every 2.5 seconds
+    // Repeat every 2.5 seconds (Chime + Vibration pulse for silent phone mode)
     this.loopIntervalId = setInterval(() => {
       if (!this.isAlarmPlaying) return;
       this.playThemedChime(theme);
+      this.triggerHaptic([600, 150, 600, 150, 1000]);
     }, 2500);
   }
 
@@ -600,8 +604,9 @@ class HighDecibelSoundEngine {
       const speechText = `طلب رقم ${orderNumber} جاهز للاستلام`;
       const utterance = new SpeechSynthesisUtterance(speechText);
       utterance.lang = 'ar-SA';
-      utterance.rate = 0.95;
+      utterance.rate = 0.92;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
       const arabicVoice = voices.find((v) => v.lang.startsWith('ar'));
@@ -624,6 +629,7 @@ class HighDecibelSoundEngine {
       utterance.lang = 'en-US';
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
       const englishVoice = voices.find((v) => v.lang.startsWith('en'));
@@ -648,10 +654,21 @@ class HighDecibelSoundEngine {
       this.announceOrderArabic(orderNumber, restaurantName);
       setTimeout(() => {
         this.announceOrderEnglish(orderNumber, restaurantName);
-      }, 2200);
+      }, 2400);
     } else {
       this.announceOrderArabic(orderNumber, restaurantName);
     }
+  }
+
+  public async testTvVoiceAnnouncement(
+    orderNumber: string = '104',
+    restaurantName: string = 'كافيه دي مو'
+  ): Promise<void> {
+    await this.unlock();
+    this.playHospitalityChime();
+    setTimeout(() => {
+      this.announceOrder(orderNumber, 'bilingual', restaurantName);
+    }, 1500);
   }
 }
 
