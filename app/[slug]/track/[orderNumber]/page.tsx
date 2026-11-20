@@ -53,8 +53,25 @@ function TenantCustomerTrackerInner() {
   const [overrideOrder, setOverrideOrder] = useState<Order | null>(null);
 
   // Self-healing fallback ticket: Customer NEVER sees an empty screen or error boundary
+  // Strictly isolates from stale historical orders
   const fallbackOrder = useMemo((): Order => {
-    if (liveOrder) return liveOrder;
+    if (liveOrder) {
+      const now = Date.now();
+      if (liveOrder.status === 'completed') {
+        const compTime = new Date(liveOrder.completedAt || liveOrder.createdAt || now).getTime();
+        if (now - compTime < 90 * 1000) {
+          return liveOrder;
+        }
+      } else if (liveOrder.status === 'ready') {
+        const readyTime = new Date(liveOrder.readyAt || liveOrder.createdAt || now).getTime();
+        if (now - readyTime < 30 * 60 * 1000) {
+          return liveOrder;
+        }
+      } else if (liveOrder.status === 'preparing') {
+        return liveOrder;
+      }
+    }
+
     const estParam = searchParams?.get('est');
     const statusParam = (searchParams?.get('status') as OrderStatus) || 'preparing';
     return {
@@ -71,6 +88,14 @@ function TenantCustomerTrackerInner() {
   }, [liveOrder, searchParams, decodedOrderNumber, slug]);
 
   const order = overrideOrder || liveOrder || fallbackOrder;
+
+  // Reset any cached override orders when route parameters change
+  useEffect(() => {
+    setOverrideOrder(null);
+    setAlarmActive(false);
+    setHasUserSilenced(false);
+    confettiFiredRef.current = false;
+  }, [decodedOrderNumber, slug]);
 
   // Local state
   const [isAudioUnlocked, setIsAudioUnlocked] = useState<boolean>(false);
@@ -284,10 +309,13 @@ function TenantCustomerTrackerInner() {
     if (order.status !== 'preparing' || !decodedOrderNumber) return;
 
     let isCancelled = false;
+    const createdParam = searchParams?.get('created') || '';
+    const createdQuery = createdParam ? `&created=${encodeURIComponent(createdParam)}` : '';
+
     const pollOrder = async () => {
       try {
         const res = await fetch(
-          `/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}&t=${Date.now()}`,
+          `/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}${createdQuery}&t=${Date.now()}`,
           {
             cache: 'no-store',
             headers: {
@@ -301,13 +329,28 @@ function TenantCustomerTrackerInner() {
         if (isCancelled || !data?.success || !data.order) return;
 
         const remoteOrder: Order = data.order;
+        const now = Date.now();
+
         if (remoteOrder.status === 'ready') {
-          setOverrideOrder(remoteOrder);
-          setHasUserSilenced(false);
-          setAlarmActive(true);
-          soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
-          soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
-          syncNow().catch(() => {});
+          const readyTime = new Date(remoteOrder.readyAt || remoteOrder.createdAt || now).getTime();
+          // Strictly verify that the ready status was declared within the last 30 minutes
+          if (now - readyTime < 30 * 60 * 1000) {
+            setOverrideOrder(remoteOrder);
+            setHasUserSilenced(false);
+            setAlarmActive(true);
+            soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
+            soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
+            syncNow().catch(() => {});
+          }
+        } else if (remoteOrder.status === 'completed') {
+          const compTime = new Date(remoteOrder.completedAt || remoteOrder.createdAt || now).getTime();
+          // Only transition to completed if completed very recently (< 90 seconds)
+          if (now - compTime < 90 * 1000) {
+            setOverrideOrder(remoteOrder);
+            setAlarmActive(false);
+            soundManager.stopReadyAlarm();
+            syncNow().catch(() => {});
+          }
         }
       } catch {
         // Silently continue polling

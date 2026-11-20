@@ -39,7 +39,8 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
     if (!orderNumber.trim()) return;
     soundManager.unlock();
     const targetSlug = slug || 'demo-cafe';
-    router.push(`/${targetSlug}/track/${encodeURIComponent(orderNumber.trim())}`);
+    const now = Date.now();
+    router.push(`/${targetSlug}/track/${encodeURIComponent(orderNumber.trim())}?created=${now}`);
   };
 
   return (
@@ -145,7 +146,8 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
                 onClick={() => {
                   soundManager.unlock();
                   const targetSlug = ord.restaurantSlug || slug || 'demo-cafe';
-                  router.push(`/${targetSlug}/track/${encodeURIComponent(ord.orderNumber)}`);
+                  const orderCreated = new Date(ord.createdAt || ord.created_at || Date.now()).getTime();
+                  router.push(`/${targetSlug}/track/${encodeURIComponent(ord.orderNumber)}?created=${orderCreated}`);
                 }}
                 className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-right transition-all flex items-center justify-between group active:scale-95"
               >

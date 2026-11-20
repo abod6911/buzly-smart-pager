@@ -100,6 +100,39 @@ const orderInputSchema = z.object({
   created_at: z.string().optional(),
 });
 
+// Helper: Strict Order Freshness & Historical Isolation Engine
+function isOrderFresh(o: Order, minCreatedTime: number = 0): boolean {
+  if (!o) return false;
+  const now = Date.now();
+  const createdEpoch = new Date(o.createdAt || o.created_at || now).getTime();
+
+  // If client supplied a ?created= timestamp from their QR code, reject any order created earlier than 30s before that epoch
+  if (minCreatedTime > 0 && createdEpoch < (minCreatedTime - 30000)) {
+    return false;
+  }
+
+  // 1. Completed orders are only relevant for 90 seconds (to show the review/rating screen to the active customer).
+  // Older completed orders are strictly historical and MUST NEVER be shown to newly tracking customers!
+  if (o.status === 'completed') {
+    const completedEpoch = new Date(o.completedAt || o.createdAt || o.created_at || now).getTime();
+    return (now - completedEpoch) < (90 * 1000);
+  }
+
+  // 2. Ready orders: Only considered active if marked ready within the last 30 minutes.
+  // Stale ready orders from previous hours/shifts are treated as expired.
+  if (o.status === 'ready') {
+    const readyEpoch = new Date(o.readyAt || o.createdAt || now).getTime();
+    return (now - readyEpoch) < (30 * 60 * 1000);
+  }
+
+  // 3. Preparing orders: Active within last 6 hours
+  if (o.status === 'preparing') {
+    return (now - createdEpoch) < (6 * 60 * 60 * 1000);
+  }
+
+  return false;
+}
+
 // GET: High-Scale Targeted Orders Retrieval (Zero-Latency Cached/Non-cached Delivery)
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
@@ -115,6 +148,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const rawSlug = searchParams.get('slug')?.toLowerCase();
   const rawOrderNumber = searchParams.get('orderNumber')?.trim();
+  const rawCreated = searchParams.get('created')?.trim();
+  const minCreatedTime = rawCreated && /^\d+$/.test(rawCreated) ? parseInt(rawCreated, 10) : 0;
 
   // Sanitize query params (strip optional leading '#' from customer QR / URL)
   const slug = rawSlug && /^[a-z0-9-]+$/.test(rawSlug) ? rawSlug : undefined;
@@ -126,20 +161,29 @@ export async function GET(req: NextRequest) {
 
   const currentStore = getStore();
 
-  // Fast-Path: If customer is polling their specific order, check memory store first
+  // Fast-Path: If customer is polling their specific order, check memory store first with strict freshness filter
   if (slug && orderNumber) {
-    const storeMatch = currentStore.find(
+    const cleanNum = orderNumber.toLowerCase();
+    const matchingMemOrders = currentStore.filter(
       (o) =>
-        o.orderNumber.toLowerCase() === orderNumber.toLowerCase() &&
+        o.orderNumber.toLowerCase() === cleanNum &&
         (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug
     );
 
-    // If memory store already has the order in 'ready' or 'completed' state, deliver in 0ms
-    if (storeMatch && (storeMatch.status === 'ready' || storeMatch.status === 'completed')) {
+    // Sort newest first
+    matchingMemOrders.sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
+
+    const freshMemOrder = matchingMemOrders.find((o) => isOrderFresh(o, minCreatedTime));
+
+    if (freshMemOrder && (freshMemOrder.status === 'ready' || freshMemOrder.status === 'completed')) {
       return NextResponse.json(
         {
           success: true,
-          order: storeMatch,
+          order: freshMemOrder,
           source: 'memory-fast-path',
           lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
           serverTime: new Date().toISOString(),
@@ -153,41 +197,46 @@ export async function GET(req: NextRequest) {
   if (isSupabaseConfigured() && supabase) {
     try {
       if (slug && orderNumber) {
-        // Targeted single customer order lookup
-        const { data: dbRow, error } = await supabase
+        // Targeted single customer order lookup: fetch up to 5 newest orders with this number
+        const { data: dbRows, error } = await supabase
           .from('orders_queue')
           .select('*')
           .eq('restaurant_slug', slug)
           .eq('order_number', orderNumber)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(5);
 
-        if (!error && dbRow) {
-          const mappedOrder = mapDbRowToOrder(dbRow);
-          // Re-overlay any optimistic memory status if newer
-          const storeMatch = currentStore.find(
-            (o) =>
-              o.orderNumber.toLowerCase() === orderNumber.toLowerCase() &&
-              (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug
-          );
-          if (storeMatch) {
-            if (storeMatch.status === 'ready' && mappedOrder.status === 'preparing') {
-              mappedOrder.status = 'ready';
-              mappedOrder.readyAt = storeMatch.readyAt || mappedOrder.readyAt;
+        if (!error && dbRows && dbRows.length > 0) {
+          const mappedOrders = dbRows.map(mapDbRowToOrder);
+          const freshDbOrder = mappedOrders.find((o) => isOrderFresh(o, minCreatedTime));
+
+          if (freshDbOrder) {
+            // Re-overlay any optimistic memory status if newer
+            const cleanNum = orderNumber.toLowerCase();
+            const storeMatch = currentStore.find(
+              (o) =>
+                o.orderNumber.toLowerCase() === cleanNum &&
+                (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug &&
+                o.id === freshDbOrder.id
+            );
+            if (storeMatch) {
+              if (storeMatch.status === 'ready' && freshDbOrder.status === 'preparing') {
+                freshDbOrder.status = 'ready';
+                freshDbOrder.readyAt = storeMatch.readyAt || freshDbOrder.readyAt;
+              }
+              freshDbOrder.rePingCount = Math.max(storeMatch.rePingCount || 0, freshDbOrder.rePingCount || 0);
             }
-            mappedOrder.rePingCount = Math.max(storeMatch.rePingCount || 0, mappedOrder.rePingCount || 0);
-          }
 
-          return NextResponse.json(
-            {
-              success: true,
-              order: mappedOrder,
-              lastUpdated: Date.now(),
-              serverTime: new Date().toISOString(),
-            },
-            { headers: NO_CACHE_HEADERS }
-          );
+            return NextResponse.json(
+              {
+                success: true,
+                order: freshDbOrder,
+                lastUpdated: Date.now(),
+                serverTime: new Date().toISOString(),
+              },
+              { headers: NO_CACHE_HEADERS }
+            );
+          }
         }
       } else if (slug) {
         // Active orders only: preparing and ready (plus recently completed within active window)
@@ -200,7 +249,7 @@ export async function GET(req: NextRequest) {
           .limit(100);
 
         if (!error && dbRows && dbRows.length > 0) {
-          const mappedOrders = dbRows.map(mapDbRowToOrder);
+          const mappedOrders = dbRows.map(mapDbRowToOrder).filter((o) => isOrderFresh(o, 0));
           return NextResponse.json(
             {
               success: true,
@@ -243,25 +292,30 @@ export async function GET(req: NextRequest) {
       );
     };
 
-    let single = store.find(matchesNumber);
-    if (!single) {
-      single = getStore().find(matchesNumber);
-    }
-    if (!single) {
+    const matchingFallback = store.filter(matchesNumber);
+    matchingFallback.sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
+
+    const freshFallback = matchingFallback.find((o) => isOrderFresh(o, minCreatedTime));
+
+    if (!freshFallback) {
       return NextResponse.json(
         {
-          success: false,
-          message: 'Order not found',
+          success: true,
+          message: 'No active fresh order found',
           order: null,
           serverTime: new Date().toISOString(),
         },
-        { status: 404, headers: NO_CACHE_HEADERS }
+        { status: 200, headers: NO_CACHE_HEADERS }
       );
     }
     return NextResponse.json(
       {
         success: true,
-        order: single,
+        order: freshFallback,
         lastUpdated: globalThis.__chimer_orders_last_updated || Date.now(),
         serverTime: new Date().toISOString(),
       },
@@ -480,13 +534,13 @@ export async function POST(req: NextRequest) {
           created_at: rawData.created_at || rawData.createdAt || nowIso,
         };
 
-        // Filter out if duplicate number in same restaurant that is still active
+        // Purge ALL older orders with this number in this restaurant (preparing, ready, or completed)
+        // so the new ticket starts with a completely fresh state and avoids any collision with historical orders
         const filtered = store.filter(
           (o) =>
             !(
               (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === newOrder.restaurantSlug.toLowerCase() &&
-              o.orderNumber.toLowerCase() === newOrder.orderNumber.toLowerCase() &&
-              (o.status === 'preparing' || o.status === 'ready')
+              o.orderNumber.toLowerCase() === newOrder.orderNumber.toLowerCase()
             )
         );
         const next = [newOrder, ...filtered];

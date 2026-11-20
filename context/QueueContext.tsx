@@ -18,12 +18,13 @@ import {
 } from '@/types/queue';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { soundManager } from '@/lib/audio';
+import { SEED_RESTAURANTS } from '@/lib/restaurantStore';
 
 const STORAGE_ORDERS_KEY = 'buzly_multitenant_orders_v3';
 const STORAGE_RESTAURANTS_KEY = 'buzly_multitenant_restaurants_v3';
 const BROADCAST_CHANNEL_NAME = 'buzly_realtime_queue_v3';
 
-export const DEFAULT_DEMO_RESTAURANT: Restaurant = {
+export const DEFAULT_DEMO_RESTAURANT: Restaurant = SEED_RESTAURANTS['demo-cafe'] || {
   id: 'res_demo-cafe',
   slug: 'demo-cafe',
   name: 'كافيه دي مو (Demo Cafe)',
@@ -254,9 +255,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {}
       );
       if (storedRest && typeof storedRest === 'object' && Object.keys(storedRest).length > 0) {
-        setRestaurants(storedRest);
+        setRestaurants({ ...SEED_RESTAURANTS, ...storedRest });
       } else {
-        setRestaurants({ 'demo-cafe': DEFAULT_DEMO_RESTAURANT });
+        setRestaurants({ ...SEED_RESTAURANTS });
       }
 
       const storedOrders = safeParseStorage<Order[] | null>(
@@ -269,17 +270,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setOrders([]);
       }
 
-      if (!isSupabaseConfigured()) {
-        setIsRestaurantsLoaded(true);
-      }
-
-      // Background sync all restaurants from server store
+      // Background sync all restaurants from server store without premature flag flipping
       fetch('/api/restaurants')
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.success && data?.restaurants) {
             setRestaurants((prev) => {
-              const merged = { ...prev, ...data.restaurants };
+              const merged = { ...SEED_RESTAURANTS, ...prev, ...data.restaurants };
               try {
                 localStorage.setItem(STORAGE_RESTAURANTS_KEY, JSON.stringify(merged));
               } catch {}
@@ -629,6 +626,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const serverOrders: Order[] = data.orders;
 
             // Self-healing: Detect if an order moved to 'ready' or was re-pinged while device was asleep
+            // Strictly check freshness: never trigger ready chime if ready status is older than 30 minutes
+            const nowTime = Date.now();
             serverOrders.forEach((newOrd: Order) => {
               const prevOrd = safePrev.find(
                 (p) =>
@@ -637,8 +636,12 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     (p.restaurantSlug || p.restaurant_slug || '').toLowerCase() ===
                       (newOrd.restaurantSlug || newOrd.restaurant_slug || '').toLowerCase())
               );
+              const readyEpoch = new Date(newOrd.readyAt || newOrd.createdAt || nowTime).getTime();
+              const isReadyFresh = (nowTime - readyEpoch) < (30 * 60 * 1000);
+
               if (
                 prevOrd &&
+                isReadyFresh &&
                 ((prevOrd.status === 'preparing' && newOrd.status === 'ready') ||
                   (newOrd.rePingCount > (prevOrd.rePingCount || 0)))
               ) {
@@ -833,6 +836,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (restaurants[cleanSlug]) {
         return restaurants[cleanSlug];
       }
+      if (SEED_RESTAURANTS[cleanSlug]) {
+        return SEED_RESTAURANTS[cleanSlug];
+      }
       if (cleanSlug === 'demo-cafe') {
         return DEFAULT_DEMO_RESTAURANT;
       }
@@ -993,23 +999,30 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [orders, restaurants, saveAndBroadcast]
   );
 
-  // 4.1 Duplicate Prevention Helper: Check if order is active within the last 18 hours
+  // 4.1 Duplicate Prevention Helper: Check if order is fresh and active
   const getActiveOrder = useCallback(
     (orderNumber: string, restaurantSlug?: string): Order | undefined => {
       const clean = orderNumber.trim().toLowerCase();
       const slug = (restaurantSlug || 'demo-cafe').toLowerCase().trim();
-      const cutoff = Date.now() - 18 * 60 * 60 * 1000;
+      const now = Date.now();
       const safeOrders = Array.isArray(orders) ? orders : [];
       return safeOrders.find((o) => {
         if (!o) return false;
         const ordSlug = (o.restaurantSlug || o.restaurant_slug || '').toLowerCase().trim();
-        const createdTime = new Date(o.createdAt || o.created_at || Date.now()).getTime();
-        return (
-          o.orderNumber.toLowerCase() === clean &&
-          ordSlug === slug &&
-          (o.status === 'preparing' || o.status === 'ready') &&
-          createdTime > cutoff
-        );
+        if (ordSlug !== slug) return false;
+        if (o.orderNumber.toLowerCase() !== clean) return false;
+
+        const createdTime = new Date(o.createdAt || o.created_at || now).getTime();
+        // Preparing: active within last 4 hours
+        if (o.status === 'preparing') {
+          return (now - createdTime) < 4 * 60 * 60 * 1000;
+        }
+        // Ready: active within last 30 minutes
+        if (o.status === 'ready') {
+          const readyTime = new Date(o.readyAt || o.createdAt || now).getTime();
+          return (now - readyTime) < 30 * 60 * 1000;
+        }
+        return false;
       });
     },
     [orders]
@@ -1058,14 +1071,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // 1. Register in pending optimistic map
       pendingOptimisticOrdersRef.current.set(tempId, optimisticOrder);
 
-      // 2. Compute next state immediately
+      // 2. Compute next state immediately: Purge ALL older orders with this number (preparing, ready, or completed)
       const currentOrders = Array.isArray(ordersRef.current) ? ordersRef.current : [];
       const filtered = currentOrders.filter(
         (o) =>
           !(
             (o.restaurantSlug || o.restaurant_slug || '').toLowerCase() === slug &&
-            o.orderNumber.toLowerCase() === cleanNum.toLowerCase() &&
-            (o.status === 'preparing' || o.status === 'ready')
+            o.orderNumber.toLowerCase() === cleanNum.toLowerCase()
           )
       );
       const nextOrders = [optimisticOrder, ...filtered];
@@ -1897,19 +1909,41 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (matching.length === 0) return undefined;
 
-      // Active orders ('preparing' or 'ready') take absolute precedence over completed ones.
-      // Within the same group, the newest order (by created_at) wins.
+      // Sort newest first
       matching.sort((a, b) => {
-        const aActive = a.status === 'preparing' || a.status === 'ready' ? 1 : 0;
-        const bActive = b.status === 'preparing' || b.status === 'ready' ? 1 : 0;
-        if (aActive !== bActive) return bActive - aActive;
-
         const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
         const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
         return timeB - timeA;
       });
 
-      return matching[0];
+      const now = Date.now();
+      // 1. Fresh preparing order (created < 4 hours ago)
+      const preparing = matching.find((o) => {
+        if (o.status !== 'preparing') return false;
+        const time = new Date(o.createdAt || o.created_at || now).getTime();
+        return (now - time) < 4 * 60 * 60 * 1000;
+      });
+      if (preparing) return preparing;
+
+      // 2. Fresh ready order (marked ready < 30 minutes ago)
+      const ready = matching.find((o) => {
+        if (o.status !== 'ready') return false;
+        const readyTime = new Date(o.readyAt || o.createdAt || now).getTime();
+        return (now - readyTime) < 30 * 60 * 1000;
+      });
+      if (ready) return ready;
+
+      // 3. Very fresh completed order (completed < 90 seconds ago for rating transition)
+      const completed = matching.find((o) => {
+        if (o.status !== 'completed') return false;
+        const compTime = new Date(o.completedAt || o.createdAt || o.created_at || now).getTime();
+        return (now - compTime) < 90 * 1000;
+      });
+      if (completed) return completed;
+
+      // If all matching orders are older than their active windows, return undefined
+      // so customer tracking initializes safely in preparing state!
+      return undefined;
     },
     [orders]
   );

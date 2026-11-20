@@ -73,7 +73,8 @@ export const QrModal: React.FC<QrModalProps> = ({
     const cleanSlug = (restaurantSlug || 'demo-cafe').toLowerCase();
 
     if (orderNumber) {
-      return `${base}/${cleanSlug}/track/${encodeURIComponent(orderNumber)}`;
+      const now = Date.now();
+      return `${base}/${cleanSlug}/track/${encodeURIComponent(orderNumber)}?created=${now}`;
     }
 
     return `${base}/${cleanSlug}/track`;
