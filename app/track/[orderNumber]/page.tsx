@@ -30,10 +30,10 @@ function GenericTrackerRedirectInner() {
   }, [decodedOrderNumber, orders, router, searchParams]);
 
   return (
-    <div className="min-h-screen bg-obsidian text-white flex flex-col items-center justify-center font-cairo p-4">
-      <div className="w-12 h-12 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
-      <h2 className="text-lg font-bold text-white font-mono">#{decodedOrderNumber}</h2>
-      <p className="text-zinc-400 text-xs mt-1">جارِ فتح شاشة تتبع الطلب وتجهيز التنبيه...</p>
+    <div className="min-h-screen bg-[#09090B] text-white flex flex-col items-center justify-center font-sans p-4">
+      <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-4" />
+      <h2 className="text-xl font-bold text-white font-mono">#{decodedOrderNumber}</h2>
+      <p className="text-zinc-500 text-xs mt-1 font-sans">تحميل...</p>
     </div>
   );
 }

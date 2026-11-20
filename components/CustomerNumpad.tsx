@@ -44,16 +44,16 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-5">
-      {/* Apple Clean Keypad Surface */}
-      <div className="bg-[#161618] border border-white/[0.08] rounded-[32px] p-6 sm:p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] text-center">
+    <div className="w-full max-w-md mx-auto space-y-4">
+      {/* Clean Keypad Surface */}
+      <div className="bg-[#141416] border border-white/[0.07] rounded-[28px] p-6 sm:p-7 shadow-xl text-center">
         <p className="text-xs text-zinc-400 mb-3 font-medium">{t('enterBillNumber')}</p>
 
         {/* Display Screen */}
         <div
           dir="ltr"
           style={{ direction: 'ltr' }}
-          className="bg-[#0B0B0D] border border-white/[0.06] rounded-[22px] py-4 px-6 flex items-center justify-center gap-2 mb-6"
+          className="bg-[#0E0E10] border border-white/[0.06] rounded-2xl py-4 px-6 flex items-center justify-center gap-2 mb-6"
         >
           <span className="text-zinc-500 font-mono text-2xl font-semibold select-none">#</span>
           <span
@@ -110,15 +110,15 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
           </motion.button>
         </div>
 
-        {/* Submit Tracking Button (Apple HIG Primary) */}
+        {/* Submit Tracking Button (Luxury High-Contrast Solid White) */}
         <motion.button
           type="button"
           whileTap={orderNumber.trim() ? { scale: 0.97 } : undefined}
           disabled={!orderNumber.trim()}
           onClick={handleTrack}
-          className={`w-full py-4 px-6 rounded-[20px] font-bold text-base flex items-center justify-center gap-2 transition-all ${
+          className={`w-full py-4 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
             orderNumber.trim()
-              ? 'bg-[#34C759] hover:bg-[#30D158] text-black shadow-lg shadow-emerald-500/20 cursor-pointer'
+              ? 'bg-white hover:bg-zinc-200 text-black shadow-sm cursor-pointer'
               : 'bg-white/[0.04] text-zinc-600 border border-white/[0.05] cursor-not-allowed'
           }`}
         >
@@ -127,9 +127,9 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
         </motion.button>
       </div>
 
-      {/* Quick Select from Active Orders (Apple Grouped Capsule) */}
+      {/* Quick Select from Active Orders */}
       {activeOrders.length > 0 && (
-        <div className="bg-[#161618] border border-white/[0.08] rounded-[24px] p-4 shadow-md">
+        <div className="bg-[#141416] border border-white/[0.07] rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
               <span>{t('orChooseFromActive')}</span>
@@ -149,16 +149,16 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
                   const orderCreated = new Date(ord.createdAt || ord.created_at || Date.now()).getTime();
                   router.push(`/${targetSlug}/track/${encodeURIComponent(ord.orderNumber)}?created=${orderCreated}`);
                 }}
-                className="p-3 rounded-2xl bg-obsidian-card hover:bg-obsidian-border border border-obsidian-border text-right transition-all flex items-center justify-between group active:scale-95"
+                className="p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-right transition-all flex items-center justify-between group active:scale-95"
               >
                 <div>
-                  <div className="font-mono tabular-nums font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
+                  <div className="font-mono tabular-nums font-extrabold text-lg text-white group-hover:text-zinc-200 transition-colors">
                     #{ord.orderNumber}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${
-                        ord.status === 'ready' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                        ord.status === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'
                       }`}
                     />
                     <span className="text-[10px] text-zinc-400">

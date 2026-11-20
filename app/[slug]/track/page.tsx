@@ -2,13 +2,11 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useQueue } from '@/context/QueueContext';
 import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
-import { Bell, ShieldCheck, Utensils, Lock } from 'lucide-react';
 
 export default function TenantTrackEntryPage() {
   const params = useParams();
@@ -36,7 +34,7 @@ export default function TenantTrackEntryPage() {
   const restaurantName = restaurant?.name || slug;
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white flex flex-col justify-between p-4 sm:p-6 font-sans selection:bg-[#34C759] selection:text-black">
+    <div className="min-h-screen bg-[#09090B] text-white flex flex-col justify-between p-4 sm:p-6 font-sans">
       {/* Top Header */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between py-2.5 z-10">
         <div className="flex items-center gap-3">
@@ -46,14 +44,9 @@ export default function TenantTrackEntryPage() {
             themeColor={themeColor}
             size="md"
           />
-          <div>
-            <h1 className="font-semibold text-[15px] text-white tracking-tight">
-              {restaurantName}
-            </h1>
-            <span className="text-[11px] text-zinc-400">
-              خدمة النداء الرقمي
-            </span>
-          </div>
+          <h1 className="font-semibold text-sm text-white tracking-tight">
+            {restaurantName}
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -67,19 +60,11 @@ export default function TenantTrackEntryPage() {
         <div className="w-full">
           <CustomerNumpad activeOrders={activeOrders} slug={slug} />
         </div>
-
-        {/* Reassuring Footer */}
-        <div className="mt-5 text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{t('noAppNeeded')}</span>
-        </div>
       </main>
 
-      {/* Bottom Footer */}
+      {/* Clean Minimalist Footer */}
       <footer className="max-w-md w-full mx-auto text-center py-2 z-10">
-        <p className="text-[11px] text-zinc-400 font-sans">
-          استرح وسيقوم هاتفك بالرنين والاهتزاز فور جهوزية طلبك
-        </p>
+        <span className="text-[11px] text-zinc-600 font-mono">CHIMER</span>
       </footer>
     </div>
   );

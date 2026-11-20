@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo, useRef, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
@@ -12,17 +11,10 @@ import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import {
-  Bell,
-  CheckCircle2,
-  Clock,
   VolumeX,
   Volume2,
   ArrowRight,
-  RotateCcw,
   Star,
-  Send,
-  Utensils,
-  Receipt,
   Check,
 } from 'lucide-react';
 
@@ -94,7 +86,6 @@ function TenantCustomerTrackerInner() {
     setOverrideOrder(null);
     setAlarmActive(false);
     setHasUserSilenced(false);
-    confettiFiredRef.current = false;
   }, [decodedOrderNumber, slug]);
 
   // Local state
@@ -105,7 +96,6 @@ function TenantCustomerTrackerInner() {
   const [rating, setRating] = useState<number>(5);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
-  const confettiFiredRef = useRef<boolean>(false);
 
   // 1. Instant Audio Pre-Decoding & Silent Hardware Warm-Up
   useEffect(() => {
@@ -196,18 +186,6 @@ function TenantCustomerTrackerInner() {
               }
             );
 
-            if (!confettiFiredRef.current) {
-              confettiFiredRef.current = true;
-              try {
-                confetti({
-                  particleCount: 100,
-                  spread: 80,
-                  origin: { y: 0.55 },
-                  colors: ['#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
-                });
-              } catch {}
-            }
-
             syncNow().catch(() => {});
           } else if (matches && data.type === 'ORDER_COMPLETED') {
             setOverrideOrder((prev) => (prev ? { ...prev, status: 'completed' } : null));
@@ -284,18 +262,6 @@ function TenantCustomerTrackerInner() {
             body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
           }
         );
-
-        if (!confettiFiredRef.current) {
-          confettiFiredRef.current = true;
-          try {
-            confetti({
-              particleCount: 100,
-              spread: 80,
-              origin: { y: 0.55 },
-              colors: ['#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
-            });
-          } catch {}
-        }
 
         syncNow().catch(() => {});
       }
@@ -424,18 +390,6 @@ function TenantCustomerTrackerInner() {
         body: 'تفضل إلى الكاونتر لاستلام طلبك وهو طازج.',
       });
 
-      // Confetti celebratory splash
-      if (!confettiFiredRef.current) {
-        confettiFiredRef.current = true;
-        try {
-          confetti({
-            particleCount: 100,
-            spread: 80,
-            origin: { y: 0.55 },
-            colors: ['#10B981', '#34D399', '#F59E0B', '#FFFFFF'],
-          });
-        } catch {}
-      }
     } else if (order.status === 'completed') {
       soundManager.stopReadyAlarm();
       soundManager.stopHaptic();
@@ -585,38 +539,27 @@ function TenantCustomerTrackerInner() {
   const progressPercent = Math.min(100, Math.round((elapsedMinutes / Math.max(1, estMinutes)) * 100));
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white flex flex-col justify-between p-4 sm:p-6 font-sans select-none relative overflow-x-hidden selection:bg-[#34C759] selection:text-black">
-      {/* Subtle Apple ambient glow on ready */}
-      {isReady && (
-        <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_20%,_rgba(52,199,89,0.12),transparent_70%)] animate-pulse" />
-      )}
-
-      {/* Top Header / Navigation Bar */}
-      <header className="max-w-md w-full mx-auto flex items-center justify-between z-10 py-3">
+    <div className="min-h-screen bg-[#09090B] text-white flex flex-col justify-between p-4 sm:p-6 font-sans select-none relative overflow-x-hidden">
+      {/* Top Header */}
+      <header className="max-w-md w-full mx-auto flex items-center justify-between py-2 z-10">
         <Link
           href={`/${slug}/track`}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white text-xs font-medium transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white text-xs font-medium transition-colors"
         >
           <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
           <span>{t('anotherOrder')}</span>
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Subtle Live Status Indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] text-[11px] font-medium text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#34C759]" />
-            <span>متصل</span>
-          </div>
-
           <LanguageSwitcher variant="minimal" />
 
           <button
             onClick={handleExplicitUnlock}
-            className="p-2 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white transition-colors cursor-pointer"
             title={t('audioCheck')}
           >
             {isAudioUnlocked ? (
-              <Volume2 className="w-3.5 h-3.5 text-[#34C759]" />
+              <Volume2 className="w-3.5 h-3.5 text-zinc-200" />
             ) : (
               <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
             )}
@@ -624,56 +567,17 @@ function TenantCustomerTrackerInner() {
         </div>
       </header>
 
-      {/* In-App Ready Notification Banner (iOS Dynamic Island / Capsule alert) */}
-      <AnimatePresence>
-        {isReady && !hasUserSilenced && (
-          <motion.div
-            initial={{ y: -60, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -60, opacity: 0, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-            className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50 bg-[#1C1C1E] border border-[#34C759]/40 rounded-[24px] p-4 shadow-2xl flex items-center justify-between backdrop-blur-xl"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#34C759]/20 flex items-center justify-center text-[#34C759] shrink-0">
-                <Bell className="w-5 h-5 animate-bounce" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-[#34C759]">طلبك جاهز الآن!</div>
-                <div className="text-sm font-bold text-white">
-                  رقم #{decodedOrderNumber} تفضل بالاستلام
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                soundManager.stopReadyAlarm();
-                soundManager.stopHaptic();
-                setHasUserSilenced(true);
-              }}
-              className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors cursor-pointer"
-            >
-              إيقاف الرنين
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main Apple Live Activity Card */}
-      <main className="max-w-md w-full mx-auto my-auto z-10 py-2">
+      {/* Main Order Card */}
+      <main className="max-w-md w-full mx-auto my-auto z-10 py-4">
         <motion.div
           layout
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className={`rounded-[32px] p-6 sm:p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] transition-all duration-500 border ${
-            isReady
-              ? 'bg-[#18231C] border-[#34C759]/30 shadow-[#34C759]/10'
-              : 'bg-[#161618] border-white/[0.08]'
-          }`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="rounded-[28px] p-6 sm:p-8 bg-[#141416] border border-white/[0.07] shadow-xl text-center"
         >
-          {/* Restaurant Header */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.06]">
+          {/* Restaurant & Status Badge Row */}
+          <div className="flex items-center justify-between pb-5 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
               <RestaurantAvatar
                 logoUrl={restaurant?.logoUrl}
@@ -681,182 +585,142 @@ function TenantCustomerTrackerInner() {
                 themeColor={restaurant?.themeColor}
                 size="md"
               />
-              <div>
-                <h1 className="text-[15px] font-semibold text-white tracking-tight">
-                  {restaurant?.name || slug}
-                </h1>
-                <p className="text-[11px] text-zinc-400">تذكرة المتابعة المباشرة</p>
-              </div>
+              <h1 className="text-sm font-semibold text-white tracking-tight">
+                {restaurant?.name || slug}
+              </h1>
             </div>
 
-            {/* Apple Status Capsule */}
+            {/* Quiet Status Pill */}
             <div
-              className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
                 isReady
-                  ? 'bg-[#34C759]/20 text-[#34C759] border border-[#34C759]/30'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                   : isCompleted
-                  ? 'bg-zinc-800 text-zinc-300'
-                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/25'
+                  ? 'bg-white/[0.06] text-zinc-400'
+                  : 'bg-white/[0.06] text-zinc-300'
               }`}
             >
               {isReady ? 'جاهز للاستلام' : isCompleted ? 'تم الاستلام' : 'قيد التحضير'}
             </div>
           </div>
 
-          {/* Hero Order Number */}
-          <div className="text-center py-4 mb-4">
-            <span className="text-xs font-medium text-zinc-400 tracking-wider block mb-2">
-              {t('orderNumber')}
-            </span>
+          {/* Big Order Number */}
+          <div className="py-6 sm:py-8">
             <div
               dir="ltr"
               style={{ direction: 'ltr' }}
-              className="text-7xl sm:text-8xl font-black tracking-tight tabular-nums text-white my-1 font-mono"
+              className="text-8xl sm:text-9xl font-black tracking-tight tabular-nums text-white font-mono leading-none my-2 select-none"
             >
               #{decodedOrderNumber}
             </div>
 
-            {/* State subline */}
+            {/* Status-specific content */}
             {isPreparing && (
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium mt-3">
-                <Clock className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
-                <span>{t('estPrepTime', { min: remainingMinutes })}</span>
+              <div className="mt-8 space-y-4">
+                {/* Subtle, minimalist progress bar */}
+                <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-white/70 rounded-full"
+                    style={{ width: `${Math.max(15, progressPercent)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-zinc-400 font-normal">
+                  سيرن هاتفك ويهتز فور جهوزية الطلب
+                </p>
+                {!isAudioUnlocked && (
+                  <button
+                    onClick={handleExplicitUnlock}
+                    className="text-[11px] text-zinc-400 hover:text-white underline cursor-pointer pt-1"
+                  >
+                    انقر هنا لتأكيد رنين الهاتف
+                  </button>
+                )}
               </div>
             )}
 
             {isReady && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#34C759]/15 border border-[#34C759]/30 text-[#34C759] text-sm font-bold mt-3 animate-pulse">
-                <CheckCircle2 className="w-4 h-4 text-[#34C759]" />
-                <span>طلبك جاهز، تفضل باستلامه من الكاونتر</span>
+              <div className="mt-6 space-y-4">
+                <p className="text-sm font-semibold text-zinc-200">
+                  طلبك جاهز، تفضل بالاستلام من الكاونتر
+                </p>
+
+                {/* Tactile High-Contrast White Action Button */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleIReceivedOrder}
+                  className="w-full py-4 px-6 rounded-2xl bg-white hover:bg-zinc-100 text-black font-bold text-base transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <Check className="w-5 h-5 stroke-[2.5]" />
+                  <span>استلمت الطلب</span>
+                </motion.button>
+
+                {alarmActive && (
+                  <div>
+                    <button
+                      onClick={() => {
+                        soundManager.stopReadyAlarm();
+                        soundManager.stopHaptic();
+                        setHasUserSilenced(true);
+                      }}
+                      className="text-xs text-zinc-400 hover:text-white transition-colors py-1 cursor-pointer"
+                    >
+                      إيقاف صوت الرنين
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
             {isCompleted && (
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-400 text-xs font-medium mt-3">
-                <Check className="w-3.5 h-3.5 text-[#34C759]" />
-                <span>{t('orderDeliveredThanks')}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Continuous Apple Progress Capsule */}
-          {!isCompleted && (
-            <div className="space-y-2 mb-6">
-              <div className="h-2 w-full bg-white/[0.06] rounded-full overflow-hidden">
-                <motion.div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    isReady ? 'bg-[#34C759]' : 'bg-amber-400'
-                  }`}
-                  style={{ width: isReady ? '100%' : `${Math.max(15, progressPercent)}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[11px] text-zinc-500 font-medium px-0.5">
-                <span>تم تأكيد الطلب</span>
-                <span className={isPreparing ? 'text-amber-300 font-semibold' : ''}>جاري التحضير</span>
-                <span className={isReady ? 'text-[#34C759] font-semibold' : ''}>جاهز للاستلام</span>
-              </div>
-            </div>
-          )}
-
-          {/* Primary Action Button when Ready */}
-          {isReady && (
-            <div className="space-y-3 mb-4">
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handleIReceivedOrder}
-                className="w-full py-4 px-6 rounded-[20px] bg-[#34C759] hover:bg-[#30D158] text-black font-extrabold text-base transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 cursor-pointer"
-              >
-                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                <span>استلمت طلبي — إيقاف التنبيه</span>
-              </motion.button>
-            </div>
-          )}
-
-          {/* Completed State: Review and Feedback */}
-          {isCompleted && (
-            <div className="space-y-4 pt-2">
-              <div className="p-5 rounded-[24px] bg-white/[0.04] border border-white/[0.06] text-center space-y-3">
-                <p className="text-xs font-semibold text-zinc-300">
-                  {t('howWasExperience')}
+              <div className="mt-6 space-y-5">
+                <p className="text-xs text-zinc-400">
+                  نتمنى لك وجبة شهية وتجربة مميزة
                 </p>
+
+                {/* Minimal Rating Stars */}
                 <div className="flex items-center justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
-                      onClick={() => setRating(star)}
-                      className="p-1 transition-transform hover:scale-110 cursor-pointer"
+                      onClick={() => {
+                        setRating(star);
+                        if (order?.id) {
+                          submitOrderFeedback(order.id, { rating: star, submittedAt: new Date().toISOString() }, slug);
+                        }
+                        setFeedbackSent(true);
+                      }}
+                      className="p-1.5 transition-transform active:scale-90 cursor-pointer"
                     >
                       <Star
-                        className={`w-6 h-6 ${
-                          star <= rating
-                            ? 'text-amber-400 fill-amber-400'
-                            : 'text-zinc-600'
+                        className={`w-7 h-7 ${
+                          star <= rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'
                         }`}
                       />
                     </button>
                   ))}
                 </div>
 
-                {!feedbackSent ? (
-                  <button
-                    onClick={() => {
-                      if (order?.id) {
-                        submitOrderFeedback(order.id, {
-                          rating,
-                          tags: selectedTags,
-                          submittedAt: new Date().toISOString(),
-                        }, slug);
-                      }
-                      setFeedbackSent(true);
-                    }}
-                    className="px-6 py-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-xs font-semibold text-white transition-colors cursor-pointer"
-                  >
-                    {t('submitFeedback')}
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-[#34C759] font-medium">
-                    <Check className="w-4 h-4" />
-                    <span>{t('feedbackThanks')}</span>
-                  </div>
+                {feedbackSent && (
+                  <p className="text-xs text-emerald-400 font-medium">شكراً لتقييمك!</p>
                 )}
+
+                <div className="pt-2">
+                  <Link
+                    href={`/${slug}/track`}
+                    className="inline-block text-xs text-zinc-400 hover:text-white underline underline-offset-4"
+                  >
+                    متابعة طلب آخر
+                  </Link>
+                </div>
               </div>
-
-              <Link
-                href={`/${slug}/track`}
-                className="block w-full py-3.5 rounded-[18px] bg-white/[0.05] hover:bg-white/[0.09] text-center text-xs font-medium text-white transition-all"
-              >
-                {t('trackNewOrder')}
-              </Link>
-            </div>
-          )}
-
-          {/* Discreet Audio Reassurance Note */}
-          {!isCompleted && (
-            <div className="pt-2 text-center">
-              {isAudioUnlocked ? (
-                <p className="text-[11px] text-zinc-400 flex items-center justify-center gap-1.5">
-                  <Volume2 className="w-3.5 h-3.5 text-[#34C759]" />
-                  <span>التنبيه الصوتي والاهتزاز مفعل تلقائياً</span>
-                </p>
-              ) : (
-                <button
-                  onClick={handleExplicitUnlock}
-                  className="text-[11px] text-zinc-400 hover:text-white flex items-center justify-center gap-1.5 mx-auto underline cursor-pointer"
-                >
-                  <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-                  <span>انقر هنا لتأكيد رنين الهاتف فور جهوزية الطلب</span>
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-md w-full mx-auto text-center z-10 py-3">
-        <p className="text-[11px] text-zinc-400">
-          استرح وسيقوم هاتفك بالرنين فور جهوزية طلبك
-        </p>
+      {/* Clean Bottom Area */}
+      <footer className="max-w-md w-full mx-auto text-center py-2 z-10">
+        <span className="text-[11px] text-zinc-600 font-mono">CHIMER</span>
       </footer>
     </div>
   );
@@ -867,9 +731,9 @@ export default function TenantCustomerTrackerPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#000000] text-white flex flex-col items-center justify-center font-sans p-4">
-          <div className="w-10 h-10 rounded-full border-2 border-[#34C759] border-t-transparent animate-spin mb-4" />
-          <p className="text-zinc-400 text-xs font-sans">جاري تجهيز تذكرة الطلب...</p>
+        <div className="min-h-screen bg-[#09090B] text-white flex flex-col items-center justify-center font-sans p-4">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-4" />
+          <p className="text-zinc-500 text-xs font-sans">تحميل...</p>
         </div>
       }
     >
