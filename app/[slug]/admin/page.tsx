@@ -8,6 +8,7 @@ import { useQueue } from '@/context/QueueContext';
 import { StaffPinGuard, StaffLockBtn } from '@/components/StaffPinGuard';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 import {
   Settings,
   Palette,
@@ -270,7 +271,7 @@ export default function TenantAdminBrandingPage() {
             </div>
 
             <div class="brand-footer">
-              مدعوم بنظام بوزلي للنداء الذكي
+              تم التطوير والبناء بواسطة MUHAB
             </div>
           </div>
           <script>
@@ -988,6 +989,11 @@ export default function TenantAdminBrandingPage() {
             <AdminOrdersArchive slug={slug} themeColor={themeColor} />
           )}
         </main>
+
+        {/* Footer Attribution */}
+        <footer className="mt-8 pt-4 pb-2 border-t border-white/[0.06] flex items-center justify-center">
+          <MuhabBrandBadge />
+        </footer>
       </div>
     </StaffPinGuard>
   );

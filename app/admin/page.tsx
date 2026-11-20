@@ -53,6 +53,7 @@ import {
   Key,
   AlertTriangle,
 } from 'lucide-react';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 
 const MASTER_PIN = '8888';
 const AUTH_STORAGE_KEY = 'buzly_super_admin_authenticated';
@@ -1335,6 +1336,12 @@ export default function SuperAdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Admin Footer with Developer Credit */}
+      <footer className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+        <span>Buzly Smart Pager Enterprise Engine</span>
+        <MuhabBrandBadge />
+      </footer>
 
       {/* ========================================================= */}
       {/* MODAL 1: CREATE OR EDIT RESTAURANT */}

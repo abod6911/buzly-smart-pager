@@ -7,6 +7,7 @@ import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
 import { RestaurantNotFound } from '@/components/RestaurantNotFound';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 
 export default function TenantTrackEntryPage() {
   const params = useParams();
@@ -63,8 +64,8 @@ export default function TenantTrackEntryPage() {
       </main>
 
       {/* Clean Minimalist Footer */}
-      <footer className="max-w-md w-full mx-auto text-center py-2 z-10">
-        <span className="text-[11px] text-zinc-600 font-mono">CHIMER</span>
+      <footer className="max-w-md w-full mx-auto text-center py-3 z-10">
+        <MuhabBrandBadge />
       </footer>
     </div>
   );

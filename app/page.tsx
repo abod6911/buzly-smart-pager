@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Shield,
 } from 'lucide-react';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 
 export default function LandingRoleSwitcherPage() {
   const { language, isRTL, t } = useLanguage();
@@ -181,8 +182,12 @@ export default function LandingRoleSwitcherPage() {
       </main>
 
       {/* Minimal Luxury Footer */}
-      <footer className="border-t border-white/[0.07] px-4 py-6 text-center text-xs text-zinc-500 mt-auto flex flex-col sm:flex-row items-center justify-between max-w-6xl w-full mx-auto gap-2">
-        <p>Buzly Smart Restaurant Pager © 2026</p>
+      <footer className="border-t border-white/[0.07] px-4 py-6 text-center text-xs text-zinc-500 mt-auto flex flex-col sm:flex-row items-center justify-between max-w-6xl w-full mx-auto gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <p>Buzly Smart Restaurant Pager © 2026</p>
+          <span className="hidden sm:inline text-zinc-700">•</span>
+          <MuhabBrandBadge />
+        </div>
         <Link
           href="/admin"
           className="text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1.5"

@@ -10,6 +10,7 @@ import { soundManager } from '@/lib/audio';
 import { pwaHelper } from '@/lib/pwa-helper';
 import { Order, OrderStatus } from '@/types/queue';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 import {
   VolumeX,
   Volume2,
@@ -719,8 +720,8 @@ function TenantCustomerTrackerInner() {
       </main>
 
       {/* Clean Bottom Area */}
-      <footer className="max-w-md w-full mx-auto text-center py-2 z-10">
-        <span className="text-[11px] text-zinc-600 font-mono">CHIMER</span>
+      <footer className="max-w-md w-full mx-auto text-center py-3 z-10">
+        <MuhabBrandBadge />
       </footer>
     </div>
   );

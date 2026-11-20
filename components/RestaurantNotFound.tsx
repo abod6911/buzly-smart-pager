@@ -3,6 +3,7 @@
 import React from 'react';
 import { QrCode, RefreshCw, AlertCircle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 
 interface RestaurantNotFoundProps {
   slug: string;
@@ -72,8 +73,8 @@ export const RestaurantNotFound: React.FC<RestaurantNotFoundProps> = ({ slug }) 
           </button>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-white/[0.05] text-[11px] text-zinc-400 font-sans">
-          خدمة النداء الرقمي للعملاء
+        <div className="mt-6 pt-4 border-t border-white/[0.05] text-[11px] text-zinc-400 font-sans flex items-center justify-center">
+          <MuhabBrandBadge />
         </div>
       </motion.div>
     </div>

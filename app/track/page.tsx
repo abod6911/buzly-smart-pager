@@ -6,6 +6,7 @@ import { useQueue } from '@/context/QueueContext';
 import { CustomerNumpad } from '@/components/CustomerNumpad';
 import { BrandLogo } from '@/components/BrandLogo';
 import { Bell, ArrowRight, ShieldCheck, UtensilsCrossed } from 'lucide-react';
+import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 
 export default function TrackEntryPage() {
   const { orders } = useQueue();
@@ -52,6 +53,11 @@ export default function TrackEntryPage() {
         <div className="mt-8 text-center text-xs text-zinc-500 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
           <span>تنبيه فوري بالصوت والاهتزاز دون الحاجة لتحميل أي تطبيق</span>
+        </div>
+
+        {/* Attribution Footer */}
+        <div className="mt-6 text-center">
+          <MuhabBrandBadge />
         </div>
       </main>
     </div>

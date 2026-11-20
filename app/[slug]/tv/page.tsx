@@ -493,6 +493,11 @@ export default function KitchenTvBoardPage() {
                 {isWakeLockActive ? 'منع إغلاق الشاشة نشط • 24/7' : 'حماية الشاشة نشطة'}
               </span>
             </div>
+
+            <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121215]/90 border border-white/[0.08] text-[11px] text-zinc-400 backdrop-blur-md shadow-lg select-none">
+              <span>تم التطوير والبناء بواسطة</span>
+              <span className="font-bold text-white tracking-wider">MUHAB</span>
+            </div>
           </div>
 
           {/* Quick TV Control Actions */}
