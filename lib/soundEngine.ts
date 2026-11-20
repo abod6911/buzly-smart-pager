@@ -434,7 +434,12 @@ class HighDecibelSoundEngine {
   public startReadyAlarmLoop(theme: ChimeSoundTheme = this.currentTheme): void {
     const ctx = this.initAudioChain();
 
-    if (this.isAlarmPlaying) return;
+    if (this.isAlarmPlaying) {
+      // Re-ping or repeat: trigger audio chime & vibration immediately without waiting for interval
+      this.playThemedChime(theme);
+      this.triggerHaptic([800, 200, 800, 200, 1200]);
+      return;
+    }
     this.isAlarmPlaying = true;
 
     if (ctx && ctx.state === 'suspended') {

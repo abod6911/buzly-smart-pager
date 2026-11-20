@@ -106,28 +106,24 @@ function isOrderFresh(o: Order, minCreatedTime: number = 0): boolean {
   const now = Date.now();
   const createdEpoch = new Date(o.createdAt || o.created_at || now).getTime();
 
-  // If client supplied a ?created= timestamp from their QR code, reject any order created earlier than 30s before that epoch
-  if (minCreatedTime > 0 && createdEpoch < (minCreatedTime - 30000)) {
-    return false;
-  }
-
   // 1. Completed orders are only relevant for 90 seconds (to show the review/rating screen to the active customer).
-  // Older completed orders are strictly historical and MUST NEVER be shown to newly tracking customers!
+  // Once 90 seconds have passed, it is strictly archived and must never be shown.
   if (o.status === 'completed') {
     const completedEpoch = new Date(o.completedAt || o.createdAt || o.created_at || now).getTime();
-    return (now - completedEpoch) < (90 * 1000);
+    if (now - completedEpoch >= 90 * 1000) return false;
+    if (minCreatedTime > 0 && completedEpoch < minCreatedTime) return false;
+    return true;
   }
 
-  // 2. Ready orders: Only considered active if marked ready within the last 30 minutes.
-  // Stale ready orders from previous hours/shifts are treated as expired.
+  // 2. Ready orders: Active if marked ready within the last 60 minutes
   if (o.status === 'ready') {
     const readyEpoch = new Date(o.readyAt || o.createdAt || now).getTime();
-    return (now - readyEpoch) < (30 * 60 * 1000);
+    return (now - readyEpoch) < (60 * 60 * 1000);
   }
 
-  // 3. Preparing orders: Active within last 6 hours
+  // 3. Preparing orders: Active within the last 8 hours
   if (o.status === 'preparing') {
-    return (now - createdEpoch) < (6 * 60 * 60 * 1000);
+    return (now - createdEpoch) < (8 * 60 * 60 * 1000);
   }
 
   return false;
@@ -179,7 +175,7 @@ export async function GET(req: NextRequest) {
 
     const freshMemOrder = matchingMemOrders.find((o) => isOrderFresh(o, minCreatedTime));
 
-    if (freshMemOrder && (freshMemOrder.status === 'ready' || freshMemOrder.status === 'completed')) {
+    if (freshMemOrder) {
       return NextResponse.json(
         {
           success: true,
@@ -397,8 +393,29 @@ export async function PATCH(req: NextRequest) {
       return o;
     });
 
-    if (updatedOrder) {
+    if (!updatedOrder && (targetNumber || orderId || body.order?.orderNumber)) {
+      const fallbackNumber = targetNumber || body.order?.orderNumber || '1';
+      const fallbackId = orderId || body.order?.id || `ord-${Date.now()}`;
+      const constructedOrder: Order = {
+        ...(body.order || {}),
+        id: fallbackId,
+        orderNumber: fallbackNumber,
+        restaurantSlug: targetSlug || 'demo-cafe',
+        restaurant_slug: targetSlug || 'demo-cafe',
+        status: (status as OrderStatus) || 'ready',
+        readyAt: readyAt || nowIso,
+        lastPingAt: lastPingAt || nowIso,
+        rePingCount: typeof ping_count === 'number' ? ping_count : (isRePing ? 1 : 0),
+        createdAt: (body.order && (body.order.createdAt || body.order.created_at)) || nowIso,
+        created_at: (body.order && (body.order.created_at || body.order.createdAt)) || nowIso,
+      };
+      updatedOrder = constructedOrder;
+      setStore([constructedOrder, ...store]);
+    } else if (updatedOrder) {
       setStore(next);
+    }
+
+    if (updatedOrder) {
       try {
         broadcastSSEOrderEvent({
           type: isRePing ? 'ORDER_REPING' : 'ORDER_READY',

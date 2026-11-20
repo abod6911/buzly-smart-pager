@@ -1280,6 +1280,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cache: 'no-store',
         body: JSON.stringify({
           action: 'ORDER_READY',
+          order: targetOrder,
           orderId: targetOrder.id,
           orderNumber: targetOrder.orderNumber,
           restaurantSlug: targetSlug,
@@ -1415,9 +1416,12 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cache: 'no-store',
         body: JSON.stringify({
           action: 'ORDER_REPING',
+          order: targetOrder,
           orderId: targetOrder.id,
           orderNumber: targetOrder.orderNumber,
           restaurantSlug: targetSlug,
+          status: 'ready',
+          readyAt: targetOrder.readyAt || nowIso,
           lastPingAt: nowIso,
           ping_count: targetOrder.rePingCount,
         }),

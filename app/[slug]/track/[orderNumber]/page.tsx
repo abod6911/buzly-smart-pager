@@ -82,6 +82,17 @@ function TenantCustomerTrackerInner() {
 
   const order = overrideOrder || liveOrder || fallbackOrder;
 
+  // Stable references to prevent SSE / WebSocket reconnection loops
+  const orderRef = useRef<Order>(order);
+  useEffect(() => {
+    orderRef.current = order;
+  }, [order]);
+
+  const restaurantRef = useRef(restaurant);
+  useEffect(() => {
+    restaurantRef.current = restaurant;
+  }, [restaurant]);
+
   // Reset any cached override orders when route parameters change
   useEffect(() => {
     setOverrideOrder(null);
@@ -157,16 +168,17 @@ function TenantCustomerTrackerInner() {
             (!pNum || pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum);
 
           if (matches && (data.type === 'ORDER_READY' || data.type === 'ORDER_REPING')) {
+            const currentOrd = orderRef.current;
             const updatedReadyOrder: Order = {
-              ...(overrideOrder || liveOrder || fallbackOrder),
+              ...currentOrd,
               ...(data.order || {}),
               status: 'ready',
               rePingCount:
                 typeof data.rePingCount === 'number'
                   ? data.rePingCount
                   : data.type === 'ORDER_REPING'
-                  ? ((overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0) + 1
-                  : (overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0,
+                  ? (currentOrd.rePingCount || 0) + 1
+                  : currentOrd.rePingCount || 0,
               readyAt: data.readyAt || data.order?.readyAt || new Date().toISOString(),
               lastPingAt: data.lastPingAt || new Date().toISOString(),
             };
@@ -175,13 +187,14 @@ function TenantCustomerTrackerInner() {
             setHasUserSilenced(false);
             setAlarmActive(true);
 
-            soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
-            soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
+            const theme = restaurantRef.current?.chimeTheme || 'hospitality';
+            soundManager.startReadyAlarmLoop(theme);
+            soundManager.triggerHaptic([800, 200, 800, 200, 1200]);
 
             pwaHelper.showSystemNotification(
               data.type === 'ORDER_REPING'
-                ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurant?.name || slug})`
-                : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurant?.name || slug})`,
+                ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurantRef.current?.name || slug})`
+                : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurantRef.current?.name || slug})`,
               {
                 body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
               }
@@ -207,7 +220,7 @@ function TenantCustomerTrackerInner() {
         eventSource.close();
       }
     };
-  }, [slug, decodedOrderNumber, overrideOrder, liveOrder, fallbackOrder, restaurant?.name, restaurant?.chimeTheme, syncNow]);
+  }, [slug, decodedOrderNumber, syncNow]);
 
   // 1.5 Persistent Pre-Warmed Supabase Realtime Broadcast Channel (Zero-Latency Delivery <100ms)
   useEffect(() => {
@@ -232,17 +245,17 @@ function TenantCustomerTrackerInner() {
       const matchNum = pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum;
 
       if (matchSlug && matchNum) {
-        // Zero-Latency Instant Delivery (<100ms) - Direct Phone Reaction!
+        const currentOrd = orderRef.current;
         const updatedReadyOrder: Order = {
-          ...(overrideOrder || liveOrder || fallbackOrder),
+          ...currentOrd,
           ...(payload.order || {}),
           status: 'ready',
           rePingCount:
             typeof payload.rePingCount === 'number'
               ? payload.rePingCount
               : payload.type === 'ORDER_REPING'
-              ? ((overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0) + 1
-              : (overrideOrder || liveOrder || fallbackOrder)?.rePingCount || 0,
+              ? (currentOrd.rePingCount || 0) + 1
+              : currentOrd.rePingCount || 0,
           readyAt: payload.readyAt || payload.order?.readyAt || new Date().toISOString(),
           lastPingAt: payload.lastPingAt || new Date().toISOString(),
         };
@@ -251,14 +264,14 @@ function TenantCustomerTrackerInner() {
         setHasUserSilenced(false);
         setAlarmActive(true);
 
-        // Immediate audio chime and vibration in 0ms without iOS hardware delay
-        soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
-        soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
+        const theme = restaurantRef.current?.chimeTheme || 'hospitality';
+        soundManager.startReadyAlarmLoop(theme);
+        soundManager.triggerHaptic([800, 200, 800, 200, 1200]);
 
         pwaHelper.showSystemNotification(
           payload.type === 'ORDER_REPING'
-            ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurant?.name || slug})`
-            : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurant?.name || slug})`,
+            ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurantRef.current?.name || slug})`
+            : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurantRef.current?.name || slug})`,
           {
             body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
           }
@@ -269,25 +282,23 @@ function TenantCustomerTrackerInner() {
     };
 
     channel.on('broadcast', { event: 'ORDER_CALL' }, handleBroadcast);
-  }, [slug, decodedOrderNumber, warmupLiveChannel, getOrCreateLiveChannel, liveOrder, fallbackOrder, overrideOrder, restaurant?.name, restaurant?.chimeTheme, syncNow]);
+  }, [slug, decodedOrderNumber, warmupLiveChannel, getOrCreateLiveChannel, syncNow]);
 
-  // 2. Ultra-Fast High-Frequency Heartbeat Poll (300ms Direct Poll while preparing)
+  // 2. Ultra-Fast High-Frequency Heartbeat Poll (200ms Direct Poll until completed)
   useEffect(() => {
-    if (order.status !== 'preparing' || !decodedOrderNumber) return;
+    if (order.status === 'completed' || !decodedOrderNumber) return;
 
     let isCancelled = false;
-    const createdParam = searchParams?.get('created') || '';
-    const createdQuery = createdParam ? `&created=${encodeURIComponent(createdParam)}` : '';
 
     const pollOrder = async () => {
       try {
         const res = await fetch(
-          `/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}${createdQuery}&t=${Date.now()}`,
+          `/api/orders?slug=${encodeURIComponent(slug)}&orderNumber=${encodeURIComponent(decodedOrderNumber)}&t=${Date.now()}`,
           {
             cache: 'no-store',
             headers: {
               'Pragma': 'no-cache',
-              'Cache-Control': 'no-cache',
+              'Cache-Control': 'no-store, no-cache, must-revalidate',
             },
           }
         );
@@ -296,23 +307,33 @@ function TenantCustomerTrackerInner() {
         if (isCancelled || !data?.success || !data.order) return;
 
         const remoteOrder: Order = data.order;
-        const now = Date.now();
+        const currentOrd = orderRef.current;
 
         if (remoteOrder.status === 'ready') {
-          const readyTime = new Date(remoteOrder.readyAt || remoteOrder.createdAt || now).getTime();
-          // Strictly verify that the ready status was declared within the last 30 minutes
-          if (now - readyTime < 30 * 60 * 1000) {
+          const isNewReady = currentOrd.status === 'preparing';
+          const isNewPing = (remoteOrder.rePingCount || 0) > (currentOrd.rePingCount || 0);
+
+          if (isNewReady || isNewPing) {
             setOverrideOrder(remoteOrder);
             setHasUserSilenced(false);
             setAlarmActive(true);
-            soundManager.startReadyAlarmLoop(restaurant?.chimeTheme || 'hospitality');
-            soundManager.triggerHaptic([600, 150, 600, 150, 1000]);
+            const theme = restaurantRef.current?.chimeTheme || 'hospitality';
+            soundManager.startReadyAlarmLoop(theme);
+            soundManager.triggerHaptic([800, 200, 800, 200, 1200]);
+
+            pwaHelper.showSystemNotification(
+              isNewPing
+                ? `تذكير: طلبك #${decodedOrderNumber} جاهز للاستلام! 🔔 (${restaurantRef.current?.name || slug})`
+                : `طلبك #${decodedOrderNumber} جاهز للاستلام! 🍔 (${restaurantRef.current?.name || slug})`,
+              {
+                body: 'تفضل بالتوجه إلى الكاونتر لاستلام وجبتك وهي ساخنة ولذيذة.',
+              }
+            );
+
             syncNow().catch(() => {});
           }
         } else if (remoteOrder.status === 'completed') {
-          const compTime = new Date(remoteOrder.completedAt || remoteOrder.createdAt || now).getTime();
-          // Only transition to completed if completed very recently (< 90 seconds)
-          if (now - compTime < 90 * 1000) {
+          if (currentOrd.status !== 'completed') {
             setOverrideOrder(remoteOrder);
             setAlarmActive(false);
             soundManager.stopReadyAlarm();
@@ -326,12 +347,12 @@ function TenantCustomerTrackerInner() {
 
     // Run immediately on mount (0ms) without waiting for first interval tick
     pollOrder();
-    const interval = setInterval(pollOrder, 300);
+    const interval = setInterval(pollOrder, 200);
     return () => {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [order.status, decodedOrderNumber, slug, restaurant?.chimeTheme, syncNow]);
+  }, [order.status, decodedOrderNumber, slug, syncNow]);
 
   // 3. Background Reconnection Recovery on visibilitychange
   useEffect(() => {
