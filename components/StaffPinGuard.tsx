@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Lock, AlertCircle, KeyRound, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Lock, AlertCircle, KeyRound, ShieldAlert, CheckCircle2, Keyboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { soundManager } from '@/lib/audio';
 import { Restaurant } from '@/types/queue';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
+import { extractDigitKey } from '@/lib/keyboard';
 
 interface StaffPinGuardProps {
   restaurant?: Restaurant;
@@ -143,30 +144,81 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
     [isVerifying, lockedUntilSeconds, restaurant?.slug, onUnlocked]
   );
 
-  const handleDigit = (digit: string) => {
-    if (lockedUntilSeconds && lockedUntilSeconds > 0) return;
-    soundManager.playKeyClick();
-    if (pin.length < 4) {
-      const nextPin = pin + digit;
-      setPin(nextPin);
+  const pinRef = useRef<string>('');
+  useEffect(() => {
+    pinRef.current = pin;
+  }, [pin]);
 
-      if (nextPin.length === 4) {
-        verifyPinOnServer(nextPin);
+  const handleDigit = useCallback(
+    (digit: string) => {
+      if (lockedUntilSeconds && lockedUntilSeconds > 0) return;
+      if (isVerifying) return;
+      const currentPin = pinRef.current;
+      if (currentPin.length < 4) {
+        soundManager.playKeyClick();
+        const nextPin = currentPin + digit;
+        pinRef.current = nextPin;
+        setPin(nextPin);
+
+        if (nextPin.length === 4) {
+          verifyPinOnServer(nextPin);
+        }
       }
-    }
-  };
+    },
+    [lockedUntilSeconds, isVerifying, verifyPinOnServer]
+  );
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     if (lockedUntilSeconds && lockedUntilSeconds > 0) return;
+    if (isVerifying) return;
     soundManager.playKeyClick();
-    setPin((prev) => prev.slice(0, -1));
-  };
+    const nextPin = pinRef.current.slice(0, -1);
+    pinRef.current = nextPin;
+    setPin(nextPin);
+  }, [lockedUntilSeconds, isVerifying]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     if (lockedUntilSeconds && lockedUntilSeconds > 0) return;
+    if (isVerifying) return;
     soundManager.playKeyClick();
+    pinRef.current = '';
     setPin('');
-  };
+  }, [lockedUntilSeconds, isVerifying]);
+
+  // Physical Keyboard & Numpad Listener for Cashier Terminals & Desktop PCs
+  useEffect(() => {
+    if (isAuthenticated) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing inside an input or textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Allow browser shortcuts (Cmd+R, Ctrl+C, etc.)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const digit = extractDigitKey(e.key, e.code);
+      if (digit !== null) {
+        e.preventDefault();
+        handleDigit(digit);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      } else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        handleClear();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (pinRef.current.length === 4) {
+          verifyPinOnServer(pinRef.current);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated, handleDigit, handleBackspace, handleClear, verifyPinOnServer]);
 
   if (!mounted) return null;
 
@@ -321,6 +373,11 @@ export const StaffPinGuard: React.FC<StaffPinGuardProps> = ({
         <div className="pt-3 border-t border-white/[0.06] text-center flex items-center justify-center gap-1.5 text-zinc-500 text-xs">
           <ShieldAlert className="w-3.5 h-3.5 text-emerald-400/80" />
           <span>{t('protectedAreaNotice')}</span>
+        </div>
+
+        <div className="mt-2 text-center text-[11px] text-zinc-500/80 flex items-center justify-center gap-1.5 select-none font-sans">
+          <Keyboard className="w-3 h-3 text-zinc-400" />
+          <span>{language === 'ar' ? 'يدعم لوحة المفاتيح والأرقام الجانبية (Numpad)' : 'Supports keyboard & Numpad entry'}</span>
         </div>
       </motion.div>
     </div>

@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Delete, ArrowLeft, Search, Sparkles } from 'lucide-react';
+import { Delete, ArrowLeft, Search, Sparkles, Keyboard } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
 import { useLanguage } from '@/context/LanguageContext';
+import { extractDigitKey } from '@/lib/keyboard';
 
 interface CustomerNumpadProps {
   activeOrders: Order[];
@@ -18,30 +19,76 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
   const router = useRouter();
   const { language, isRTL, t } = useLanguage();
 
-  const handleDigit = (digit: string) => {
+  const orderNumberRef = useRef<string>('');
+  useEffect(() => {
+    orderNumberRef.current = orderNumber;
+  }, [orderNumber]);
+
+  const handleDigit = useCallback((digit: string) => {
     soundManager.playKeyClick();
-    if (orderNumber.length < 5) {
-      setOrderNumber((prev) => prev + digit);
+    const current = orderNumberRef.current;
+    if (current.length < 5) {
+      const next = current + digit;
+      orderNumberRef.current = next;
+      setOrderNumber(next);
     }
-  };
+  }, []);
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     soundManager.playKeyClick();
-    setOrderNumber((prev) => prev.slice(0, -1));
-  };
+    const next = orderNumberRef.current.slice(0, -1);
+    orderNumberRef.current = next;
+    setOrderNumber(next);
+  }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     soundManager.playKeyClick();
+    orderNumberRef.current = '';
     setOrderNumber('');
-  };
+  }, []);
 
-  const handleTrack = () => {
-    if (!orderNumber.trim()) return;
+  const handleTrack = useCallback(() => {
+    const num = orderNumberRef.current.trim();
+    if (!num) return;
     soundManager.unlock();
     const targetSlug = slug || 'demo-cafe';
     const now = Date.now();
-    router.push(`/${targetSlug}/track/${encodeURIComponent(orderNumber.trim())}?created=${now}`);
-  };
+    router.push(`/${targetSlug}/track/${encodeURIComponent(num)}?created=${now}`);
+  }, [slug, router]);
+
+  // Physical Keyboard & Numpad listener for PCs, laptops, and desktop browsers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing inside an input or textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === 'Enter') {
+          handleTrack();
+        }
+        return;
+      }
+
+      // Ignore browser shortcuts
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const digit = extractDigitKey(e.key, e.code);
+      if (digit !== null) {
+        e.preventDefault();
+        handleDigit(digit);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      } else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        handleClear();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleTrack();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDigit, handleBackspace, handleClear, handleTrack]);
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
@@ -125,6 +172,12 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
           <span>{t('trackMyOrder')}</span>
           <ArrowLeft className={`w-4 h-4 stroke-[2.5] ${isRTL ? '' : 'rotate-180'}`} />
         </motion.button>
+
+        {/* Keyboard shortcut hint */}
+        <div className="mt-3 text-center text-[11px] text-zinc-500/80 flex items-center justify-center gap-1.5 select-none font-sans">
+          <Keyboard className="w-3 h-3 text-zinc-400" />
+          <span>{language === 'ar' ? 'يمكنك استخدام لوحة المفاتيح والضغط على Enter' : 'You can type on keyboard & press Enter'}</span>
+        </div>
       </div>
 
       {/* Quick Select from Active Orders */}

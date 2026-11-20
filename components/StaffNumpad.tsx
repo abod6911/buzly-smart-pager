@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RotateCcw, Clock, Check, X, FileText, AlertCircle, BellRing } from 'lucide-react';
+import { Plus, RotateCcw, Clock, Check, X, FileText, AlertCircle, BellRing, Keyboard } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 import { Order } from '@/types/queue';
 import { useLanguage } from '@/context/LanguageContext';
 import { OdometerNumber } from '@/components/OdometerNumber';
 import { appleTapDialpad } from '@/lib/motion';
+import { extractDigitKey } from '@/lib/keyboard';
 
 interface StaffNumpadProps {
   onAddOrder: (
@@ -103,10 +104,13 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
         return;
       }
 
-      if (/^[0-9]$/.test(e.key)) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const digit = extractDigitKey(e.key, e.code);
+      if (digit !== null) {
         e.preventDefault();
         soundManager.playKeyClick();
-        setOrderNumber((prev) => (prev.length < 5 ? prev + e.key : prev));
+        setOrderNumber((prev) => (prev.length < 5 ? prev + digit : prev));
       } else if (e.key === 'Backspace') {
         e.preventDefault();
         soundManager.playKeyClick();
@@ -352,6 +356,12 @@ export const StaffNumpad: React.FC<StaffNumpadProps> = ({
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>{isBusy ? t('addingToQueue') : t('addToQueue')}</span>
         </motion.button>
+
+        {/* Keyboard shortcut hint */}
+        <div className="pt-0.5 text-center text-[10px] text-zinc-500/80 flex items-center justify-center gap-1 select-none">
+          <Keyboard className="w-2.5 h-2.5 text-zinc-400" />
+          <span>يدعم لوحة المفاتيح والأرقام الجانبية (Numpad) ومفتاح Enter</span>
+        </div>
       </div>
     </div>
   );
