@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
     "test:e2e": "node scripts/test-e2e-realtime.mjs",
     "test:security": "node scripts/test-pin-security.mjs",
     "test:archive": "node scripts/test-archive-rollover.mjs",

@@ -52,7 +52,7 @@ for (const term of essentialTerms) {
 console.log(`  [PASS] Essential terminology verified in both languages (${essentialTerms.length} verified)`);
 
 // 3. Verify Server HTML Rendering for Customer Tracker & TV
-const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:3044';
+const BASE_URL = process.env.TEST_URL || process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
 
 try {
   const resTracker = await fetch(`${BASE_URL}/demo-cafe/track`);

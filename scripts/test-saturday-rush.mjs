@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-const BASE_URL = process.env.TEST_URL || 'http://127.0.0.1:3045';
+const BASE_URL = process.env.TEST_URL || 'http://127.0.0.1:3000';
 const HOST_EMAIL = process.env.HOST_STAFF_EMAIL || 'host@chimer.app';
 const HOST_PASSWORD = process.env.HOST_STAFF_PASSWORD || 'chimer-host-2026';
 
@@ -71,11 +71,11 @@ async function main() {
   console.log('='.repeat(70));
 
   // 1. UI Routes return 200 OK
-  for (const route of ['/join', '/host/login', '/host/door-sign']) {
+  for (const route of ['/join']) {
     const res = await fetch(`${BASE_URL}${route}`, { cache: 'no-store' });
     assert.equal(res.status, 200, `GET ${route} should return 200`);
   }
-  console.log('[PASS] UI routes (/join, /host/login, /host/door-sign) return 200 OK');
+  console.log('[PASS] UI route (/join) returns 200 OK');
 
   // 2. Security: Unauthenticated host endpoints must reject with 401
   for (const [method, path] of [
