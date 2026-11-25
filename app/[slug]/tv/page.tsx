@@ -120,7 +120,7 @@ export default function KitchenTvBoardPage() {
     }
     setTimeout(() => {
       setHighlightOrderNumber(null);
-    }, 3500);
+    }, 3200);
   };
 
   useEffect(() => {
@@ -211,10 +211,9 @@ export default function KitchenTvBoardPage() {
 
   return (
     <ErrorBoundary fallbackTitle="تعذر تحميل شاشة الصالة والتلفاز">
-      <div className="min-h-screen bg-[#09090B] text-white flex flex-col font-sans overflow-hidden select-none relative">
-        {/* 1. ULTRA-CLEAN MINIMAL ENTERPRISE HEADER */}
-        <header className="border-b border-white/[0.08] bg-[#09090B] px-6 py-4 flex items-center justify-between z-20">
-          {/* Brand: Prominent & Clean */}
+      <div className="min-h-screen bg-[#0A0A0C] text-white flex flex-col font-sans overflow-hidden select-none relative">
+        {/* 1. ARCHITECTURAL MINIMAL HEADER */}
+        <header className="border-b border-white/[0.07] bg-[#0A0A0C] px-6 sm:px-8 py-4 flex items-center justify-between z-20">
           <div className="flex items-center gap-4">
             <RestaurantAvatar
               logoUrl={restaurant?.logoUrl}
@@ -222,252 +221,191 @@ export default function KitchenTvBoardPage() {
               themeColor={restaurant?.themeColor}
               size="lg"
             />
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide">
-                {restaurant?.name || slug}
-              </h1>
-            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              {restaurant?.name || slug}
+            </h1>
           </div>
 
-          {/* Status & Minimal Controls (Clock, Language & Fullscreen) */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <LanguageSwitcher variant="minimal" />
 
-            {/* Digital Clock in Western / English numerals */}
-            <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-              <Clock className="w-4 h-4 text-zinc-400" />
-              <span className="font-mono text-xl lg:text-2xl font-semibold text-zinc-100 tabular-nums tracking-wider dir-ltr">
+            <div className="bg-[#121215] border border-white/[0.08] px-4 py-2 rounded-xl flex items-center gap-2">
+              <span className="font-mono text-lg lg:text-xl font-semibold text-zinc-200 tabular-nums tracking-wider dir-ltr">
                 {currentTime || '--:--:--'}
               </span>
             </div>
 
-            {/* Sleek Fullscreen Toggle */}
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              whileHover={{ scale: 1.05 }}
+            <button
+              onClick={handleTestVoice}
+              disabled={isTestingAudio}
+              className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors cursor-pointer disabled:opacity-40"
+              title={language === 'ar' ? 'تجربة الصوت' : 'Test Sound'}
+            >
+              <Volume2 className={`w-4 h-4 ${isTestingAudio ? 'text-emerald-400' : ''}`} />
+            </button>
+
+            <button
               onClick={toggleFullscreen}
-              className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] cursor-pointer"
+              className="p-2.5 rounded-xl bg-[#121215] hover:bg-[#18181C] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors cursor-pointer"
               title={t('fullscreen')}
             >
               <Maximize2 className="w-4 h-4" />
-            </motion.button>
+            </button>
           </div>
         </header>
 
-        {/* 2. DRAMATIC CENTER SPOTLIGHT CALLOUT OVERLAY */}
+        {/* 2. CINEMATIC CENTER SPOTLIGHT OVERLAY */}
         <AnimatePresence>
           {highlightOrderNumber && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md pointer-events-none"
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/75 backdrop-blur-xl pointer-events-none"
             >
               <motion.div
-                initial={{ scale: 0.8, opacity: 0.8 }}
-                animate={{ scale: 2.2, opacity: 0 }}
-                transition={{ repeat: Infinity, duration: 1.8, ease: 'easeOut' }}
-                className="absolute w-72 h-72 rounded-full border-2 border-emerald-400/50 pointer-events-none"
-              />
-              <motion.div
-                initial={{ scale: 0.6, opacity: 0.7 }}
-                animate={{ scale: 1.8, opacity: 0 }}
-                transition={{ repeat: Infinity, duration: 1.8, delay: 0.5, ease: 'easeOut' }}
-                className="absolute w-72 h-72 rounded-full border border-emerald-400/40 pointer-events-none"
-              />
-
-              <motion.div
-                initial={{ scale: 0.5, y: 40, opacity: 0 }}
+                initial={{ scale: 0.72, y: 32, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{
-                  scale: 0.35,
-                  x: '-40%',
-                  y: '10%',
+                  scale: 0.42,
+                  x: '-28%',
+                  y: '6%',
                   opacity: 0,
-                  transition: { duration: 0.45, ease: [0.32, 0.72, 0, 1] },
+                  transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
                 }}
                 transition={{
                   type: 'spring',
-                  stiffness: 350,
+                  stiffness: 280,
                   damping: 24,
                 }}
-                className="relative bg-[#121216] border-2 border-emerald-500 rounded-3xl p-8 sm:p-12 text-center max-w-xl w-full shadow-2xl shadow-emerald-500/20"
+                className="bg-emerald-600 text-white rounded-[36px] px-12 py-12 sm:px-20 sm:py-16 text-center max-w-xl w-full shadow-[0_32px_90px_rgba(0,0,0,0.65)]"
               >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>{t('newCall')}</span>
-                </div>
-
-                <div className="font-mono text-7xl sm:text-9xl font-black text-white tracking-tight tabular-nums my-2 drop-shadow-lg">
-                  #{highlightOrderNumber}
-                </div>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-4 tracking-tight">
-                  {language === 'ar' ? 'جاهز للاستلام الآن' : 'READY FOR PICKUP'}
-                </h2>
-                <p className="text-sm sm:text-base text-zinc-300 mt-2 font-medium">
-                  {language === 'ar' ? 'تفضل بالتوجه إلى كاونتر الاستلام' : 'Please proceed to the counter to collect your order'}
+                <p className="text-sm sm:text-base font-bold uppercase tracking-[0.25em] text-emerald-100 mb-3">
+                  {language === 'ar' ? 'جاهز للاستلام' : 'ORDER READY'}
                 </p>
+
+                <div
+                  dir="ltr"
+                  className="font-mono text-[110px] sm:text-[156px] font-black text-white tracking-tight tabular-nums leading-none my-2"
+                >
+                  {highlightOrderNumber}
+                </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* 3. MAIN TV VIEW: Split Board OR Clean Welcome Idle State */}
+        {/* 3. MAIN TV VIEW: PURE ARCHITECTURAL NUMBER BOARD */}
         {hasAnyActiveOrders ? (
-          <main className="flex-1 grid grid-cols-2 divide-x-2 divide-x-reverse divide-white/[0.06] p-6 gap-6 overflow-hidden">
+          <main className="flex-1 grid grid-cols-2 divide-x divide-x-reverse divide-white/[0.07] overflow-hidden">
             {/* COLUMN 1: PREPARING (قيد التحضير) */}
-            <div className="flex flex-col bg-[#121215] rounded-2xl border border-white/[0.08] p-5 lg:p-6 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-5">
+            <section className="flex flex-col p-6 lg:p-8 overflow-hidden">
+              <div className="flex items-center justify-between pb-5 border-b border-white/[0.07] mb-6">
                 <div className="flex items-center gap-3">
-                  <span className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.45)]" />
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-zinc-100 tracking-tight flex items-baseline gap-2">
-                    <span>{t('nowPreparing')}</span>
-                    {language === 'ar' && (
-                      <span className="text-xl font-bold text-zinc-500 uppercase">PREPARING</span>
-                    )}
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <h2 className="text-2xl lg:text-3xl font-bold text-zinc-200 tracking-tight">
+                    {t('nowPreparing')}
                   </h2>
                 </div>
-                <span className="px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-base lg:text-lg font-mono font-bold tabular-nums">
+                <span className="font-mono text-lg font-semibold text-zinc-500 tabular-nums">
                   {preparingOrders.length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
                   <AnimatePresence mode="popLayout">
                     {preparingOrders.map((order) => (
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.72, y: 24, filter: 'blur(8px)' }}
-                        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         exit={{
                           opacity: 0,
-                          scale: 0.65,
-                          y: -24,
-                          filter: 'blur(10px)',
-                          transition: { duration: 0.28, ease: 'easeInOut' },
+                          scale: 0.8,
+                          transition: { duration: 0.25, ease: 'easeOut' },
                         }}
                         transition={{
-                          layout: { type: 'spring', stiffness: 340, damping: 28 },
-                          scale: { type: 'spring', stiffness: 380, damping: 25 },
-                          opacity: { duration: 0.25 },
+                          layout: { type: 'spring', stiffness: 320, damping: 28 },
+                          scale: { type: 'spring', stiffness: 360, damping: 26 },
                         }}
-                        className="bg-[#18181C] border border-white/[0.08] hover:border-white/20 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group"
+                        className="bg-[#121215] border border-white/[0.07] rounded-2xl py-6 px-4 flex items-center justify-center text-center"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
-                        <span className="text-xs font-mono text-zinc-400 font-medium mb-1 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                          <span>{t('orderNumber')}</span>
-                        </span>
-                        <div className="font-mono text-4xl lg:text-5xl font-black text-white tracking-tight tabular-nums my-1 drop-shadow-sm">
+                        <span
+                          dir="ltr"
+                          className="font-mono text-4xl lg:text-5xl font-bold text-zinc-200 tracking-tight tabular-nums"
+                        >
                           {order.orderNumber}
-                        </div>
-                        <div className="mt-2 text-[11px] font-mono text-zinc-400 bg-white/[0.04] px-2.5 py-0.5 rounded-full border border-white/[0.06] tabular-nums">
-                          {t('elapsedAgo', { min: getElapsedMins(order.createdAt || order.created_at || new Date().toISOString()) })}
-                        </div>
+                        </span>
                       </motion.div>
                     ))}
                   </AnimatePresence>
                 </div>
-
-                {preparingOrders.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-base font-medium">{t('noPreparingOrders')}</p>
-                  </div>
-                )}
               </div>
-            </div>
+            </section>
 
-            {/* COLUMN 2: READY FOR PICKUP (جاهز للاستلام) */}
-            <div className="flex flex-col bg-[#071F18]/60 rounded-2xl border border-emerald-500/25 p-5 lg:p-6 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between pb-4 border-b border-emerald-500/20 mb-5">
+            {/* COLUMN 2: READY (جاهز) */}
+            <section className="flex flex-col p-6 lg:p-8 bg-[#0D1310] overflow-hidden">
+              <div className="flex items-center justify-between pb-5 border-b border-emerald-500/20 mb-6">
                 <div className="flex items-center gap-3">
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-400" />
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-emerald-400 tracking-tight flex items-baseline gap-2">
-                    <span>{t('readyForPickup')}</span>
-                    {language === 'ar' && (
-                      <span className="text-xl font-bold text-emerald-500/70 uppercase">READY</span>
-                    )}
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <h2 className="text-2xl lg:text-3xl font-bold text-emerald-400 tracking-tight">
+                    {t('readyForPickup')}
                   </h2>
                 </div>
-                <span className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-base lg:text-lg font-mono font-bold tabular-nums">
+                <span className="font-mono text-lg font-semibold text-emerald-500/70 tabular-nums">
                   {readyOrders.length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <AnimatePresence mode="popLayout">
                     {readyOrders.map((order) => (
                       <motion.div
                         key={order.id}
                         layout
-                        initial={{ opacity: 0, scale: 0.65, y: 32, filter: 'blur(10px)' }}
-                        animate={{
-                          opacity: 1,
-                          scale: 1,
-                          y: 0,
-                          filter: 'blur(0px)',
-                        }}
+                        initial={{ opacity: 0, scale: 0.78 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         exit={{
                           opacity: 0,
-                          scale: 0.55,
-                          y: -35,
-                          filter: 'blur(12px)',
-                          transition: { duration: 0.35, ease: [0.32, 0.72, 0, 1] },
+                          scale: 0.75,
+                          transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
                         }}
                         transition={{
-                          layout: { type: 'spring', stiffness: 320, damping: 26 },
-                          scale: { type: 'spring', stiffness: 420, damping: 22 },
-                          opacity: { duration: 0.28 },
+                          layout: { type: 'spring', stiffness: 300, damping: 26 },
+                          scale: { type: 'spring', stiffness: 380, damping: 22 },
                         }}
-                        className="bg-gradient-to-b from-[#08281E] to-[#041712] border-2 border-emerald-400/80 hover:border-emerald-300 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center shadow-xl shadow-emerald-500/20 relative overflow-hidden ring-1 ring-emerald-500/40"
+                        className="bg-emerald-600/15 border border-emerald-500/35 rounded-3xl py-8 px-5 flex items-center justify-center text-center"
                       >
-                        <span className="text-[11px] uppercase font-black text-emerald-300 mb-1 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span>{t('ready')}</span>
-                        </span>
-                        <motion.div
-                          initial={{ scale: 0.82 }}
+                        <motion.span
+                          dir="ltr"
+                          initial={{ scale: 0.85 }}
                           animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 450, damping: 18 }}
-                          className="font-mono text-5xl lg:text-6xl font-black text-white tracking-tight tabular-nums my-1 drop-shadow-[0_4px_14px_rgba(16,185,129,0.5)]"
+                          transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+                          className="font-mono text-6xl lg:text-7xl font-black text-white tracking-tight tabular-nums"
                         >
                           {order.orderNumber}
-                        </motion.div>
-                        <span className="mt-1.5 text-xs font-bold text-emerald-200 bg-emerald-500/20 border border-emerald-500/40 px-3 py-0.5 rounded-full shadow-inner flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>{t('proceedToCounter')}</span>
-                        </span>
+                        </motion.span>
                       </motion.div>
                     ))}
                   </AnimatePresence>
                 </div>
-
-                {readyOrders.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-20">
-                    <p className="text-base font-medium">{t('waitingForReady')}</p>
-                  </div>
-                )}
               </div>
-            </div>
+            </section>
           </main>
         ) : (
-          /* Welcome Idle State */
-          <main className="flex-1 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-radial from-emerald-500/5 via-transparent to-transparent pointer-events-none" />
-
+          /* Quiet Luxury Welcome Idle State */
+          <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className="max-w-2xl w-full flex flex-col items-center z-10"
+              className="max-w-2xl w-full flex flex-col items-center"
             >
-              {/* Brand Logo / Initials Badge */}
-              <div className="mb-6 shadow-2xl">
+              <div className="mb-6">
                 <RestaurantAvatar
                   logoUrl={restaurant?.logoUrl}
                   name={restaurant?.name || slug}
@@ -475,59 +413,12 @@ export default function KitchenTvBoardPage() {
                   size="xl"
                 />
               </div>
-
-              <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tight">
+              <h2 className="text-4xl sm:text-6xl font-bold text-white tracking-tight">
                 {restaurant?.name || slug}
               </h2>
             </motion.div>
           </main>
         )}
-
-        {/* 4. SMART TV OPERATOR BAR (Floating Minimalist Dock) */}
-        <div className="fixed bottom-3 left-4 right-4 z-40 flex items-center justify-between pointer-events-none">
-          {/* Wake Lock & System Live Indicator */}
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121215]/90 border border-white/[0.08] text-xs backdrop-blur-md shadow-lg">
-              <span className={`w-2 h-2 rounded-full ${isWakeLockActive ? 'bg-[#34C759]' : 'bg-amber-400'} animate-pulse`} />
-              <span className="text-zinc-300 font-medium text-[11px]">
-                {isWakeLockActive ? 'منع إغلاق الشاشة نشط • 24/7' : 'حماية الشاشة نشطة'}
-              </span>
-            </div>
-
-            <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121215]/90 border border-white/[0.08] text-[11px] text-zinc-400 backdrop-blur-md shadow-lg select-none">
-              <span>تم التطوير والبناء بواسطة</span>
-              <span className="font-bold text-white tracking-wider">MUHAB</span>
-            </div>
-          </div>
-
-          {/* Quick TV Control Actions */}
-          <div className="flex items-center gap-2 pointer-events-auto">
-            {/* Instant Speaker & Voice Test Button */}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={handleTestVoice}
-              disabled={isTestingAudio}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] text-xs font-semibold backdrop-blur-md transition-all shadow-lg cursor-pointer disabled:opacity-50"
-              title="اختبار سماعات الصالة والنداء الصوتي"
-            >
-              <Volume2 className={`w-3.5 h-3.5 ${isTestingAudio ? 'animate-bounce text-[#34C759]' : 'text-zinc-300'}`} />
-              <span>{isTestingAudio ? 'جاري اختبار الصوت في الصالة...' : 'تجربة الصوت والنداء'}</span>
-            </motion.button>
-
-            {/* Instant Fullscreen Toggle Button */}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={toggleFullscreen}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34C759] hover:bg-[#30D158] text-black text-xs font-bold transition-all shadow-lg cursor-pointer"
-              title="ملء الشاشة بالكامل (F11 أو F)"
-            >
-              <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>ملء الشاشة (F11)</span>
-            </motion.button>
-          </div>
-        </div>
       </div>
     </ErrorBoundary>
   );
