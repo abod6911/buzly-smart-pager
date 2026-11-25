@@ -192,20 +192,6 @@ export default function TenantStaffCashierPage() {
                     <span className="font-semibold text-sm text-white">
                       {restaurant?.name || slug}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      {t('cashierPos')}
-                    </span>
-                    {networkStatus === 'connected' ? (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>{t('liveConnected')}</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                        <span>{t('reconnecting')}</span>
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -294,25 +280,8 @@ export default function TenantStaffCashierPage() {
                   {completedOrders.length}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
-                {completedOrders.length > 0 && (
-                  <button
-                    onClick={() => archiveCompletedOrders(slug)}
-                    className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.06] transition-colors"
-                    title={t('archive')}
-                  >
-                    <Archive className="w-3.5 h-3.5" />
-                    <span>{t('archive')}</span>
-                  </button>
-                )}
-                <button
-                  onClick={handleStartNewDay}
-                  className="flex items-center gap-1 text-[11px] text-amber-300 hover:text-amber-200 font-medium bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20 transition-colors"
-                  title={t('resetDayConfirm')}
-                >
-                  <RotateCcw className="w-3 h-3 text-amber-400" />
-                  <span>{t('startNewDay')}</span>
-                </button>
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-zinc-400">
+                <CheckCircle2 className="w-4 h-4" />
               </div>
             </div>
           </div>

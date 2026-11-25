@@ -706,7 +706,11 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const incSlug = (incoming.restaurantSlug || incoming.restaurant_slug || '').toLowerCase();
                 for (const [key, val] of map.entries()) {
                   const valSlug = (val.restaurantSlug || val.restaurant_slug || '').toLowerCase();
-                  if (val.orderNumber === incoming.orderNumber && valSlug === incSlug) {
+                  // Only match by orderNumber against active orders (or same status) so old completed orders never swallow a newly created order with the same number
+                  const bothActive =
+                    (val.status === 'preparing' || val.status === 'ready') &&
+                    (incoming.status === 'preparing' || incoming.status === 'ready');
+                  if (val.orderNumber === incoming.orderNumber && valSlug === incSlug && bothActive) {
                     matchingKey = key;
                     break;
                   }
@@ -718,11 +722,11 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 if (matchingKey !== incoming.id) {
                   map.delete(matchingKey);
                 }
-                // Status resolution: if local was already marked 'ready' or 'completed', do not downgrade
+                // Status resolution: if local was already marked 'ready' or 'completed' for the SAME order, do not downgrade
                 let resolvedStatus = incoming.status;
                 if (prev.status === 'ready' && incoming.status === 'preparing') {
                   resolvedStatus = 'ready';
-                } else if (prev.status === 'completed' && incoming.status !== 'completed') {
+                } else if (prev.status === 'completed' && incoming.status !== 'completed' && prev.id === incoming.id) {
                   resolvedStatus = 'completed';
                 }
 
