@@ -199,10 +199,6 @@ function JoinWaitlistContent() {
 
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setFormError('Please enter your name so the host knows who to call.');
-      return;
-    }
 
     // Unlock Web Audio API inside the user gesture!
     const unlocked = await waitlistBuzzer.unlock();
@@ -217,7 +213,6 @@ function JoinWaitlistContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           restaurantSlug: slug,
-          name: name.trim(),
           partySize,
           seatingPreference,
           phoneNumber: phoneNumber.trim() || null,
@@ -650,24 +645,7 @@ function JoinWaitlistContent() {
           </div>
 
           <form onSubmit={handleJoinSubmit} className="space-y-5">
-            {/* 1. Your Name */}
-            <div>
-              <label htmlFor="guest-name" className="block text-sm font-bold text-zinc-800 mb-1.5">
-                Your name
-              </label>
-              <input
-                id="guest-name"
-                type="text"
-                required
-                maxLength={80}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Alex"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3.5 text-base font-medium text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900"
-              />
-            </div>
-
-            {/* 2. Party Size 2x4 Grid */}
+            {/* 1. Party Size 2x4 Grid */}
             <div>
               <span className="block text-sm font-bold text-zinc-800 mb-2">
                 How many of you?

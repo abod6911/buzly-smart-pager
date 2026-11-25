@@ -17,6 +17,9 @@ import {
   ArrowRight,
   Star,
   Check,
+  BellRing,
+  Clock,
+  ShieldCheck,
 } from 'lucide-react';
 
 function TenantCustomerTrackerInner() {
@@ -560,13 +563,26 @@ function TenantCustomerTrackerInner() {
   const remainingMinutes = Math.max(0, estMinutes - elapsedMinutes);
   const progressPercent = Math.min(100, Math.round((elapsedMinutes / Math.max(1, estMinutes)) * 100));
 
+  const restaurantDisplayName = restaurant?.name || slug;
+  const paddedOrderNum = decodedOrderNumber.padStart(3, '0');
+
   return (
-    <div className="min-h-screen bg-[#09090B] text-white flex flex-col justify-between p-4 sm:p-6 font-sans select-none relative overflow-x-hidden">
+    <div
+      className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 font-sans select-none relative overflow-x-hidden transition-colors duration-700 ${
+        isReady
+          ? 'bg-emerald-600 text-white'
+          : 'bg-[#F4F1EA] text-zinc-900'
+      }`}
+    >
       {/* Top Header */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between py-2 z-10">
         <Link
           href={`/${slug}/track`}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white text-xs font-medium transition-colors"
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            isReady
+              ? 'bg-white/15 hover:bg-white/25 text-white'
+              : 'bg-white/80 hover:bg-white text-zinc-700 border border-zinc-200/80 shadow-xs'
+          }`}
         >
           <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
           <span>{t('anotherOrder')}</span>
@@ -577,172 +593,286 @@ function TenantCustomerTrackerInner() {
 
           <button
             onClick={handleExplicitUnlock}
-            className="p-2 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
+              isReady
+                ? 'bg-white/15 hover:bg-white/25 text-white'
+                : 'bg-white/80 hover:bg-white text-zinc-700 border border-zinc-200/80'
+            }`}
             title={t('audioCheck')}
           >
             {isAudioUnlocked ? (
-              <Volume2 className="w-3.5 h-3.5 text-zinc-200" />
+              <Volume2 className="w-3.5 h-3.5" />
             ) : (
-              <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+              <VolumeX className="w-3.5 h-3.5 opacity-60" />
             )}
           </button>
         </div>
       </header>
 
-      {/* Main Order Card */}
+      {/* Main Tactile Ticket / Cinematic Ready View */}
       <main className="max-w-md w-full mx-auto my-auto z-10 py-4">
-        <motion.div
-          layout
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="rounded-[28px] p-6 sm:p-8 bg-[#141416] border border-white/[0.07] shadow-xl text-center"
-        >
-          {/* Restaurant & Status Badge Row */}
-          <div className="flex items-center justify-between pb-5 border-b border-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <RestaurantAvatar
-                logoUrl={restaurant?.logoUrl}
-                name={restaurant?.name || slug}
-                themeColor={restaurant?.themeColor}
-                size="md"
-              />
-              <h1 className="text-sm font-semibold text-white tracking-tight">
-                {restaurant?.name || slug}
-              </h1>
-            </div>
-
-            {/* Quiet Status Pill */}
-            <div
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                isReady
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                  : isCompleted
-                  ? 'bg-white/[0.06] text-zinc-400'
-                  : 'bg-white/[0.06] text-zinc-300'
-              }`}
+        <AnimatePresence mode="wait">
+          {isPreparing && (
+            <motion.div
+              key="ticket-preparing"
+              initial={{ opacity: 0, y: 14, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -24, scale: 0.96 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full"
             >
-              {isReady ? 'جاهز للاستلام' : isCompleted ? 'تم الاستلام' : 'قيد التحضير'}
-            </div>
-          </div>
-
-          {/* Big Order Number */}
-          <div className="py-6 sm:py-8">
-            <div
-              dir="ltr"
-              style={{ direction: 'ltr' }}
-              className="text-8xl sm:text-9xl font-black tracking-tight tabular-nums text-white font-mono leading-none my-2 select-none"
-            >
-              #{decodedOrderNumber}
-            </div>
-
-            {/* Status-specific content */}
-            {isPreparing && (
-              <div className="mt-8 space-y-4">
-                {/* Subtle, minimalist progress bar */}
-                <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-white/70 rounded-full"
-                    style={{ width: `${Math.max(15, progressPercent)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-zinc-400 font-normal">
-                  سيرن هاتفك ويهتز فور جهوزية الطلب
-                </p>
-                {!isAudioUnlocked && (
-                  <button
-                    onClick={handleExplicitUnlock}
-                    className="text-[11px] text-zinc-400 hover:text-white underline cursor-pointer pt-1"
-                  >
-                    انقر هنا لتأكيد رنين الهاتف
-                  </button>
-                )}
-              </div>
-            )}
-
-            {isReady && (
-              <div className="mt-6 space-y-4">
-                <p className="text-sm font-semibold text-zinc-200">
-                  طلبك جاهز، تفضل بالاستلام من الكاونتر
-                </p>
-
-                {/* Tactile High-Contrast White Action Button */}
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleIReceivedOrder}
-                  className="w-full py-4 px-6 rounded-2xl bg-white hover:bg-zinc-100 text-black font-bold text-base transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              {/* Audio recovery banner if needed */}
+              {!isAudioUnlocked && (
+                <button
+                  type="button"
+                  onClick={handleExplicitUnlock}
+                  className="w-full mb-3 bg-amber-100 hover:bg-amber-200/80 border border-amber-300 text-amber-950 rounded-2xl px-4 py-2.5 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                 >
-                  <Check className="w-5 h-5 stroke-[2.5]" />
-                  <span>استلمت الطلب</span>
-                </motion.button>
+                  <span className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4" />
+                    {language === 'ar'
+                      ? 'انقر لتفعيل صوت الرنين العالي'
+                      : 'Tap to enable loud buzzer chime'}
+                  </span>
+                  <span className="underline">
+                    {language === 'ar' ? 'تجربة' : 'Test'}
+                  </span>
+                </button>
+              )}
 
-                {alarmActive && (
-                  <div>
-                    <button
-                      onClick={() => {
-                        soundManager.stopReadyAlarm();
-                        soundManager.stopHaptic();
-                        setHasUserSilenced(true);
-                      }}
-                      className="text-xs text-zinc-400 hover:text-white transition-colors py-1 cursor-pointer"
+              {/* Physical Perforated Ticket Card */}
+              <div className="drop-shadow-[0_16px_40px_rgba(24,24,27,0.08)]">
+                {/* Upper Ticket Body */}
+                <div className="bg-[#FFFDF9] border border-b-0 border-zinc-200/90 rounded-t-[28px] p-6 sm:p-7">
+                  <div className="flex items-center justify-between gap-3 mb-6">
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 truncate">
+                      {restaurantDisplayName}
+                    </span>
+                    <span
+                      dir="ltr"
+                      className="font-mono text-sm font-bold text-zinc-900 bg-zinc-100 px-3 py-1 rounded-full shrink-0"
                     >
-                      إيقاف صوت الرنين
-                    </button>
+                      No. {paddedOrderNum}
+                    </span>
                   </div>
-                )}
-              </div>
-            )}
 
-            {isCompleted && (
-              <div className="mt-6 space-y-5">
-                <p className="text-xs text-zinc-400">
-                  نتمنى لك وجبة شهية وتجربة مميزة
-                </p>
-
-                {/* Minimal Rating Stars */}
-                <div className="flex items-center justify-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => {
-                        setRating(star);
-                        if (order?.id) {
-                          submitOrderFeedback(order.id, { rating: star, submittedAt: new Date().toISOString() }, slug);
-                        }
-                        setFeedbackSent(true);
-                      }}
-                      className="p-1.5 transition-transform active:scale-90 cursor-pointer"
+                  <div className="text-center py-3">
+                    <p className="text-sm font-bold text-zinc-500 mb-1">
+                      {language === 'ar' ? 'طلبك قيد التحضير' : 'Preparing your order'}
+                    </p>
+                    <div
+                      dir="ltr"
+                      className="text-6xl sm:text-7xl font-black tracking-tight tabular-nums text-zinc-950 font-mono leading-none my-2"
                     >
-                      <Star
-                        className={`w-7 h-7 ${
-                          star <= rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'
-                        }`}
-                      />
-                    </button>
-                  ))}
+                      #{decodedOrderNumber}
+                    </div>
+
+                    <div className="mt-4 inline-flex items-center gap-2 bg-amber-100 border border-amber-200 text-amber-950 px-4 py-1.5 rounded-full text-sm font-bold">
+                      <Clock className="w-4 h-4 text-amber-700" />
+                      <span>
+                        {language === 'ar'
+                          ? `حوالي ${remainingMinutes > 0 ? remainingMinutes : estMinutes} دقائق`
+                          : `About ${remainingMinutes > 0 ? remainingMinutes : estMinutes} minutes`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {feedbackSent && (
-                  <p className="text-xs text-emerald-400 font-medium">شكراً لتقييمك!</p>
-                )}
+                {/* Perforated Tear Line with Circular Side Notches */}
+                <div className="relative flex items-center bg-[#FFFDF9] border-x border-zinc-200/90">
+                  <div className="w-5 h-10 bg-[#F4F1EA] rounded-r-full border-y border-r border-zinc-200/90 -ml-px transition-colors duration-700" />
+                  <div className="flex-1 border-t-2 border-dashed border-zinc-300 mx-2" />
+                  <div className="w-5 h-10 bg-[#F4F1EA] rounded-l-full border-y border-l border-zinc-200/90 -mr-px transition-colors duration-700" />
+                </div>
 
-                <div className="pt-2">
-                  <Link
-                    href={`/${slug}/track`}
-                    className="inline-block text-xs text-zinc-400 hover:text-white underline underline-offset-4"
-                  >
-                    متابعة طلب آخر
-                  </Link>
+                {/* Lower Ticket Stub (Tears away cinematically when Ready) */}
+                <motion.div
+                  initial={{ y: 0, opacity: 1, rotate: 0 }}
+                  exit={{ y: 68, opacity: 0, rotate: -3 }}
+                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                  className="bg-[#FAF7F0] border border-t-0 border-zinc-200/90 rounded-b-[28px] p-6 sm:p-7 pt-5 flex items-center gap-5"
+                >
+                  <div className="flex items-center justify-center w-12 shrink-0 border-r border-zinc-200 pr-4">
+                    <span
+                      dir="ltr"
+                      className="font-mono text-2xl font-black tracking-widest text-zinc-400 -rotate-90 select-none"
+                    >
+                      {paddedOrderNum}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 space-y-2.5 text-start">
+                    <p className="text-sm font-medium text-zinc-700 leading-snug">
+                      {language === 'ar'
+                        ? 'سيرن هاتفك فور جهوزية طلبك. أبقِ هذه الصفحة مفتوحة.'
+                        : "We'll buzz this phone when your order is ready. Keep this page open."}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        {language === 'ar'
+                          ? 'مباشر • يتحدث فور جهوزية الطلب'
+                          : 'Live. Updates the moment your order is ready.'}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 text-zinc-500 font-medium">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        {language === 'ar'
+                          ? 'الشاشة تبقى مضيئة'
+                          : 'Screen staying awake'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+
+          {isReady && (
+            <motion.div
+              key="ticket-ready"
+              initial={{ opacity: 0, scale: 0.9, y: 28 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="text-center py-4"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6 shadow-lg"
+              >
+                <BellRing className="w-10 h-10 text-white" />
+              </motion.div>
+
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-100 mb-2">
+                {restaurantDisplayName}
+              </p>
+
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-2">
+                {language === 'ar' ? 'طلبك جاهز!' : 'Your order is ready.'}
+              </h1>
+
+              <p className="text-lg text-emerald-50 font-medium mb-6">
+                {language === 'ar'
+                  ? 'تفضل بالاستلام من الكاونتر الآن'
+                  : 'Come to the counter to pick it up.'}
+              </p>
+
+              <div className="bg-emerald-700/60 border border-emerald-400/30 rounded-3xl p-6 mb-6 shadow-inner">
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-200 block mb-1">
+                  {language === 'ar' ? 'رقم الطلب' : 'Order Number'}
+                </span>
+                <div
+                  dir="ltr"
+                  className="text-7xl font-black font-mono tabular-nums text-white"
+                >
+                  #{decodedOrderNumber}
                 </div>
               </div>
-            )}
-          </div>
-        </motion.div>
+
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleIReceivedOrder}
+                className="w-full py-4 px-6 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-950 font-bold text-lg transition-all flex items-center justify-center gap-2 shadow-xl cursor-pointer"
+              >
+                <Check className="w-5 h-5 stroke-[2.5]" />
+                <span>{language === 'ar' ? 'استلمت الطلب' : "I've picked it up"}</span>
+              </motion.button>
+
+              {alarmActive && (
+                <button
+                  onClick={() => {
+                    soundManager.stopReadyAlarm();
+                    soundManager.stopHaptic();
+                    setHasUserSilenced(true);
+                  }}
+                  className="mt-4 text-xs text-emerald-100/90 hover:text-white underline underline-offset-4 py-1 cursor-pointer"
+                >
+                  {language === 'ar' ? 'إيقاف صوت الرنين' : 'Silence buzzer chime'}
+                </button>
+              )}
+            </motion.div>
+          )}
+
+          {isCompleted && (
+            <motion.div
+              key="ticket-completed"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-[#FFFDF9] border border-zinc-200/90 rounded-[28px] p-7 sm:p-8 text-center shadow-[0_14px_40px_rgba(24,24,27,0.08)]"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-7 h-7 stroke-[2.5]" />
+              </div>
+
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">
+                {restaurantDisplayName}
+              </p>
+              <h1 className="text-2xl font-extrabold text-zinc-950 mb-1">
+                {language === 'ar'
+                  ? `تم تسليم الطلب #${decodedOrderNumber}`
+                  : `Order #${decodedOrderNumber} picked up`}
+              </h1>
+              <p className="text-sm text-zinc-600 mb-6">
+                {language === 'ar'
+                  ? 'نتمنى لك وجبة شهية وتجربة مميزة'
+                  : 'Enjoy your meal!'}
+              </p>
+
+              {/* Minimal Rating Stars */}
+              <div className="flex items-center justify-center gap-2 mb-3">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => {
+                      setRating(star);
+                      if (order?.id) {
+                        submitOrderFeedback(
+                          order.id,
+                          { rating: star, submittedAt: new Date().toISOString() },
+                          slug
+                        );
+                      }
+                      setFeedbackSent(true);
+                    }}
+                    className="p-1.5 transition-transform active:scale-90 cursor-pointer"
+                  >
+                    <Star
+                      className={`w-7 h-7 ${
+                        star <= rating
+                          ? 'text-amber-400 fill-amber-400'
+                          : 'text-zinc-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {feedbackSent && (
+                <p className="text-xs text-emerald-700 font-bold mb-4">
+                  {language === 'ar' ? 'شكراً لتقييمك!' : 'Thanks for your feedback!'}
+                </p>
+              )}
+
+              <Link
+                href={`/${slug}/track`}
+                className="mt-2 inline-block w-full py-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-sm transition-colors"
+              >
+                {language === 'ar' ? 'متابعة طلب آخر' : 'Track another order'}
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Clean Bottom Area */}
       <footer className="max-w-md w-full mx-auto text-center py-3 z-10">
-        <MuhabBrandBadge />
+        <div className={isReady ? 'opacity-80' : 'opacity-70'}>
+          <MuhabBrandBadge />
+        </div>
       </footer>
     </div>
   );

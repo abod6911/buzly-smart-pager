@@ -95,13 +95,6 @@ export default function LandingRoleSwitcherPage() {
             >
               {language === 'ar' ? 'تذكرة انتظار طاولة (/join)' : 'Join Waitlist (/join)'}
             </Link>
-
-            <Link
-              href="/host/login"
-              className="px-5 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.12] text-emerald-300 font-semibold text-sm transition-all"
-            >
-              {language === 'ar' ? 'لوحة المضيف (/host)' : 'Host Stand (/host)'}
-            </Link>
           </div>
         </div>
 

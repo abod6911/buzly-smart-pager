@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const joinSchema = z.object({
   restaurantSlug: z.string().trim().min(1).max(50).regex(/^[a-z0-9-]+$/).default('demo-cafe'),
-  name: z.string().trim().min(1, 'Please enter your name').max(80),
+  name: z.string().trim().max(80).optional().default('Guest'),
   partySize: z.coerce.number().int().min(1).max(20),
   seatingPreference: z.enum(['inside', 'patio', 'either']).default('either'),
   phoneNumber: z
