@@ -617,80 +617,67 @@ export default function SuperAdminDashboard() {
   // ========================================================
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#070709] text-white flex flex-col justify-center items-center p-4 font-sans selection:bg-emerald-500 selection:text-black relative overflow-hidden">
-        {/* Luxury Background Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] bg-emerald-500/10 blur-[140px] rounded-full pointer-events-none" />
-
+      <div className="min-h-screen bg-[#0A0A0C] text-white flex flex-col justify-center items-center p-4 font-sans selection:bg-emerald-500 selection:text-black">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="w-full max-w-lg bg-[#111114]/95 border border-white/[0.1] rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl relative z-10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="w-full max-w-sm bg-[#121215] border border-white/[0.08] rounded-3xl p-7 sm:p-8 shadow-2xl"
         >
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-black to-emerald-950/40 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-emerald-500/10">
-              <ShieldCheck className="w-9 h-9" />
+          <div className="mb-7">
+            <div className="w-11 h-11 rounded-2xl bg-white/[0.05] border border-white/[0.08] text-zinc-200 flex items-center justify-center mb-5">
+              <Lock className="w-5 h-5" />
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono uppercase tracking-widest font-bold mb-3">
-              <span>Zero-Knowledge Defense Gate</span>
-            </div>
-
-            <h1 className="text-2xl font-black text-white tracking-tight font-cairo">
-              مركز القيادة الأمنية لمالك المنصة
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              إدارة المنصة
             </h1>
-            <p className="text-xs text-zinc-400 mt-2 leading-relaxed max-w-sm mx-auto">
-              هذه المنطقة مشفرة بنظام الحماية البنكية وخاضعة لمراقبة الـ IP.
-              يتطلب الدخول تزويد المفاتيح المزدوجة الخاصة بالمالك فقط.
+            <p className="text-xs text-zinc-400 mt-1">
+              سجّل الدخول لإدارة الفروع والإعدادات.
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleAuthSubmit} className="space-y-4">
-            {/* Field 1: Master ID */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 flex items-center justify-between">
-                <span>المعرّف الأمني للمالك (Master Identifier)</span>
-                <span className="text-[10px] text-zinc-500 font-mono">ID / USERNAME</span>
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                اسم المستخدم
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  autoFocus
-                  autoComplete="off"
-                  value={userInput}
-                  onChange={(e) => {
-                    setUserInput(e.target.value);
-                    setAuthError('');
-                  }}
-                  placeholder="المعرّف السري..."
-                  className="w-full bg-[#09090B] border border-white/[0.12] rounded-2xl py-3 px-4 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 transition-colors"
-                />
-              </div>
+              <input
+                type="text"
+                autoFocus
+                autoComplete="username"
+                value={userInput}
+                onChange={(e) => {
+                  setUserInput(e.target.value);
+                  setAuthError('');
+                }}
+                placeholder="admin"
+                className="w-full bg-[#0A0A0C] border border-white/[0.1] rounded-xl py-3 px-3.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+              />
             </div>
 
-            {/* Field 2: Secret Passphrase */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 flex items-center justify-between">
-                <span>مفتاح التشفير السري (Master Passphrase)</span>
-                <span className="text-[10px] text-zinc-500 font-mono">HMAC-SHA512 KEY</span>
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                كلمة المرور
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="off"
+                  autoComplete="current-password"
                   value={passInput}
                   onChange={(e) => {
                     setPassInput(e.target.value);
                     setAuthError('');
                   }}
-                  placeholder="كلمة المرور المشفرة..."
-                  className="w-full bg-[#09090B] border border-white/[0.12] rounded-2xl py-3 pl-11 pr-4 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="••••••••"
+                  className="w-full bg-[#0A0A0C] border border-white/[0.1] rounded-xl py-3 pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 transition-colors"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -698,48 +685,29 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
 
-            {/* Error Display */}
             {authError && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium flex items-start gap-2 leading-relaxed"
-              >
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium flex items-start gap-2 leading-relaxed">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span>{authError}</span>
-              </motion.div>
+              </div>
             )}
 
-            {/* Security Badges */}
-            <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] text-zinc-400 font-mono">
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-2 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>3 Strikes IP Lockout</span>
-              </div>
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-2 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>PBKDF2 SHA-512 Hash</span>
-              </div>
-            </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isAuthLoading}
-              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-black font-black text-sm transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+              className="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-sm transition-colors cursor-pointer disabled:opacity-50 mt-2"
             >
-              <Unlock className="w-4 h-4" />
-              <span>{isAuthLoading ? 'جارِ فك التشفير والتحقق الأمني...' : 'فك التشفير والولوج الآمن'}</span>
+              {isAuthLoading ? 'جارِ الدخول...' : 'تسجيل الدخول'}
             </button>
           </form>
 
-          <div className="mt-5 text-center">
+          <div className="mt-6 pt-5 border-t border-white/[0.06] text-center">
             <Link
               href="/"
-              className="text-xs text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
+              className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors inline-flex items-center gap-1.5"
             >
               <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? '' : 'rotate-180'}`} />
-              <span>الخروج والرجوع للموقع العام</span>
+              <span>العودة للرئيسية</span>
             </Link>
           </div>
         </motion.div>
