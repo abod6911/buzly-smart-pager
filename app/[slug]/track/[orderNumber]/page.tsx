@@ -167,7 +167,7 @@ function TenantCustomerTrackerInner() {
           const cleanTargetNum = decodedOrderNumber.replace(/^#/, '').toLowerCase();
 
           const matches =
-            (!pSlug || pSlug === 'all' || pSlug === slug.toLowerCase().trim()) &&
+            pSlug === slug.toLowerCase().trim() &&
             (!pNum || pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum);
 
           if (matches && (data.type === 'ORDER_READY' || data.type === 'ORDER_REPING')) {
@@ -244,7 +244,7 @@ function TenantCustomerTrackerInner() {
       const cleanPNum = pNum.replace(/^#/, '').toLowerCase();
       const cleanTargetNum = decodedOrderNumber.replace(/^#/, '').toLowerCase();
 
-      const matchSlug = !pSlug || pSlug === slug.toLowerCase().trim();
+      const matchSlug = pSlug === slug.toLowerCase().trim();
       const matchNum = pNum.toLowerCase() === decodedOrderNumber.toLowerCase() || cleanPNum === cleanTargetNum;
 
       if (matchSlug && matchNum) {
