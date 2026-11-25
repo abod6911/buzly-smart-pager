@@ -35,7 +35,7 @@ export default function TenantTrackEntryPage() {
   const restaurantName = restaurant?.name || slug;
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-white flex flex-col justify-between p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-[#F4F1EA] text-zinc-900 flex flex-col justify-between p-4 sm:p-6 font-sans">
       {/* Top Header */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between py-2.5 z-10">
         <div className="flex items-center gap-3">
@@ -45,7 +45,7 @@ export default function TenantTrackEntryPage() {
             themeColor={themeColor}
             size="md"
           />
-          <h1 className="font-semibold text-sm text-white tracking-tight">
+          <h1 className="font-bold text-sm text-zinc-900 tracking-tight">
             {restaurantName}
           </h1>
         </div>
@@ -64,7 +64,7 @@ export default function TenantTrackEntryPage() {
       </main>
 
       {/* Clean Minimalist Footer */}
-      <footer className="max-w-md w-full mx-auto text-center py-3 z-10">
+      <footer className="max-w-md w-full mx-auto text-center py-3 z-10 opacity-70">
         <MuhabBrandBadge />
       </footer>
     </div>
