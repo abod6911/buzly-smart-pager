@@ -16,6 +16,8 @@ interface CustomerNumpadProps {
 
 export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, slug }) => {
   const [orderNumber, setOrderNumber] = useState<string>('');
+  const [notFoundError, setNotFoundError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
   const router = useRouter();
   const { language, isRTL, t } = useLanguage();
 
@@ -26,6 +28,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
 
   const handleDigit = useCallback((digit: string) => {
     soundManager.playKeyClick();
+    setNotFoundError(null);
     const current = orderNumberRef.current;
     if (current.length < 5) {
       const next = current + digit;
@@ -36,6 +39,7 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
 
   const handleBackspace = useCallback(() => {
     soundManager.playKeyClick();
+    setNotFoundError(null);
     const next = orderNumberRef.current.slice(0, -1);
     orderNumberRef.current = next;
     setOrderNumber(next);
@@ -43,18 +47,49 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
 
   const handleClear = useCallback(() => {
     soundManager.playKeyClick();
+    setNotFoundError(null);
     orderNumberRef.current = '';
     setOrderNumber('');
   }, []);
 
-  const handleTrack = useCallback(() => {
+  const handleTrack = useCallback(async () => {
     const num = orderNumberRef.current.trim();
     if (!num) return;
     soundManager.unlock();
     const targetSlug = slug || 'demo-cafe';
-    const now = Date.now();
-    router.push(`/${targetSlug}/track/${encodeURIComponent(num)}?created=${now}`);
-  }, [slug, router]);
+    setIsChecking(true);
+    setNotFoundError(null);
+
+    try {
+      const existsLocally = activeOrders.some(
+        (o) => o.orderNumber.toLowerCase() === num.toLowerCase()
+      );
+      if (!existsLocally) {
+        const res = await fetch(
+          `/api/orders?slug=${encodeURIComponent(targetSlug)}&orderNumber=${encodeURIComponent(num)}&t=${Date.now()}`,
+          { cache: 'no-store' }
+        );
+        const data = res.ok ? await res.json().catch(() => null) : null;
+        if (!res.ok || !data?.success || !data?.order) {
+          setNotFoundError(
+            language === 'ar'
+              ? `رقم الطلب #${num} غير موجود. تأكد من الرقم على الفاتورة.`
+              : `Order #${num} not found. Please check your receipt number.`
+          );
+          return;
+        }
+      }
+      router.push(`/${targetSlug}/track/${encodeURIComponent(num)}`);
+    } catch {
+      setNotFoundError(
+        language === 'ar'
+          ? 'تعذر التحقق من الطلب، حاول مرة أخرى.'
+          : 'Could not verify order. Please try again.'
+      );
+    } finally {
+      setIsChecking(false);
+    }
+  }, [slug, router, activeOrders, language]);
 
   // Physical Keyboard & Numpad listener for PCs, laptops, and desktop browsers
   useEffect(() => {
@@ -113,6 +148,12 @@ export const CustomerNumpad: React.FC<CustomerNumpadProps> = ({ activeOrders, sl
             {orderNumber || '••••'}
           </span>
         </div>
+
+        {notFoundError && (
+          <div className="mb-4 px-4 py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+            {notFoundError}
+          </div>
+        )}
 
         {/* Apple Circular Numpad 1-9, C, 0, Backspace */}
         <div dir="ltr" style={{ direction: 'ltr' }} className="grid grid-cols-3 gap-3 sm:gap-4 max-w-[280px] sm:max-w-[320px] mx-auto mb-6">

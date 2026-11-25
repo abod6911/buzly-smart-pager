@@ -48,48 +48,19 @@ function TenantCustomerTrackerInner() {
   const restaurant = getRestaurant(slug);
   const liveOrder = getOrder(decodedOrderNumber, slug);
   const [overrideOrder, setOverrideOrder] = useState<Order | null>(null);
+  const [isCheckingOrder, setIsCheckingOrder] = useState<boolean>(!liveOrder);
+  const [orderNotFound, setOrderNotFound] = useState<boolean>(false);
 
-  // Self-healing fallback ticket: Customer NEVER sees an empty screen or error boundary
-  // Strictly isolates from stale historical orders
-  const fallbackOrder = useMemo((): Order => {
-    if (liveOrder) {
-      const now = Date.now();
-      if (liveOrder.status === 'completed') {
-        const compTime = new Date(liveOrder.completedAt || liveOrder.createdAt || now).getTime();
-        if (now - compTime < 90 * 1000) {
-          return liveOrder;
-        }
-      } else if (liveOrder.status === 'ready') {
-        const readyTime = new Date(liveOrder.readyAt || liveOrder.createdAt || now).getTime();
-        if (now - readyTime < 30 * 60 * 1000) {
-          return liveOrder;
-        }
-      } else if (liveOrder.status === 'preparing') {
-        return liveOrder;
-      }
-    }
-
-    const estParam = searchParams?.get('est');
-    const statusParam = (searchParams?.get('status') as OrderStatus) || 'preparing';
-    return {
-      id: `ticket-${decodedOrderNumber}`,
-      orderNumber: decodedOrderNumber || '1',
-      restaurantSlug: slug,
-      restaurant_slug: slug,
-      status: statusParam,
-      estimatedMinutes: parseInt(estParam || '10', 10) || 10,
-      notes: searchParams?.get('notes') || undefined,
-      createdAt: searchParams?.get('created') || new Date().toISOString(),
-      rePingCount: 0,
-    };
-  }, [liveOrder, searchParams, decodedOrderNumber, slug]);
-
-  const order = overrideOrder || liveOrder || fallbackOrder;
+  const order = overrideOrder || liveOrder || null;
 
   // Stable references to prevent SSE / WebSocket reconnection loops
-  const orderRef = useRef<Order>(order);
+  const orderRef = useRef<Order | null>(order);
   useEffect(() => {
     orderRef.current = order;
+    if (order) {
+      setIsCheckingOrder(false);
+      setOrderNotFound(false);
+    }
   }, [order]);
 
   const restaurantRef = useRef(restaurant);
@@ -102,6 +73,8 @@ function TenantCustomerTrackerInner() {
     setOverrideOrder(null);
     setAlarmActive(false);
     setHasUserSilenced(false);
+    setOrderNotFound(false);
+    setIsCheckingOrder(!liveOrder);
   }, [decodedOrderNumber, slug]);
 
   // Local state
@@ -181,15 +154,22 @@ function TenantCustomerTrackerInner() {
           if (matches && (data.type === 'ORDER_READY' || data.type === 'ORDER_REPING')) {
             const currentOrd = orderRef.current;
             const updatedReadyOrder: Order = {
-              ...currentOrd,
+              ...(currentOrd || {
+                id: `order-${decodedOrderNumber}`,
+                orderNumber: decodedOrderNumber,
+                restaurantSlug: slug,
+                createdAt: new Date().toISOString(),
+                estimatedMinutes: 10,
+                rePingCount: 0,
+              }),
               ...(data.order || {}),
               status: 'ready',
               rePingCount:
                 typeof data.rePingCount === 'number'
                   ? data.rePingCount
                   : data.type === 'ORDER_REPING'
-                  ? (currentOrd.rePingCount || 0) + 1
-                  : currentOrd.rePingCount || 0,
+                  ? (currentOrd?.rePingCount || 0) + 1
+                  : currentOrd?.rePingCount || 0,
               readyAt: data.readyAt || data.order?.readyAt || new Date().toISOString(),
               lastPingAt: data.lastPingAt || new Date().toISOString(),
             };
@@ -258,15 +238,22 @@ function TenantCustomerTrackerInner() {
       if (matchSlug && matchNum) {
         const currentOrd = orderRef.current;
         const updatedReadyOrder: Order = {
-          ...currentOrd,
+          ...(currentOrd || {
+            id: `order-${decodedOrderNumber}`,
+            orderNumber: decodedOrderNumber,
+            restaurantSlug: slug,
+            createdAt: new Date().toISOString(),
+            estimatedMinutes: 10,
+            rePingCount: 0,
+          }),
           ...(payload.order || {}),
           status: 'ready',
           rePingCount:
             typeof payload.rePingCount === 'number'
               ? payload.rePingCount
               : payload.type === 'ORDER_REPING'
-              ? (currentOrd.rePingCount || 0) + 1
-              : currentOrd.rePingCount || 0,
+              ? (currentOrd?.rePingCount || 0) + 1
+              : currentOrd?.rePingCount || 0,
           readyAt: payload.readyAt || payload.order?.readyAt || new Date().toISOString(),
           lastPingAt: payload.lastPingAt || new Date().toISOString(),
         };
@@ -297,7 +284,7 @@ function TenantCustomerTrackerInner() {
 
   // 2. Ultra-Fast High-Frequency Heartbeat Poll (200ms Direct Poll until completed)
   useEffect(() => {
-    if (order.status === 'completed' || !decodedOrderNumber) return;
+    if (order?.status === 'completed' || !decodedOrderNumber) return;
 
     let isCancelled = false;
 
@@ -313,12 +300,33 @@ function TenantCustomerTrackerInner() {
             },
           }
         );
+        if (res.status === 404) {
+          if (!isCancelled && !orderRef.current) {
+            setOrderNotFound(true);
+            setIsCheckingOrder(false);
+          }
+          return;
+        }
         if (!res.ok) return;
         const data = await res.json();
-        if (isCancelled || !data?.success || !data.order) return;
+        if (isCancelled) return;
+        if (!data?.success || !data.order) {
+          if (!orderRef.current) {
+            setOrderNotFound(true);
+            setIsCheckingOrder(false);
+          }
+          return;
+        }
 
         const remoteOrder: Order = data.order;
         const currentOrd = orderRef.current;
+
+        if (!currentOrd) {
+          setOverrideOrder(remoteOrder);
+          setOrderNotFound(false);
+          setIsCheckingOrder(false);
+          return;
+        }
 
         if (remoteOrder.status === 'ready') {
           const isNewReady = currentOrd.status === 'preparing';
@@ -363,7 +371,7 @@ function TenantCustomerTrackerInner() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [order.status, decodedOrderNumber, slug, syncNow]);
+  }, [order?.status, decodedOrderNumber, slug, syncNow]);
 
   // 3. Background Reconnection Recovery on visibilitychange
   useEffect(() => {
@@ -570,16 +578,57 @@ function TenantCustomerTrackerInner() {
     }
   };
 
-  const isPreparing = order.status === 'preparing';
-  const isReady = order.status === 'ready';
-  const isCompleted = order.status === 'completed';
+  const isPreparing = order?.status === 'preparing';
+  const isReady = order?.status === 'ready';
+  const isCompleted = order?.status === 'completed';
 
-  const estMinutes = order.estimatedMinutes || 10;
+  const estMinutes = order?.estimatedMinutes || 10;
   const remainingMinutes = Math.max(0, estMinutes - elapsedMinutes);
   const progressPercent = Math.min(100, Math.round((elapsedMinutes / Math.max(1, estMinutes)) * 100));
 
   const restaurantDisplayName = restaurant?.name || slug;
   const paddedOrderNum = decodedOrderNumber.padStart(3, '0');
+
+  if (isCheckingOrder && !order) {
+    return (
+      <div className="min-h-screen bg-[#F4F1EA] text-zinc-900 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-900 border-t-transparent animate-spin mb-3" />
+        <p className="text-sm font-medium text-zinc-600">
+          {language === 'ar'
+            ? `جارِ التحقق من الطلب #${decodedOrderNumber}...`
+            : `Checking order #${decodedOrderNumber}...`}
+        </p>
+      </div>
+    );
+  }
+
+  if (orderNotFound || !order) {
+    return (
+      <div className="min-h-screen bg-[#F4F1EA] text-zinc-900 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-[#FFFDF9] border border-zinc-200/90 rounded-[28px] p-7 sm:p-8 text-center shadow-[0_14px_40px_rgba(24,24,27,0.08)]">
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
+            {restaurantDisplayName}
+          </p>
+          <h1 className="text-2xl font-extrabold text-zinc-950 mb-2">
+            {language === 'ar'
+              ? `رقم الطلب #${decodedOrderNumber} غير موجود`
+              : `Order #${decodedOrderNumber} not found`}
+          </h1>
+          <p className="text-sm text-zinc-600 mb-6">
+            {language === 'ar'
+              ? 'الرقم غير صحيح أو لم يتم تسجيل هذا الطلب بعد. تأكد من الرقم على الفاتورة أو راجع الكاشير.'
+              : 'This order number is not in the active queue. Please double-check your receipt or ask the cashier.'}
+          </p>
+          <Link
+            href={`/${slug}/track`}
+            className="inline-block w-full py-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-sm transition-colors"
+          >
+            {language === 'ar' ? 'إدخال رقم طلب آخر' : 'Try another order number'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
