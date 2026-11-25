@@ -736,60 +736,43 @@ export default function SuperAdminDashboard() {
       </AnimatePresence>
 
       {/* Top Header */}
-      <header className="border-b border-white/[0.07] bg-[#09090B]/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3">
+      <header className="border-b border-white/[0.06] bg-[#0A0A0C]/90 backdrop-blur-xl sticky top-0 z-40 px-4 sm:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Logo & Super Admin Badge */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-3 group">
               <BrandLogo size="sm" />
               <div className="flex flex-col">
-                <span className="font-black text-sm tracking-tight text-white font-mono flex items-center gap-2">
-                  CHIMER <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded font-sans font-bold">HQ</span>
+                <span className="font-bold text-sm tracking-tight text-white">
+                  إدارة المنصة
                 </span>
-                <span className="text-[10px] text-zinc-400">لوحة المالك والعمليات المركزية</span>
+                <span className="text-[11px] text-zinc-500">لوحة المالك</span>
               </div>
             </Link>
           </div>
 
-          {/* Sync & Latency Indicators */}
-          <div className="hidden md:flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-zinc-300 font-mono text-[11px]">
-                {isSupabaseActive ? 'Supabase Realtime Active' : 'Realtime Engine Sync'}
-              </span>
-              <span className="text-[10px] font-mono text-emerald-400">⚡ 32ms</span>
-            </div>
-          </div>
-
-          {/* Actions & Lock */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <LanguageSwitcher variant="minimal" />
 
             <button
               onClick={openSecurityModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white font-medium text-xs border border-white/[0.08] transition-colors cursor-pointer"
-              title="إعدادات الأمان وبيئة Vercel"
+              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors cursor-pointer"
+              title="إعدادات الأمان"
             >
-              <Key className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">أمان Vercel</span>
+              <Key className="w-4 h-4" />
             </button>
 
             <button
               onClick={openCreateModal}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-colors shadow-md shadow-emerald-500/20 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>إضافة مطعم</span>
+              <span>إضافة فرع</span>
             </button>
 
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl bg-white/[0.04] hover:bg-rose-500/20 hover:text-rose-400 text-zinc-400 border border-white/[0.06] transition-colors"
-              title="قفل لوحة المالك"
+              className="p-2 rounded-xl bg-white/[0.04] hover:bg-rose-500/15 hover:text-rose-400 text-zinc-400 border border-white/[0.06] transition-colors cursor-pointer"
+              title="قفل الجلسة"
             >
               <Lock className="w-4 h-4" />
             </button>
@@ -798,17 +781,13 @@ export default function SuperAdminDashboard() {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl w-full mx-auto p-4 sm:px-6 py-6 flex-1 space-y-6">
-        {/* 1. Global KPI Metrics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {/* Metric 1: Total Stores */}
-          <div className="bg-[#111114] border border-white/[0.07] rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold">إجمالي المتاجر</span>
-              <Store className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-white">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-8 py-7 flex-1 space-y-6">
+        {/* 1. Executive KPI Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="bg-[#111114] border border-white/[0.07] rounded-3xl p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col justify-between">
+            <span className="text-xs font-medium text-zinc-400 mb-3">إجمالي الفروع</span>
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-3xl font-bold font-mono tabular-nums text-white">
                 {stats.totalStores}
               </span>
               <span className="text-[11px] text-emerald-400 font-medium">
@@ -817,107 +796,74 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* Metric 2: Live In-Flight Orders */}
-          <div className="bg-[#111114] border border-white/[0.07] rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold">الطلبات الجارية الآن</span>
-              <Flame className="w-4 h-4 text-amber-400" />
-            </div>
+          <div className="bg-[#111114] border border-white/[0.07] rounded-3xl p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col justify-between">
+            <span className="text-xs font-medium text-zinc-400 mb-3">الطلبات الجارية</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-amber-400">
+              <span className="text-3xl font-bold font-mono tabular-nums text-amber-300">
                 {stats.activeOrdersCount}
               </span>
-              <span className="text-[11px] text-zinc-400">في الطابور</span>
+              <span className="text-[11px] text-zinc-500">في الانتظار</span>
             </div>
           </div>
 
-          {/* Metric 3: Completed Today */}
-          <div className="bg-[#111114] border border-white/[0.07] rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold">الطلبات المنجزة اليوم</span>
-              <CheckCircle2 className="w-4 h-4 text-sky-400" />
-            </div>
+          <div className="bg-[#111114] border border-white/[0.07] rounded-3xl p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col justify-between">
+            <span className="text-xs font-medium text-zinc-400 mb-3">المنجزة اليوم</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-sky-400">
+              <span className="text-3xl font-bold font-mono tabular-nums text-white">
                 {stats.completedTodayCount}
               </span>
-              <span className="text-[11px] text-zinc-400">طلب ناجح</span>
+              <span className="text-[11px] text-zinc-500">طلب</span>
             </div>
           </div>
 
-          {/* Metric 4: Avg Prep Time */}
-          <div className="bg-[#111114] border border-white/[0.07] rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold">متوسط سرعة الإنجاز</span>
-              <Clock className="w-4 h-4 text-purple-400" />
-            </div>
+          <div className="bg-[#111114] border border-white/[0.07] rounded-3xl p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col justify-between">
+            <span className="text-xs font-medium text-zinc-400 mb-3">متوسط الإنجاز</span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-purple-400">
+              <span className="text-3xl font-bold font-mono tabular-nums text-white">
                 {stats.avgPrepTime}
               </span>
-              <span className="text-xs text-zinc-400">دقيقة/طلب</span>
+              <span className="text-xs text-zinc-500">دقيقة</span>
             </div>
           </div>
 
-          {/* Metric 5: Customer Satisfaction */}
-          <div className="col-span-2 lg:col-span-1 bg-[#111114] border border-white/[0.07] rounded-2xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold">رضا العملاء</span>
-              <Sparkles className="w-4 h-4 text-yellow-400" />
-            </div>
+          <div className="col-span-2 lg:col-span-1 bg-[#111114] border border-white/[0.07] rounded-3xl p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col justify-between">
+            <span className="text-xs font-medium text-zinc-400 mb-3">رضا العملاء</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-yellow-400">
-                ⭐ {stats.avgRating}
+              <span className="text-3xl font-bold font-mono tabular-nums text-white">
+                {stats.avgRating}
               </span>
-              <span className="text-[11px] text-zinc-400">
+              <span className="text-[11px] text-zinc-500">
                 ({stats.ratingCount} تقييم)
               </span>
             </div>
           </div>
         </div>
 
-        {/* 2. Platform Realtime Activity Radar (Collapsible) */}
-        <div className="bg-[#111114] border border-white/[0.07] rounded-2xl p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                Platform Live Event Radar (رادار النشاط الحي المباشر)
-              </h3>
-            </div>
-            <button
-              onClick={() => setLiveRadarOpen(!liveRadarOpen)}
-              className="text-[11px] text-zinc-400 hover:text-white transition-colors"
-            >
-              {liveRadarOpen ? 'تصغير' : 'عرض'}
-            </button>
-          </div>
-
-          {liveRadarOpen && (
-            <div className="text-xs text-zinc-300 font-mono flex items-center gap-3 overflow-x-auto py-1">
-              {lastEvent ? (
-                <div className="flex items-center gap-2 bg-[#09090B] px-3 py-1.5 rounded-xl border border-white/[0.08] shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-emerald-400 font-bold">{lastEvent.type}</span>
-                  <span className="text-zinc-500">|</span>
-                  <span className="text-white">متجر: {lastEvent.restaurantSlug || 'demo-cafe'}</span>
-                  {lastEvent.orderNumber && (
-                    <>
-                      <span className="text-zinc-500">|</span>
-                      <span className="text-amber-400">طلب #{lastEvent.orderNumber}</span>
-                    </>
-                  )}
-                  <span className="text-zinc-500 text-[10px]">
-                    ({new Date(lastEvent.timestamp).toLocaleTimeString()})
+        {/* 2. Subtle Live Activity Bar */}
+        <div className="bg-[#111114] border border-white/[0.07] rounded-2xl px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            <span className="text-xs font-semibold text-zinc-300 shrink-0">النشاط المباشر</span>
+            {liveRadarOpen && (
+              <div className="text-xs text-zinc-400 font-mono truncate">
+                {lastEvent ? (
+                  <span>
+                    {lastEvent.restaurantSlug || 'demo-cafe'}
+                    {lastEvent.orderNumber ? ` · #${lastEvent.orderNumber}` : ''}
+                    {` (${new Date(lastEvent.timestamp).toLocaleTimeString()})`}
                   </span>
-                </div>
-              ) : (
-                <span className="text-zinc-500 italic">
-                  بانتظار أحداث حية من المتاجر... النظام في وضع الاستماع الدائم
-                </span>
-              )}
-            </div>
-          )}
+                ) : (
+                  <span className="text-zinc-500">لا توجد أحداث جديدة حالياً</span>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setLiveRadarOpen(!liveRadarOpen)}
+            className="text-[11px] text-zinc-500 hover:text-zinc-200 transition-colors shrink-0 cursor-pointer"
+          >
+            {liveRadarOpen ? 'إخفاء' : 'عرض'}
+          </button>
         </div>
 
         {/* 3. Toolbar: Search, Filters & Bulk Export/Import */}
