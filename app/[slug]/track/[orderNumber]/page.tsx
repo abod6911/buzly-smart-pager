@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueue } from '@/context/QueueContext';
 import { useLanguage, LanguageSwitcher } from '@/context/LanguageContext';
 import { soundManager } from '@/lib/audio';
-import { pwaHelper } from '@/lib/pwa-helper';
-import { Order, OrderStatus } from '@/types/queue';
+import { pwaHelper, DEFAULT_VAPID_PUBLIC_KEY } from '@/lib/pwa-helper';
+import { Order, OrderStatus, PushSubscriptionData } from '@/types/queue';
 import { RestaurantAvatar } from '@/components/RestaurantAvatar';
 import { MuhabBrandBadge } from '@/components/MuhabBrandBadge';
 import {
@@ -36,6 +36,7 @@ function TenantCustomerTrackerInner() {
     getOrder,
     completeOrder,
     submitOrderFeedback,
+    registerPushSubscription,
     lastEvent,
     syncNow,
     getOrCreateLiveChannel,
@@ -124,7 +125,14 @@ function TenantCustomerTrackerInner() {
       await soundManager.unlock();
       soundManager.startSilentKeepAlive();
       setIsAudioUnlocked(true);
-      pwaHelper.requestNotificationPermission().catch(() => {});
+      const perm = await pwaHelper.requestNotificationPermission().catch(() => 'denied');
+      if (perm === 'granted') {
+        const sub = await pwaHelper.subscribeToWebPush(DEFAULT_VAPID_PUBLIC_KEY);
+        if (sub) {
+          const serialized: PushSubscriptionData = JSON.parse(JSON.stringify(sub));
+          registerPushSubscription(decodedOrderNumber, serialized, slug).catch(() => {});
+        }
+      }
     };
 
     window.addEventListener('pointerdown', unlockSilently);
@@ -541,7 +549,14 @@ function TenantCustomerTrackerInner() {
     soundManager.startSilentKeepAlive();
     setIsAudioUnlocked(true);
     soundManager.playThemedChime(restaurant?.chimeTheme || 'hospitality');
-    pwaHelper.requestNotificationPermission().catch(() => {});
+    const perm = await pwaHelper.requestNotificationPermission().catch(() => 'denied');
+    if (perm === 'granted') {
+      const sub = await pwaHelper.subscribeToWebPush(DEFAULT_VAPID_PUBLIC_KEY);
+      if (sub) {
+        const serialized: PushSubscriptionData = JSON.parse(JSON.stringify(sub));
+        registerPushSubscription(decodedOrderNumber, serialized, slug).catch(() => {});
+      }
+    }
   };
 
   const handleIReceivedOrder = async () => {
